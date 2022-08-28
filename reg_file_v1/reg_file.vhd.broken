@@ -1,0 +1,300 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+package reg_file_pkg is
+
+    constant REG_FILE_DATA_WIDTH : integer := 16;
+    constant REG_FILE_ADDR_WIDTH : integer := 16;
+    constant REG_FILE_MSB_FIRST : integer := 1;
+
+    type reg_t is record
+        ENABLE_REG : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        ENABLE_REG_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        ENABLE_REG_pulse : std_logic;
+
+        CONTROL_REG : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        CONTROL_REG_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        CONTROL_REG_pulse : std_logic;
+
+        STATUS_REG : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RO
+        STATUS_REG_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+
+        IIR_A_TAP_MSB : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        IIR_A_TAP_MSB_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        IIR_A_TAP_MSB_pulse : std_logic;
+
+        IIR_A_TAP : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        IIR_A_TAP_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        IIR_A_TAP_pulse : std_logic;
+
+        IIR_B_TAP_MSB : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        IIR_B_TAP_MSB_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        IIR_B_TAP_MSB_pulse : std_logic;
+
+        IIR_B_TAP : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RW
+        IIR_B_TAP_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+        IIR_B_TAP_pulse : std_logic;
+
+        ADC_OUTPUT_REG : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0); -- RO
+        ADC_OUTPUT_REG_addr : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+
+    end record;
+
+    type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
+
+end package;
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.reg_file_pkg.all;
+
+entity reg_file is
+    port
+    (
+        clk : in std_logic;
+        reset : in std_logic;
+        
+        transaction_en : in std_logic;
+        rw : in std_logic; -- '0' = read, '1' = write
+        rw_ready : out std_logic;
+        
+        reg_cs : in std_logic;
+        reg_spi_clk : in std_logic;
+        reg_miso : out std_logic;
+        reg_mosi : in std_logic;
+
+        STATUS_REG : in std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0);
+        ADC_OUTPUT_REG : in std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0);
+
+        reg_out : out reg_t        
+
+    );
+end entity;
+
+architecture rtl of reg_file is
+
+    component spi_slave is
+        generic
+        (
+            constant DWIDTH : natural range 1 to 32;
+            constant MSB_FIRST : natural range 0 to 1 -- 0=LSB_FIRST
+        );
+        port
+        (
+            clk : in std_logic;
+            reset : in std_logic;
+            enable : in std_logic;
+            
+            chip_select : in std_logic;
+            spi_clk : in std_logic;
+            spi_data_out : out std_logic;
+            spi_data_in : in std_logic;
+            
+            din : in std_logic_vector(DWIDTH-1 downto 0);
+            din_valid : in std_logic;
+            din_last : in std_logic;
+            din_ready : out std_logic;
+            
+            dout : out std_logic_vector(DWIDTH-1 downto 0);
+            dout_valid : out std_logic;
+            dout_last : out std_logic;
+            dout_ready : in std_logic
+        );
+    end component;
+
+
+    
+    signal transaction_state : transaction_state_t;
+    signal reg_int : reg_t := 
+    (
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0'),
+        '0',
+        (others => '0'),
+        (others => '0')
+ 
+    );
+    signal rw_ready_int : std_logic;
+    signal address : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+    
+    signal spi_slv_dout : std_logic_vector(REG_FILE_ADDR_WIDTH-1 downto 0);
+    signal spi_slv_dout_valid : std_logic;
+    signal spi_slv_din_valid : std_logic;
+    signal spi_slv_din_ready : std_logic;
+    signal spi_slv_din : std_logic_vector(REG_FILE_DATA_WIDTH-1 downto 0);
+    --signal spi_slv : dout_ready;
+    
+    signal transaction_en_cross_0 : std_logic;
+    signal transaction_en_cross_1 : std_logic;
+    signal rw_cross_0 : std_logic;
+    signal rw_cross_1 : std_logic;
+
+begin
+
+    p_domain_cross : process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                transaction_en_cross_0 <= '0';
+                transaction_en_cross_1 <= '0';
+                
+                rw_cross_0 <= '0';
+                rw_cross_1 <= '0';
+            else
+                transaction_en_cross_0 <= transaction_en;
+                transaction_en_cross_1 <= transaction_en_cross_0;
+                
+                rw_cross_0 <= rw;
+                rw_cross_1 <= rw_cross_0;
+            end if;
+        end if;
+    end process;
+    
+    reg_out <= reg_int;
+    rw_ready <= rw_ready_int;
+
+    reg_int.ENABLE_REG_addr <= std_logic_vector(to_unsigned(0, REG_FILE_ADDR_WIDTH));
+    reg_int.CONTROL_REG_addr <= std_logic_vector(to_unsigned(1, REG_FILE_ADDR_WIDTH));
+    reg_int.STATUS_REG_addr <= std_logic_vector(to_unsigned(2, REG_FILE_ADDR_WIDTH));
+    reg_int.IIR_A_TAP_MSB_addr <= std_logic_vector(to_unsigned(3, REG_FILE_ADDR_WIDTH));
+    reg_int.IIR_A_TAP_addr <= std_logic_vector(to_unsigned(4, REG_FILE_ADDR_WIDTH));
+    reg_int.IIR_B_TAP_MSB_addr <= std_logic_vector(to_unsigned(5, REG_FILE_ADDR_WIDTH));
+    reg_int.IIR_B_TAP_addr <= std_logic_vector(to_unsigned(6, REG_FILE_ADDR_WIDTH));
+    reg_int.ADC_OUTPUT_REG_addr <= std_logic_vector(to_unsigned(7, REG_FILE_ADDR_WIDTH));
+
+    spi_slv_din <=
+        reg_int.ENABLE_REG when address = reg_int.ENABLE_REG_addr else
+        reg_int.CONTROL_REG when address = reg_int.CONTROL_REG_addr else
+        reg_int.STATUS_REG when address = reg_int.STATUS_REG_addr else
+        reg_int.IIR_A_TAP_MSB when address = reg_int.IIR_A_TAP_MSB_addr else
+        reg_int.IIR_A_TAP when address = reg_int.IIR_A_TAP_addr else
+        reg_int.IIR_B_TAP_MSB when address = reg_int.IIR_B_TAP_MSB_addr else
+        reg_int.IIR_B_TAP when address = reg_int.IIR_B_TAP_addr else
+        reg_int.ADC_OUTPUT_REG when address = reg_int.ADC_OUTPUT_REG_addr else
+        (others => '0');
+
+    reg_int.ENABLE_REG_pulse <= spi_slv_dout_valid when address = reg_int.ENABLE_REG_addr and transaction_state = write_reg else '0';
+    reg_int.CONTROL_REG_pulse <= spi_slv_dout_valid when address = reg_int.CONTROL_REG_addr and transaction_state = write_reg else '0';
+    reg_int.IIR_A_TAP_MSB_pulse <= spi_slv_dout_valid when address = reg_int.IIR_A_TAP_MSB_addr and transaction_state = write_reg else '0';
+    reg_int.IIR_A_TAP_pulse <= spi_slv_dout_valid when address = reg_int.IIR_A_TAP_addr and transaction_state = write_reg else '0';
+    reg_int.IIR_B_TAP_MSB_pulse <= spi_slv_dout_valid when address = reg_int.IIR_B_TAP_MSB_addr and transaction_state = write_reg else '0';
+    reg_int.IIR_B_TAP_pulse <= spi_slv_dout_valid when address = reg_int.IIR_B_TAP_addr and transaction_state = write_reg else '0';
+
+    reg_int.ENABLE_REG <= spi_slv_dout when address = reg_int.ENABLE_REG_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+    reg_int.CONTROL_REG <= spi_slv_dout when address = reg_int.CONTROL_REG_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+    reg_int.IIR_A_TAP_MSB <= spi_slv_dout when address = reg_int.IIR_A_TAP_MSB_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+    reg_int.IIR_A_TAP <= spi_slv_dout when address = reg_int.IIR_A_TAP_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+    reg_int.IIR_B_TAP_MSB <= spi_slv_dout when address = reg_int.IIR_B_TAP_MSB_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+    reg_int.IIR_B_TAP <= spi_slv_dout when address = reg_int.IIR_B_TAP_addr and transaction_state = write_reg and spi_slv_dout_valid = '1'
+        else std_logic_vector(to_unsigned(0, REG_FILE_DATA_WIDTH)) when reset = '1';
+
+    reg_int.STATUS_REG <= STATUS_REG;
+    reg_int.ADC_OUTPUT_REG <= ADC_OUTPUT_REG;
+    p_transaction_sm : process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                transaction_state <= get_addr;
+                rw_ready_int <= '0';
+                spi_slv_din_valid <= '0';
+                address <= (others => '0');
+            else
+                case(transaction_state) is 
+                    when get_addr =>
+                        rw_ready_int <= '0';
+                        if spi_slv_dout_valid = '1' then
+                            address <= spi_slv_dout;
+                            transaction_state <= load_reg;
+                            spi_slv_din_valid <= '1';
+                        end if;
+                        
+                    when load_reg =>
+                        if spi_slv_din_ready = '1' then
+                            spi_slv_din_valid <= '0';
+                            if rw_cross_1 = '1' then
+                                transaction_state <= write_reg;
+                            else
+                                transaction_state <= read_reg;
+                            end if; 
+                        end if;
+                        
+                    when write_reg =>
+                        rw_ready_int <= '1';
+                        if spi_slv_dout_valid = '1' then
+                            transaction_state <= get_addr;
+                        end if;
+                        
+                    when read_reg =>
+                        rw_ready_int <= '1';
+                        if spi_slv_dout_valid = '1' then
+                            transaction_state <= get_addr;
+                        end if;
+                            
+                    when others =>
+                        transaction_state <= get_addr;
+                        
+                end case;
+                
+                if transaction_en_cross_1 = '0' then
+                    transaction_state <= get_addr;
+                end if;
+                
+            end if;
+        end if;
+    end process;
+
+    u_spi_slave : spi_slave
+        generic map
+        (
+            DWIDTH => REG_FILE_DATA_WIDTH,
+            MSB_FIRST => REG_FILE_MSB_FIRST
+        )
+        port map
+        (
+            clk => clk,
+            reset => reset,
+            enable => '1',
+            
+            chip_select => reg_cs,
+            spi_clk => reg_spi_clk,
+            spi_data_out => reg_miso,
+            spi_data_in => reg_mosi,
+            
+            din => spi_slv_din,
+            din_valid => spi_slv_din_valid,
+            din_last => '0',
+            din_ready => spi_slv_din_ready,
+            
+            dout => spi_slv_dout,
+            dout_valid => spi_slv_dout_valid,
+            dout_last => open,
+            dout_ready => '1'
+        );
+
+end rtl;
