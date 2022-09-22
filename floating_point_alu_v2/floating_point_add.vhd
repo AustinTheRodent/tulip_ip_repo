@@ -146,7 +146,7 @@ begin
     u_input_buffer : axis_buffer
       generic map
       (
-        G_DWIDTH    => 64
+        G_DWIDTH    => din1'length + din2'length
       )
       port map
       (
