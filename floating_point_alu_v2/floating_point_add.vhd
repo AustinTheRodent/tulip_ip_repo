@@ -56,6 +56,9 @@ architecture rtl of floating_point_add is
   constant C_EXP_LEN          : integer := 8; -- [bits]
   constant C_MANT_LEN         : integer := 23; -- [bits], without implied 1
 
+  signal din1_buff            : std_logic_vector(din1'range);
+  signal din2_buff            : std_logic_vector(din2'range);
+
   signal din_buff_din         : std_logic_vector(63 downto 0);
   signal din_buff_din_valid   : std_logic;
   signal din_buff_din_ready   : std_logic;
@@ -173,13 +176,16 @@ begin
 
   end generate;
 
-  din1_sign     <= din1(din1'left);
-  din1_exponent <= din1(din1'left-1 downto din1'left-C_EXP_LEN);
-  din1_mantissa <= '1' & din1(C_MANT_LEN-1 downto 0);
+  din1_buff     <= din_buff_dout(din_buff_dout'left downto din_buff_dout'length-din1_buff'length);
+  din2_buff     <= din_buff_dout(din2_buff'range);
 
-  din2_sign     <= din2(din2'left);
-  din2_exponent <= din2(din2'left-1 downto din2'left-C_EXP_LEN);
-  din2_mantissa <= '1' & din2(C_MANT_LEN-1 downto 0);
+  din1_sign     <= din1_buff(din1_buff'left);
+  din1_exponent <= din1_buff(din1_buff'left-1 downto din1_buff'left-C_EXP_LEN);
+  din1_mantissa <= '1' & din1_buff(C_MANT_LEN-1 downto 0);
+
+  din2_sign     <= din2_buff(din2_buff'left);
+  din2_exponent <= din2_buff(din2_buff'left-1 downto din2_buff'left-C_EXP_LEN);
+  din2_mantissa <= '1' & din2_buff(C_MANT_LEN-1 downto 0);
 
   d1_exp_islarger <=
     '1' when unsigned(din1_exponent) > unsigned(din2_exponent) else
@@ -194,14 +200,14 @@ begin
     unsigned(din2_exponent) - unsigned(din1_exponent);
 
   din1_mantissa_norm <=
-    (others => '0') when unsigned(din1(din1'left-1 downto 0)) = 0 else
-    (others => '0') when unsigned(din1(din1'left-1 downto 0)) = 0 and unsigned(din2(din2'left-1 downto 0)) = 0 else
+    (others => '0') when unsigned(din1_buff(din1_buff'left-1 downto 0)) = 0 else
+    (others => '0') when unsigned(din1_buff(din1_buff'left-1 downto 0)) = 0 and unsigned(din2_buff(din2_buff'left-1 downto 0)) = 0 else
     std_logic_vector(shift_right(unsigned(din1_mantissa), to_integer(exponent_diff))) when d2_exp_islarger = '1' else
     din1_mantissa;
 
   din2_mantissa_norm <=
-    (others => '0') when unsigned(din2(din2'left-1 downto 0)) = 0 else
-    (others => '0') when unsigned(din1(din1'left-1 downto 0)) = 0 and unsigned(din2(din2'left-1 downto 0)) = 0 else
+    (others => '0') when unsigned(din2_buff(din2_buff'left-1 downto 0)) = 0 else
+    (others => '0') when unsigned(din1_buff(din1_buff'left-1 downto 0)) = 0 and unsigned(din2_buff(din2_buff'left-1 downto 0)) = 0 else
     std_logic_vector(shift_right(unsigned(din2_mantissa), to_integer(exponent_diff))) when d1_exp_islarger = '1' else
     din2_mantissa;
 
