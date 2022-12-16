@@ -64,8 +64,6 @@ architecture rtl of floating_point_add is
   signal din_buff_din_ready   : std_logic;
   signal din_buff_din_last    : std_logic;
   signal din_buff_dout        : std_logic_vector(63 downto 0);
-  signal din_buff_dout1       : std_logic_vector(31 downto 0);
-  signal din_buff_dout2       : std_logic_vector(31 downto 0);
   signal din_buff_dout_valid  : std_logic;
   signal din_buff_dout_ready  : std_logic;
   signal din_buff_dout_last   : std_logic;
