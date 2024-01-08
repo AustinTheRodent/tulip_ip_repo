@@ -1,0 +1,16 @@
+# RW = read/write
+# RO = read only
+
+[REG_FILE_DATA_WIDTH 32]
+[REG_FILE_ADDR_WIDTH 12]
+
+#name type address reset_val
+
+CONTROL RW 0x000 0x00000000 {
+  ENABLE [0:0]
+  FEEDBACK_MODE [1:1]
+}
+
+SCRATCH RW 0x004 0xDEADBEEF {
+  SCRATCH [31:0]
+}
