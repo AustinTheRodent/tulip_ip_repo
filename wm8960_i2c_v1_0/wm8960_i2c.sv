@@ -78,6 +78,7 @@ module wm8960_i2c
     if ( reset == 1 || enable == 0 ) begin
 
       din_ready               <= 0;
+      dout_valid              <= 0;
       sdin_is_output          <= 1;
       i2c_sdin_output         <= 1;
       i2c_sclk                <= 1;
@@ -169,7 +170,7 @@ module wm8960_i2c
             i2c_sdin_output   <= 1;
             i2c_sclk          <= 1;
             transaction_stage <= 0;
-            dout_valid        <= 1;
+                    <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
             next_state        <= SM_output;
@@ -438,7 +439,7 @@ module wm8960_i2c
         end
 
         SM_output : begin
-          if ( dout_valid == 1 && dout_ready == 1 ) begin
+          if (  == 1 && dout_ready == 1 ) begin
             dout_valid  <= 0;
             state       <= SM_get_input
           end
