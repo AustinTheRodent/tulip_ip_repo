@@ -14,7 +14,7 @@ module wm8960_i2c
   input  logic        din_valid,
   output logic        din_ready,
 
-  inout  logic        i2c_sdin,
+  inout  logic        i2c_sda,
   output logic        i2c_sclk,
 
   output logic [8:0]  dout_register_data,
@@ -23,8 +23,8 @@ module wm8960_i2c
   input  logic        dout_ready
 )
 
-  logic sdin_is_output;
-  logic i2c_sdin_output;
+  logic sda_is_output;
+  logic i2c_sda_output;
 
   logic [7:0] transaction_stage;
 
@@ -66,11 +66,11 @@ module wm8960_i2c
   ////////////////////////////////////////////////////////////////
 
   always_comb begin
-    if ( sdin_is_output == 1 ) begin
-      i2c_sdin  <= i2c_sdin_output;
+    if ( sda_is_output == 1 ) begin
+      i2c_sda  <= i2c_sda_output;
     end
     else begin
-      i2c_sdin  <= 1'bz;
+      i2c_sda  <= 1'bz;
     end
   end
 
@@ -79,8 +79,8 @@ module wm8960_i2c
 
       din_ready               <= 0;
       dout_valid              <= 0;
-      sdin_is_output          <= 1;
-      i2c_sdin_output         <= 1;
+      sda_is_output           <= 1;
+      i2c_sda_output          <= 1;
       i2c_sclk                <= 1;
       clk_divider_counter     <= 0;
       clk_delay_amount        <= 0;
@@ -95,8 +95,8 @@ module wm8960_i2c
       case (state)
         SM_init : begin
           din_ready       <= 1;
-          sdin_is_output  <= 1;
-          i2c_sdin_output <= 1;
+          sda_is_output   <= 1;
+          i2c_sda_output  <= 1;
           i2c_sclk        <= 1;
 
           state           <= SM_get_input;
@@ -109,8 +109,8 @@ module wm8960_i2c
             register_address_store  <= din_register_address;
             register_data_store     <= din_register_data;
             transaction_stage       <= 0;
-            sdin_is_output          <= 1;
-            i2c_sdin_output         <= 1;
+            sda_is_output           <= 1;
+            i2c_sda_output          <= 1;
             i2c_sclk                <= 1;
             din_ready               <= 0;
             state                   <= SM_start_transaction;
@@ -119,8 +119,8 @@ module wm8960_i2c
 
         SM_start_transaction : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 1;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 1;
             i2c_sclk          <= 1;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
@@ -128,8 +128,8 @@ module wm8960_i2c
             next_state        <= SM_start_transaction;
           end
           else if ( transaction_stage == 1 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 0;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 0;
             i2c_sclk          <= 1;
             transaction_stage <= 2;
             clk_delay_amount  <= G_CLK_DIVIDER;
@@ -137,8 +137,8 @@ module wm8960_i2c
             next_state        <= SM_start_transaction;
           end
           else begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 0;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 0;
             i2c_sclk          <= 0;
             transaction_stage <= 0;
             state             <= SM_send_device_address;
@@ -148,8 +148,8 @@ module wm8960_i2c
 
         SM_end_transaction : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 0;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 0;
             i2c_sclk          <= 0;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
@@ -157,8 +157,8 @@ module wm8960_i2c
             next_state        <= SM_end_transaction;
           end
           else if ( transaction_stage == 1 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 0;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 0;
             i2c_sclk          <= 1;
             transaction_stage <= 2;
             clk_delay_amount  <= G_CLK_DIVIDER;
@@ -166,11 +166,11 @@ module wm8960_i2c
             next_state        <= SM_end_transaction;
           end
           else begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= 1;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= 1;
             i2c_sclk          <= 1;
             transaction_stage <= 0;
-                    <= 1;
+            dout_valid        <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
             next_state        <= SM_output;
@@ -179,8 +179,8 @@ module wm8960_i2c
 
         SM_send_device_address : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= device_address_store[C_DEV_ADDR_WIDTH-byte_counter-1];
+            sda_is_output     <= 1;
+            i2c_sda_output    <= device_address_store[C_DEV_ADDR_WIDTH-byte_counter-1];
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -198,7 +198,7 @@ module wm8960_i2c
             transaction_stage <= 0;
             if ( byte_counter == C_DEV_ADDR_WIDTH-1 ) begin
               byte_counter  <= 0;
-              state                   <= SM_send_rd_wr_bit;
+              state         <= SM_send_rd_wr_bit;
             end
             else begin
               byte_counter  <= byte_counter + 1;
@@ -208,8 +208,8 @@ module wm8960_i2c
 
         SM_send_rd_wr_bit : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= rd_wr_store;
+            sda_is_output     <= 1;
+            i2c_sda_output    <= rd_wr_store;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -231,8 +231,8 @@ module wm8960_i2c
 
         SM_send_register_address : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= register_address_store[C_REG_ADDR_WIDTH-byte_counter-1];
+            sda_is_output     <= 1;
+            i2c_sda_output    <= register_address_store[C_REG_ADDR_WIDTH-byte_counter-1];
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -265,7 +265,7 @@ module wm8960_i2c
 
         SM_get_register_data_0 : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 0;
+            sda_is_output     <= 0;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -279,7 +279,7 @@ module wm8960_i2c
             next_state        <= SM_send_register_data_0;
           end
           else if ( transaction_stage == 2 ) begin
-            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sdin;
+            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda;
             transaction_stage <= 3;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
@@ -295,7 +295,7 @@ module wm8960_i2c
 
         SM_get_register_data_N : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 0;
+            sda_is_output     <= 0;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -309,7 +309,7 @@ module wm8960_i2c
             next_state        <= SM_send_register_data_N;
           end
           else if ( transaction_stage == 2 ) begin
-            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sdin;
+            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda;
             transaction_stage <= 3;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
@@ -330,8 +330,8 @@ module wm8960_i2c
 
         SM_send_register_data_0 : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= register_data_store[C_REG_DATA_WIDTH-byte_counter-1];
+            sda_is_output     <= 1;
+            i2c_sda_output    <= register_data_store[C_REG_DATA_WIDTH-byte_counter-1];
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -354,8 +354,8 @@ module wm8960_i2c
 
         SM_send_register_data_N : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 1;
-            i2c_sdin_output   <= register_address_store[C_REG_DATA_WIDTH-byte_counter-1];
+            sda_is_output     <= 1;
+            i2c_sda_output    <= register_address_store[C_REG_DATA_WIDTH-byte_counter-1];
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -383,7 +383,7 @@ module wm8960_i2c
 
         SM_get_ack : begin
           if ( transaction_stage == 0 ) begin
-            sdin_is_output    <= 0;
+            sda_is_output     <= 0;
             transaction_stage <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
@@ -397,7 +397,7 @@ module wm8960_i2c
             next_state        <= SM_get_ack;
           end
           else if ( transaction_stage == 2 ) begin
-            dout_acks_received[ack_counter] <= ~i2c_sdin;
+            dout_acks_received[ack_counter] <= ~i2c_sda;
             transaction_stage <= 3;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
