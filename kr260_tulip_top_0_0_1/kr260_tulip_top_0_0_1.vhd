@@ -31,11 +31,17 @@ entity kr260_tulip_top_0_0_1 is
     s_axi_rdata   : out std_logic_vector(31 downto 0);
     s_axi_rresp   : out std_logic_vector(1 downto 0);
     s_axi_rvalid  : out std_logic;
-    s_axi_rready  : in  std_logic
+    s_axi_rready  : in  std_logic;
+
+    wm8960_i2c_sda  : inout std_logic;
+    wm8960_i2c_sclk : out   std_logic
+
   );
 end entity;
 
 architecture rtl of kr260_tulip_top_0_0_1 is
+
+  signal registers : reg_t;
 
 begin
 
@@ -71,4 +77,32 @@ begin
       registers_out => open
     );
 
+  u_wm8960_i2c : entity work.wm8960_i2c
+    generic map
+    (
+      G_CLK_DIVIDER         => 1000
+    )
+    port map
+    (
+      clk                   => clk,
+      reset                 => (not a_axi_aresetn),
+      enable                => std_logic(registers.CONTROL.ENABLE(0)),
+
+      din_device_address    => registers.I2C_CONTROL.DEVICE_ADDRESS,
+      din_rd_wr             => std_logic(registers.I2C_CONTROL.I2C_IS_READ(0)),
+      din_register_address  => registers.I2C_CONTROL.REGISTER_ADDRESS,
+      din_register_data     => registers.I2C_CONTROL.REGISTER_WR_DATA,
+      din_valid             => registers.I2C_CONTROL_wr_pulse,
+      din_ready             => open,
+
+      i2c_sda               => wm8960_i2c_sda,
+      i2c_sclk              => wm8960_i2c_sclk,
+
+      dout_register_data    => open,
+      dout_acks_received    => open,
+      dout_valid            => open,
+      dout_ready            => '1'
+    );
+
 end rtl;
+
