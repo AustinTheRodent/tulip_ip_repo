@@ -94,8 +94,9 @@ begin
 
           when wait_for_high_lrclk =>
             if v_posedge_count >= G_NUM_POSEDGE-1 then
-              state                                   <= construct_l;
-              v_posedge_count                         := 0;
+              state            <= wait_for_low_bclk;
+              next_state       <= construct_l;
+              v_posedge_count  := 0;
             else
               if lrclk = '1' then
                 v_posedge_count := v_posedge_count + 1;
