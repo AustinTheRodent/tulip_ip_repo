@@ -101,7 +101,8 @@ begin
           when wait_for_high_lrclk =>
             if v_posedge_count >= G_NUM_POSEDGE-1 then
               serial_dout     <= din_left_store(symbol_pos_count);
-              state           <= output_l;
+              state           <= wait_for_low_bclk;
+              next_state      <= output_l;
               v_posedge_count := 0;
             else
               if lrclk = '1' then
