@@ -172,7 +172,6 @@ module wm8960_i2c
             i2c_sda_output    <= 1;
             i2c_sclk          <= 1;
             transaction_stage <= 0;
-            dout_valid        <= 1;
             clk_delay_amount  <= G_CLK_DIVIDER;
             state             <= SM_delay;
             next_state        <= SM_output;
@@ -490,9 +489,13 @@ module wm8960_i2c
 
         SM_output : begin
           if ( dout_valid == 1 && dout_ready == 1 ) begin
+			din_ready	<= 1;
             dout_valid  <= 0;
             state       <= SM_get_input;
           end
+		  else begin
+			dout_valid	<= 1;
+		  end
         end
 
         default : begin
