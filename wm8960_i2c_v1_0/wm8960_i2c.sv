@@ -15,6 +15,7 @@ module wm8960_i2c
   output logic        din_ready,
 
   inout  logic        i2c_sda,
+  output logic        i2c_sda_output,
   output logic        i2c_sclk,
 
   output logic [8:0]  dout_register_data,
@@ -24,7 +25,7 @@ module wm8960_i2c
 );
 
   logic sda_is_output;
-  logic i2c_sda_output;
+  //logic i2c_sda_output;
 
   logic [7:0] transaction_stage;
 
@@ -325,7 +326,7 @@ module wm8960_i2c
             state             <= SM_delay;
             next_state        <= SM_get_register_data_N;
           end
-          if ( transaction_stage == 1 ) begin
+          else if ( transaction_stage == 1 ) begin
             sda_is_output     <= 0;
             transaction_stage <= 2;
             clk_delay_amount  <= G_CLK_DIVIDER/2;

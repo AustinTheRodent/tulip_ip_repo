@@ -12,20 +12,31 @@ package axil_reg_file_pkg is
     FEEDBACK_MODE : std_logic_vector(0 downto 0);
   end record;
 
-  type SCRATCH_subreg_t is record
-    SCRATCH : std_logic_vector(31 downto 0);
+  type VERSION_subreg_t is record
+    VERSION : std_logic_vector(31 downto 0);
+  end record;
+
+  type I2C_CONTROL_subreg_t is record
+    I2C_IS_READ : std_logic_vector(0 downto 0);
+    DEVICE_ADDRESS : std_logic_vector(6 downto 0);
+    REGISTER_ADDRESS : std_logic_vector(6 downto 0);
+    REGISTER_WR_DATA : std_logic_vector(8 downto 0);
   end record;
 
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
-    SCRATCH_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    VERSION_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    I2C_CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
-    SCRATCH : SCRATCH_subreg_t;
+    VERSION : VERSION_subreg_t;
+    I2C_CONTROL : I2C_CONTROL_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
-    SCRATCH_REG_wr_pulse : std_logic;
+    VERSION_REG_wr_pulse : std_logic;
+    I2C_CONTROL_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
-    SCRATCH_REG_rd_pulse : std_logic;
+    VERSION_REG_rd_pulse : std_logic;
+    I2C_CONTROL_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -75,7 +86,8 @@ end entity;
 architecture rtl of axil_reg_file is
 
   constant CONTROL_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 0;
-  constant SCRATCH_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 4;
+  constant VERSION_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 4;
+  constant I2C_CONTROL_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 8;
 
   signal registers          : reg_t;
 
@@ -95,7 +107,11 @@ begin
 
   registers.CONTROL.ENABLE <= registers.CONTROL_REG(0 downto 0);
   registers.CONTROL.FEEDBACK_MODE <= registers.CONTROL_REG(1 downto 1);
-  registers.SCRATCH.SCRATCH <= registers.SCRATCH_REG(31 downto 0);
+  registers.VERSION.VERSION <= registers.VERSION_REG(31 downto 0);
+  registers.I2C_CONTROL.I2C_IS_READ <= registers.I2C_CONTROL_REG(23 downto 23);
+  registers.I2C_CONTROL.DEVICE_ADDRESS <= registers.I2C_CONTROL_REG(22 downto 16);
+  registers.I2C_CONTROL.REGISTER_ADDRESS <= registers.I2C_CONTROL_REG(15 downto 9);
+  registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
 
   registers_out <= registers;
 
@@ -120,10 +136,12 @@ begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
         registers.CONTROL_REG <= x"00000000";
-        registers.SCRATCH_REG <= x"DEADBEEF";
+        registers.VERSION_REG <= x"00000006";
+        registers.I2C_CONTROL_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
-        registers.SCRATCH_REG_wr_pulse <= '0';
+        registers.VERSION_REG_wr_pulse <= '0';
+        registers.I2C_CONTROL_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -131,7 +149,8 @@ begin
         case wr_state is
           when init =>
             registers.CONTROL_REG_wr_pulse <= '0';
-            registers.SCRATCH_REG_wr_pulse <= '0';
+            registers.VERSION_REG_wr_pulse <= '0';
+            registers.I2C_CONTROL_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -139,7 +158,8 @@ begin
 
           when get_addr =>
             registers.CONTROL_REG_wr_pulse <= '0';
-            registers.SCRATCH_REG_wr_pulse <= '0';
+            registers.VERSION_REG_wr_pulse <= '0';
+            registers.I2C_CONTROL_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -154,9 +174,12 @@ begin
                 when std_logic_vector(to_unsigned(CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.CONTROL_REG <= s_axi_wdata;
                   registers.CONTROL_REG_wr_pulse <= '1';
-                when std_logic_vector(to_unsigned(SCRATCH_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.SCRATCH_REG <= s_axi_wdata;
-                  registers.SCRATCH_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(VERSION_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.VERSION_REG <= s_axi_wdata;
+                  registers.VERSION_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.I2C_CONTROL_REG <= s_axi_wdata;
+                  registers.I2C_CONTROL_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -186,7 +209,8 @@ begin
         araddr            <= (others => '0');
         s_axi_rdata       <= (others => '0');
         registers.CONTROL_REG_rd_pulse <= '0';
-        registers.SCRATCH_REG_rd_pulse <= '0';
+        registers.VERSION_REG_rd_pulse <= '0';
+        registers.I2C_CONTROL_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -194,7 +218,8 @@ begin
         case rd_state is
           when init =>
             registers.CONTROL_REG_rd_pulse <= '0';
-            registers.SCRATCH_REG_rd_pulse <= '0';
+            registers.VERSION_REG_rd_pulse <= '0';
+            registers.I2C_CONTROL_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -202,7 +227,8 @@ begin
 
           when get_addr =>
             registers.CONTROL_REG_rd_pulse <= '0';
-            registers.SCRATCH_REG_rd_pulse <= '0';
+            registers.VERSION_REG_rd_pulse <= '0';
+            registers.I2C_CONTROL_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -214,8 +240,10 @@ begin
             case araddr is
               when std_logic_vector(to_unsigned(CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.CONTROL_REG;
-              when std_logic_vector(to_unsigned(SCRATCH_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                s_axi_rdata <= registers.SCRATCH_REG;
+              when std_logic_vector(to_unsigned(VERSION_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.VERSION_REG;
+              when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.I2C_CONTROL_REG;
               when others =>
                 null;
             end case;
@@ -224,8 +252,10 @@ begin
               case araddr is
                 when std_logic_vector(to_unsigned(CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.CONTROL_REG_rd_pulse <= '1';
-                when std_logic_vector(to_unsigned(SCRATCH_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.SCRATCH_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(VERSION_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.VERSION_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.I2C_CONTROL_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;

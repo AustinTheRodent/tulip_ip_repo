@@ -1,3 +1,5 @@
+#!/bin/python3
+
 def strip_newline(input_string):
   ret_string = input_string
   if ret_string == "":

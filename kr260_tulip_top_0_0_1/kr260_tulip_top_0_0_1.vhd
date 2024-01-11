@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work2;
 library work;
 use work.axil_reg_file_pkg.all;
 
@@ -33,8 +34,15 @@ entity kr260_tulip_top_0_0_1 is
     s_axi_rvalid  : out std_logic;
     s_axi_rready  : in  std_logic;
 
-    wm8960_i2c_sda  : inout std_logic;
-    wm8960_i2c_sclk : out   std_logic
+    wm8960_i2c_sda      : inout std_logic;
+    wm8960_i2c_sda_out  : out std_logic;
+    wm8960_i2c_sclk     : out   std_logic;
+
+    debug_i2c_din_device_address    : out std_logic_vector(6 downto 0);
+    debug_i2c_din_rd_wr             : out std_logic;
+    debug_i2c_din_register_address  : out std_logic_vector(6 downto 0);
+    debug_i2c_din_register_data     : out std_logic_vector(8 downto 0);
+    debug_i2c_din_valid             : out std_logic
 
   );
 end entity;
@@ -74,8 +82,14 @@ begin
       s_axi_rvalid  => s_axi_rvalid,
       s_axi_rready  => s_axi_rready,
 
-      registers_out => open
+      registers_out => registers
     );
+
+  debug_i2c_din_device_address    <= registers.I2C_CONTROL.DEVICE_ADDRESS;
+  debug_i2c_din_rd_wr             <= std_logic(registers.I2C_CONTROL.I2C_IS_READ(0));
+  debug_i2c_din_register_address  <= registers.I2C_CONTROL.REGISTER_ADDRESS;
+  debug_i2c_din_register_data     <= registers.I2C_CONTROL.REGISTER_WR_DATA;
+  debug_i2c_din_valid             <= registers.I2C_CONTROL_REG_wr_pulse;
 
   u_wm8960_i2c : entity work.wm8960_i2c
     generic map
@@ -84,20 +98,21 @@ begin
     )
     port map
     (
-      clk                   => clk,
+      clk                   => s_axi_aclk,
       reset                 => (not a_axi_aresetn),
       enable                => std_logic(registers.CONTROL.ENABLE(0)),
-
+  
       din_device_address    => registers.I2C_CONTROL.DEVICE_ADDRESS,
       din_rd_wr             => std_logic(registers.I2C_CONTROL.I2C_IS_READ(0)),
       din_register_address  => registers.I2C_CONTROL.REGISTER_ADDRESS,
       din_register_data     => registers.I2C_CONTROL.REGISTER_WR_DATA,
-      din_valid             => registers.I2C_CONTROL_wr_pulse,
+      din_valid             => registers.I2C_CONTROL_REG_wr_pulse,
       din_ready             => open,
-
+  
       i2c_sda               => wm8960_i2c_sda,
+      i2c_sda_output        => wm8960_i2c_sda_out,
       i2c_sclk              => wm8960_i2c_sclk,
-
+  
       dout_register_data    => open,
       dout_acks_received    => open,
       dout_valid            => open,
