@@ -14,8 +14,9 @@ module wm8960_i2c
   input  logic        din_valid,
   output logic        din_ready,
 
-  inout  logic        i2c_sda,
   output logic        i2c_sda_output,
+  input  logic        i2c_sda_input,
+  output logic        sda_is_output,
   output logic        i2c_sclk,
 
   output logic [8:0]  dout_register_data,
@@ -24,7 +25,7 @@ module wm8960_i2c
   input  logic        dout_ready
 );
 
-  logic sda_is_output;
+  //logic sda_is_output;
   //logic i2c_sda_output;
 
   logic [7:0] transaction_stage;
@@ -65,17 +66,6 @@ module wm8960_i2c
   logic [8:0]  register_data_store;
 
   ////////////////////////////////////////////////////////////////
-
-  //always_comb begin
-  //  if ( sda_is_output == 1 ) begin
-  //    i2c_sda  = i2c_sda_output;
-  //  end
-  //  else begin
-  //    i2c_sda  = 1'hz;
-  //  end
-  //end
-
-  assign i2c_sda = sda_is_output ? i2c_sda_output : 1'hz;
 
   always @ (posedge clk) begin
     if ( reset == 1 || enable == 0 ) begin
@@ -305,7 +295,7 @@ module wm8960_i2c
             next_state        <= SM_get_register_data_0;
           end
           else if ( transaction_stage == 3 ) begin
-            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda;
+            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda_input;
             transaction_stage <= 4;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
@@ -341,7 +331,7 @@ module wm8960_i2c
             next_state        <= SM_get_register_data_N;
           end
           else if ( transaction_stage == 3 ) begin
-            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda;
+            dout_register_data[C_REG_DATA_WIDTH-byte_counter-1] <= i2c_sda_input;
             transaction_stage <= 4;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
@@ -447,7 +437,7 @@ module wm8960_i2c
             next_state        <= SM_get_ack;
           end
           else if ( transaction_stage == 3 ) begin
-            dout_acks_received[ack_counter] <= ~i2c_sda;
+            dout_acks_received[ack_counter] <= ~i2c_sda_input;
             transaction_stage <= 4;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
