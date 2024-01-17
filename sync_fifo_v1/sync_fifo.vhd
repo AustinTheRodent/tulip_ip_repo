@@ -2,8 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- todo: add buffers
-
 entity sync_fifo is
   generic
   (

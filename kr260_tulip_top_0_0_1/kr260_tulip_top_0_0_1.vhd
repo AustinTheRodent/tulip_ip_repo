@@ -36,11 +36,15 @@ entity kr260_tulip_top_0_0_1 is
     s_axi_rvalid  : out std_logic;
     s_axi_rready  : in  std_logic;
 
-    wm8960_i2c_sda      : inout std_logic;
-    wm8960_i2c_sda_output : out std_logic;
-    wm8960_i2c_sclk     : out   std_logic;
+    wm8960_i2c_sda        : inout std_logic;
+    wm8960_i2c_sda_output : out   std_logic;
+    wm8960_i2c_sclk       : out   std_logic;
 
-    debug_inout_test    : inout std_logic
+    bclk                  : in  std_logic;
+    dac_lrclk             : in  std_logic;
+    dac_data              : out std_logic;
+    adc_lrclk             : in  std_logic;
+    adc_data              : in  std_logic
 
   );
 end entity;
@@ -58,21 +62,16 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal i2c_sda_input  : std_logic;
   signal sda_is_output  : std_logic;
 
-begin
+  signal adc_l      : std_logic_vector(31 downto 0);
+  signal adc_r      : std_logic_vector(31 downto 0);
+  signal adc_l_buff : std_logic_vector(31 downto 0);
+  signal adc_r_buff : std_logic_vector(31 downto 0);
+  signal adc_valid  : std_logic;
 
-  IOBUF_inst : IOBUF
-    generic map
-    (
-      DRIVE       => 12,
-      IOSTANDARD  => "DEFAULT",
-      SLEW        => "SLOW")
-    port map
-    (
-      O           => open,     -- Buffer output
-      IO          => debug_inout_test,   -- Buffer inout port (connect directly to top-level port)
-      I           => registers.INOUT_TEST.WR_OUTPUT_LEVEL(0),     -- Buffer input
-      T           => (not registers.INOUT_TEST.OUTPUT_ENABLE(0))      -- 3-state enable input, high=input, low=output
-    );
+  signal dac_l      : std_logic_vector(31 downto 0);
+  signal dac_r      : std_logic_vector(31 downto 0);
+
+begin
 
   u_reg_file : entity work.axil_reg_file
     port map
@@ -170,6 +169,83 @@ begin
       dout_acks_received    => wm8960_i2c_acks,
       dout_valid            => wm8960_i2c_dout_valid(0),
       dout_ready            => '1'
+    );
+
+  u_i2s_to_parallel : entity work.i2s_to_parallel
+    generic map
+    (
+      G_NUM_POSEDGE => 3, -- used for debounce filter
+      G_DWIDTH      => 32,
+      G_LSB_FIRST   => false
+    )
+    port map
+    (
+      clk           => s_axi_aclk,
+      reset         => (not a_axi_aresetn),
+      enable        => std_logic(registers.CONTROL.ENABLE(0)),
+
+      error         => open,
+
+      bclk          => bclk,
+      lrclk         => adc_lrclk,
+      serial_din    => adc_data,
+
+      dout_left     => adc_l,
+      dout_right    => adc_r,
+      dout_valid    => adc_valid,
+      dout_ready    => '1'
+    );
+
+  -- todo: add (shallow) fifo
+  u_i2s_fifo : entity work.axis_sync_fifo
+    generic map
+    (
+      G_ADDR_WIDTH    => 9,
+      G_DATA_WIDTH    => 64,
+      G_BUFFER_INPUT  => true,
+      G_BUFFER_OUTPUT => true
+    )
+    port map
+    (
+      clk             => s_axi_aclk,
+      reset           => (not a_axi_aresetn),
+      enable          => std_logic(registers.CONTROL.ENABLE(0)),
+
+      din             => (others => '0'),
+      din_valid       => '0',
+      din_ready       => open,
+      din_last        => '0',
+
+      dout            => open,
+      dout_valid      => open,
+      dout_ready      => '0',
+      dout_last       => open
+    );
+
+
+  u_parallel_to_i2s : entity work.parallel_to_i2s
+    generic map
+    (
+      G_NUM_POSEDGE => 3, -- used for debounce filter
+      G_DWIDTH      => 32,
+      G_LSB_FIRST   => false
+    )
+    port map
+    (
+      clk           => s_axi_aclk,
+      reset         => (not a_axi_aresetn),
+      enable        => std_logic(registers.CONTROL.ENABLE(0)),
+
+      error         => open,
+
+      din_left      => dac_l,
+      din_right     => dac_r,
+      din_valid     => '1',
+      din_ready     => open,
+
+      bclk          => bclk,
+      lrclk         => dac_lrclk,
+      serial_dout   => dac_data
     );
 
 end rtl;

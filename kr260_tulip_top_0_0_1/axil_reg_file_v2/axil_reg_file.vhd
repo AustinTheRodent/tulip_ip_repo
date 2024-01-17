@@ -157,7 +157,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"00000009";
+        registers.VERSION_REG <= x"0000000A";
         registers.I2C_STATUS_REG <= x"00000000";
       else
         if s_VERSION_VERSION_v = '1' then 
