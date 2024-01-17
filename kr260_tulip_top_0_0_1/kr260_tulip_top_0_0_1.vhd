@@ -70,6 +70,14 @@ architecture rtl of kr260_tulip_top_0_0_1 is
 
   signal dac_l      : std_logic_vector(31 downto 0);
   signal dac_r      : std_logic_vector(31 downto 0);
+  signal dac_ready  : std_logic;
+
+  signal i2s_fifo_din        : std_logic_vector(63 downto 0);
+  signal i2s_fifo_din_valid  : std_logic;
+  signal i2s_fifo_din_ready  : std_logic;
+  signal i2s_fifo_dout       : std_logic_vector(63 downto 0);
+  signal i2s_fifo_dout_valid : std_logic;
+  signal i2s_fifo_dout_ready : std_logic;
 
 begin
 
@@ -196,7 +204,9 @@ begin
       dout_ready    => '1'
     );
 
-  -- todo: add (shallow) fifo
+  i2s_fifo_din        <= adc_l & adc_r;
+  i2s_fifo_din_valid  <= adc_valid;
+
   u_i2s_fifo : entity work.axis_sync_fifo
     generic map
     (
@@ -211,17 +221,20 @@ begin
       reset           => (not a_axi_aresetn),
       enable          => std_logic(registers.CONTROL.ENABLE(0)),
 
-      din             => (others => '0'),
-      din_valid       => '0',
-      din_ready       => open,
+      din             => i2s_fifo_din,
+      din_valid       => i2s_fifo_din_valid,
+      din_ready       => i2s_fifo_din_ready,
       din_last        => '0',
 
-      dout            => open,
-      dout_valid      => open,
-      dout_ready      => '0',
+      dout            => i2s_fifo_dout,
+      dout_valid      => i2s_fifo_dout_valid,
+      dout_ready      => i2s_fifo_dout_ready,
       dout_last       => open
     );
 
+  dac_l                <= i2s_fifo_dout(63 downto 32);
+  dac_r                <= i2s_fifo_dout(31 downto 0);
+  i2s_fifo_dout_ready  <= dac_ready;
 
   u_parallel_to_i2s : entity work.parallel_to_i2s
     generic map
@@ -241,7 +254,7 @@ begin
       din_left      => dac_l,
       din_right     => dac_r,
       din_valid     => '1',
-      din_ready     => open,
+      din_ready     => dac_ready,
 
       bclk          => bclk,
       lrclk         => dac_lrclk,
