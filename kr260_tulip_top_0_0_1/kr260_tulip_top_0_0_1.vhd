@@ -139,7 +139,8 @@ begin
     (
       DRIVE       => 12,
       IOSTANDARD  => "DEFAULT",
-      SLEW        => "SLOW")
+      SLEW        => "SLOW"
+    )
     port map
     (
       O           => i2c_sda_input,       -- Buffer output
