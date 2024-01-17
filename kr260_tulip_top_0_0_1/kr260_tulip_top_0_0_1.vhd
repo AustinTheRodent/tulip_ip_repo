@@ -211,7 +211,7 @@ begin
   u_i2s_fifo : entity work.axis_sync_fifo
     generic map
     (
-      G_ADDR_WIDTH    => 9,
+      G_ADDR_WIDTH    => 5,
       G_DATA_WIDTH    => 64,
       G_BUFFER_INPUT  => true,
       G_BUFFER_OUTPUT => true
