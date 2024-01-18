@@ -78,6 +78,8 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal i2s_fifo_dout       : std_logic_vector(63 downto 0);
   signal i2s_fifo_dout_valid : std_logic;
   signal i2s_fifo_dout_ready : std_logic;
+  constant C_I2S_FIFO_AWIDTH : integer := 3;
+  signal i2s_fifo_used       : std_logic_vector(C_I2S_FIFO_AWIDTH-1 downto 0);
 
 begin
 
@@ -226,6 +228,8 @@ begin
       din_valid       => i2s_fifo_din_valid,
       din_ready       => i2s_fifo_din_ready,
       din_last        => '0',
+
+      used            => i2s_fifo_used,
 
       dout            => i2s_fifo_dout,
       dout_valid      => i2s_fifo_dout_valid,
