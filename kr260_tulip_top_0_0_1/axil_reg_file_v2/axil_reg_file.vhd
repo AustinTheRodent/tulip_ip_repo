@@ -8,8 +8,8 @@ package axil_reg_file_pkg is
   constant C_REG_FILE_ADDR_WIDTH : integer := 12;
 
   type CONTROL_subreg_t is record
-    ENABLE : std_logic_vector(0 downto 0);
-    FEEDBACK_MODE : std_logic_vector(0 downto 0);
+    I2S_ENABLE : std_logic_vector(0 downto 0);
+    SW_RESETN : std_logic_vector(0 downto 0);
   end record;
 
   type I2C_CONTROL_subreg_t is record
@@ -142,8 +142,8 @@ architecture rtl of axil_reg_file is
 
 begin
 
-  registers.CONTROL.ENABLE <= registers.CONTROL_REG(0 downto 0);
-  registers.CONTROL.FEEDBACK_MODE <= registers.CONTROL_REG(1 downto 1);
+  registers.CONTROL.I2S_ENABLE <= registers.CONTROL_REG(1 downto 1);
+  registers.CONTROL.SW_RESETN <= registers.CONTROL_REG(0 downto 0);
   registers.I2C_CONTROL.I2C_IS_READ <= registers.I2C_CONTROL_REG(23 downto 23);
   registers.I2C_CONTROL.DEVICE_ADDRESS <= registers.I2C_CONTROL_REG(22 downto 16);
   registers.I2C_CONTROL.REGISTER_ADDRESS <= registers.I2C_CONTROL_REG(15 downto 9);
