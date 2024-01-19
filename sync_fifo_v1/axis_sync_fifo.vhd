@@ -21,7 +21,7 @@ entity axis_sync_fifo is
     din_ready       : out std_logic;
     din_last        : in  std_logic;
 
-    used            : in  std_logic_vector(G_ADDR_WIDTH-1 downto 0);
+    used            : out std_logic_vector(G_ADDR_WIDTH-1 downto 0);
 
     dout            : out std_logic_vector(G_DATA_WIDTH-1 downto 0);
     dout_valid      : out std_logic;

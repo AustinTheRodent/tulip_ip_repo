@@ -44,7 +44,15 @@ entity kr260_tulip_top_0_0_1 is
     dac_lrclk             : in  std_logic;
     dac_data              : out std_logic;
     adc_lrclk             : in  std_logic;
-    adc_data              : in  std_logic
+    adc_data              : in  std_logic;
+
+    dbg_fifo_din          : out std_logic_vector(63 downto 0);
+    dbg_fifo_din_valid    : out std_logic;
+    dbg_fifo_din_ready    : out std_logic;
+    dbg_fifo_dout         : out std_logic_vector(63 downto 0);
+    dbg_fifo_dout_valid   : out std_logic;
+    dbg_fifo_dout_ready   : out std_logic
+
 
   );
 end entity;
@@ -72,6 +80,9 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal dac_r      : std_logic_vector(31 downto 0);
   signal dac_ready  : std_logic;
 
+  signal i2s_adc_error  : std_logic_vector(0 downto 0);
+  signal i2s_dac_error  : std_logic_vector(0 downto 0);
+
   signal i2s_fifo_din        : std_logic_vector(63 downto 0);
   signal i2s_fifo_din_valid  : std_logic;
   signal i2s_fifo_din_ready  : std_logic;
@@ -82,6 +93,13 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal i2s_fifo_used       : std_logic_vector(C_I2S_FIFO_AWIDTH-1 downto 0);
 
 begin
+
+  dbg_fifo_din          <= i2s_fifo_din;
+  dbg_fifo_din_valid    <= i2s_fifo_din_valid;
+  dbg_fifo_din_ready    <= i2s_fifo_din_ready;
+  dbg_fifo_dout         <= i2s_fifo_dout;
+  dbg_fifo_dout_valid   <= i2s_fifo_dout_valid;
+  dbg_fifo_dout_ready   <= i2s_fifo_dout_ready;
 
   u_reg_file : entity work.axil_reg_file
     port map
@@ -109,6 +127,15 @@ begin
   
       s_I2C_STATUS_REGISTER_RD_DATA   => wm8960_i2c_register_read_data,
       s_I2C_STATUS_REGISTER_RD_DATA_v => wm8960_i2c_dout_valid(0),
+
+      s_I2S_STATUS_ADC_ERROR          => i2s_adc_error,
+      s_I2S_STATUS_ADC_ERROR_v        => '1',
+
+      s_I2S_STATUS_DAC_ERROR          => i2s_dac_error,
+      s_I2S_STATUS_DAC_ERROR_v        => '1',
+
+      s_I2S_FIFO_FIFO_USED            => std_logic_vector(resize(unsigned(i2s_fifo_used), 16)),
+      s_I2S_FIFO_FIFO_USED_v          => '1',
 
 
       s_axi_awaddr  => s_axi_awaddr,
@@ -195,7 +222,7 @@ begin
       reset         => (not a_axi_aresetn),
       enable        => std_logic(registers.CONTROL.ENABLE(0)),
 
-      error         => open,
+      error         => i2s_adc_error(0),
 
       bclk          => bclk,
       lrclk         => adc_lrclk,
@@ -213,8 +240,8 @@ begin
   u_i2s_fifo : entity work.axis_sync_fifo
     generic map
     (
-      G_ADDR_WIDTH    => 5,
-      G_DATA_WIDTH    => 64,
+      G_ADDR_WIDTH    => C_I2S_FIFO_AWIDTH,
+      G_DATA_WIDTH    => adc_l'length + adc_r'length,
       G_BUFFER_INPUT  => true,
       G_BUFFER_OUTPUT => true
     )
@@ -254,7 +281,7 @@ begin
       reset         => (not a_axi_aresetn),
       enable        => std_logic(registers.CONTROL.ENABLE(0)),
 
-      error         => open,
+      error         => i2s_dac_error(0),
 
       din_left      => dac_l,
       din_right     => dac_r,
