@@ -7,8 +7,8 @@
 #name type address reset_val
 
 CONTROL RW 0x000 0x00000000 {
-  ENABLE [0:0]
-  FEEDBACK_MODE [1:1]
+  I2S_ENABLE [1:1]
+  SW_RESETN [0:0]
 }
 
 VERSION RO 0x004 0x0000000C {
