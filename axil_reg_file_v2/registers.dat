@@ -5,6 +5,7 @@
 (KR260_TULIP_REGISTERS)
 
 [REG_FILE_DATA_WIDTH 32]
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes)
 [REG_FILE_ADDR_WIDTH 12]
 
 #name type address reset_val
