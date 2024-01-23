@@ -1,6 +1,9 @@
 # RW = read/write
 # RO = read only
 
+#name of the register set, used for H file header guard:
+(KR260_TULIP_REGISTERS)
+
 [REG_FILE_DATA_WIDTH 32]
 [REG_FILE_ADDR_WIDTH 12]
 
