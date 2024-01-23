@@ -323,7 +323,7 @@ def write_h_file(data_file_name, constants, registers, sub_registers):
     line = strip_whitespace(strip_newline(line))
     try:
       if line[0] == "(":
-        registers_name = line[1:-1]
+        registers_name = strip_whitespace(line[1:-1])
         break
     except:
       pass
