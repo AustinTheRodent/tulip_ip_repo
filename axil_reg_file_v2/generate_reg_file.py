@@ -356,6 +356,9 @@ def write_h_file(data_file_name, constants, registers, sub_registers):
       f.write("#define %s_%s_SHIFT %i\n" % (reg_name, subreg_name, lshift))
       print("%s_%s_MASK 0x%X" % (reg_name, subreg_name, mask))
       print("%s_%s_SHIFT %i" % (reg_name, subreg_name, lshift))
+      if mask_len == 1:
+        f.write("#define %s_%s (0x%X)\n" % (reg_name, subreg_name, 1<<lshift))
+        print("%s_%s (0x%X)" % (reg_name, subreg_name, 1<<lshift))
     f.write("\n")
     print("")
 
