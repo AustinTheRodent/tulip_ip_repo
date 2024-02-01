@@ -1,20 +1,20 @@
 module polynomial_estimator
 #(
-  parameter int G_POLY_ORDER = 5,
-  parameter int G_DWIDTH = 24
+  parameter  int G_POLY_ORDER = 5,
+  localparam int C_FP_DWIDTH = 32
 )
 (
-  input  logic                clk,
-  input  logic                reset,
-  input  logic                enable,
+  input  logic                   clk,
+  input  logic                   reset,
+  input  logic                   enable,
 
-  input  logic [G_DWIDTH-1:0] din,
-  input  logic                din_valid,
-  output logic                din_ready,
+  input  logic [C_FP_DWIDTH-1:0] din,
+  input  logic                   din_valid,
+  output logic                   din_ready,
 
-  output logic [G_DWIDTH-1:0] dout,
-  output logic                dout_valid,
-  input  logic                dout_ready
+  output logic [C_FP_DWIDTH-1:0] dout,
+  output logic                   dout_valid,
+  input  logic                   dout_ready
 
 );
 
@@ -35,6 +35,8 @@ module polynomial_estimator
 
   logic [G_DWIDTH-1:0] input_store;
 
+  float_t taps [0:G_POLY_ORDER-1];
+
 //////////////////////////////////////////
 
   always @ (posedge clk) begin
@@ -44,7 +46,7 @@ module polynomial_estimator
     else begin
       case (state)
         SM_INIT : begin
-          accumulate_reg <= 0;
+          //accumulate_reg <= 0;
           state          <= SM_GET_INPUT;
         end
         SM_GET_INPUT : begin
@@ -54,6 +56,7 @@ module polynomial_estimator
           end
         end
         SM_CALCULATE_STAGE_0 : begin
+          
         end
         SM_POWER_STAGE_N : begin
         end
