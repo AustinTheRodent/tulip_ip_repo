@@ -431,7 +431,7 @@ begin
 
   ps_2_i2s_fifo_avail <= std_logic_vector(to_unsigned(2**C_PS_2_I2S_FIFO_AWIDTH-1, ps_2_i2s_fifo_used'length) - unsigned(ps_2_i2s_fifo_used));
 
-  ps_2_i2s_fifo_dout_ready <=  i2s_fifo_din_ready;
+  ps_2_i2s_fifo_dout_ready <=  i2s_fifo_din_valid and i2s_fifo_din_ready;
 
   ps_2_i2s_fifo_dout_l <= ps_2_i2s_fifo_dout(2*C_ADC_RESOLUTION-1 downto C_ADC_RESOLUTION);
   ps_2_i2s_fifo_dout_r <= ps_2_i2s_fifo_dout(C_ADC_RESOLUTION-1 downto 0);
