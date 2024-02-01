@@ -63,8 +63,8 @@ module polynomial_estimator
     else begin
       case (state)
         SM_INIT : begin
-          //accumulate_reg <= 0;
-          state          <= SM_GET_INPUT;
+          din_ready <= 1;
+          state     <= SM_GET_INPUT;
         end
         SM_GET_INPUT : begin
           if (din_valid == 1 && din_ready == 1) begin
@@ -91,7 +91,6 @@ module polynomial_estimator
           if (float_mult_dout_valid == 1) begin
             if (mult_counter == stage_counter-1) begin
               float_mult_dout_store  <= float_mult_dout;
-              stage_counter          <= stage_counter + 1;
               state                  <= SM_ADD_STAGE_OUTPUT;
               mult_counter           <= 0;
               float_mult_din_valid   <= 0;
@@ -112,10 +111,30 @@ module polynomial_estimator
           float_add_din2      <= float_mult_dout_store;
           
           if (float_add_dout_valid == 1) begin
-            accumulate_reg <= float_add_dout;
+            accumulate_reg      <= float_add_dout;
             float_add_din_valid <= 0;
+            if (stage_counter == G_POLY_ORDER-1) begin
+              stage_counter <= 0;
+              dout          <= accumulate_reg;
+              dout_valid    <= 1;
+              state         <= SM_SEND_OUTPUT;
+            end
+            else begin
+              stage_counter <= stage_counter + 1;
+              state         <= SM_START_STAGE_N;
+            end
           end
           else begin
+            float_add_din_valid <= 1;
+          end
+        end
+
+        SM_SEND_OUTPUT : begin
+          if (dout_valid == 1 && dout_ready == 1) begin
+            dout_valid <= 0;
+            din_ready  <= 1;
+            state      <= SM_GET_INPUT;
+          end
         end
 
         default : begin
