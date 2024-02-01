@@ -6,8 +6,6 @@ entity floating_point_add_valid_only is
   port
   (
     clk             : in  std_logic;
-    reset           : in  std_logic;
-    enable          : in  std_logic;
 
     din1            : in  std_logic_vector(31 downto 0);
     din2            : in  std_logic_vector(31 downto 0);
