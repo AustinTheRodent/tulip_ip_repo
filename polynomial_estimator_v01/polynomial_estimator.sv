@@ -34,7 +34,11 @@ module polynomial_estimator
   float_t accumulate_reg;
 
   float_t input_store;
-  float_t x;
+  float_t float_mult_din1;
+  float_t float_mult_din2;
+  logic float_mult_din_valid;
+  float_t float_mult_dout;
+  logic float_mult_dout_valid;
 
   float_t taps [0:G_POLY_ORDER-1];
 
@@ -77,16 +81,14 @@ module polynomial_estimator
   floating_point_mult_valid_only
   u_floating_point_mult_valid_only
     (
-      .clk             (),
-      .reset           (),
-      .enable          (),
+      .clk             (clk),
 
-      .din1            (),
-      .din2            (),
-      .din_valid       (),
+      .din1            (float_mult_din1),
+      .din2            (float_mult_din2),
+      .din_valid       (float_mult_din_valid),
 
-      .dout            (),
-      .dout_valid      ()
+      .dout            (float_mult_dout),
+      .dout_valid      (float_mult_dout_valid)
     );
   
 entity floating_point_add_valid_only is
