@@ -23,7 +23,7 @@ module polynomial_estimator
     SM_INIT,
     SM_GET_INPUT,
     SM_CALCULATE_STAGE_0,
-    SM_POWER_STAGE_N,
+    SM_START_STAGE_N,
     SM_GET_STAGE_OUTPUT,
     SM_ADD_STAGE_OUTPUT,
     SM_SEND_OUTPUT
@@ -43,6 +43,7 @@ module polynomial_estimator
   float_t taps [0:G_POLY_ORDER-1];
 
   logic unsigned [7:0] stage_counter;
+  logic unsigned [7:0] mult_counter;
 
 //////////////////////////////////////////
 
@@ -66,10 +67,34 @@ module polynomial_estimator
         SM_CALCULATE_STAGE_0 : begin
           accumulate_reg <= taps[0];
           stage_counter  <= 1;
-          state 
+          mult_counter   <= 0;
+          state          <= SM_START_STAGE_N;
         end
 
-        SM_POWER_STAGE_N : begin
+        SM_START_STAGE_N : begin
+          float_mult_din1      <= input_store;
+          float_mult_din2      <= taps[stage_counter];
+          float_mult_din_valid <= 1;
+          state                <= SM_GET_STAGE_N;
+        end
+
+        SM_GET_STAGE_N : begin
+          if (float_mult_dout_valid == 1) begin
+            if (mult_counter == stage_counter-1) begin
+              stage_counter        <= stage_counter + 1;
+              state                <= SM_ADD_STAGE_OUTPUT;
+              mult_counter         <= 0;
+              float_mult_din_valid <= 0;
+            end
+            else begin
+              float_mult_din1      <= float_mult_dout;
+              float_mult_din2      <= taps[stage_counter];
+              float_mult_din_valid <= 1;
+            end
+          end
+          else begin
+            float_mult_din_valid   <= 0;
+          end
         end
 
         default: begin
