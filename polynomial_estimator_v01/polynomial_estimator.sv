@@ -22,7 +22,6 @@ module polynomial_estimator
   {
     SM_INIT,
     SM_GET_INPUT,
-    SM_CALCULATE_STAGE_0,
     SM_START_STAGE_N,
     SM_GET_STAGE_N,
     SM_ADD_STAGE_OUTPUT,
@@ -56,6 +55,8 @@ module polynomial_estimator
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
+      din_ready            <= 0;
+      dout_valid           <= 0;
       float_mult_din_valid <= 0;
       float_add_din_valid  <= 0;
       state <= SM_INIT;
@@ -68,16 +69,13 @@ module polynomial_estimator
         end
         SM_GET_INPUT : begin
           if (din_valid == 1 && din_ready == 1) begin
-            input_store <= din;
-            state       <= SM_CALCULATE_STAGE_0;
+            din_ready      <= 0;
+            input_store    <= din;
+            accumulate_reg <= taps[0];
+            stage_counter  <= 1;
+            mult_counter   <= 0;
+            state          <= SM_START_STAGE_N;
           end
-        end
-
-        SM_CALCULATE_STAGE_0 : begin
-          accumulate_reg <= taps[0];
-          stage_counter  <= 1;
-          mult_counter   <= 0;
-          state          <= SM_START_STAGE_N;
         end
 
         SM_START_STAGE_N : begin
