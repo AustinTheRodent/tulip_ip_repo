@@ -24,7 +24,7 @@ module polynomial_estimator
     SM_GET_INPUT,
     SM_CALCULATE_STAGE_0,
     SM_START_STAGE_N,
-    SM_GET_STAGE_OUTPUT,
+    SM_GET_STAGE_N,
     SM_ADD_STAGE_OUTPUT,
     SM_SEND_OUTPUT
   } state_t;
@@ -38,7 +38,14 @@ module polynomial_estimator
   float_t float_mult_din2;
   logic float_mult_din_valid;
   float_t float_mult_dout;
+  float_t float_mult_dout_store;
   logic float_mult_dout_valid;
+
+  float_t float_add_din1;
+  float_t float_add_din2;
+  logic float_add_din_valid;
+  float_t float_add_dout;
+  logic float_add_dout_valid;
 
   float_t taps [0:G_POLY_ORDER-1];
 
@@ -49,6 +56,8 @@ module polynomial_estimator
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
+      float_mult_din_valid <= 0;
+      float_add_din_valid  <= 0;
       state <= SM_INIT;
     end
     else begin
@@ -81,23 +90,35 @@ module polynomial_estimator
         SM_GET_STAGE_N : begin
           if (float_mult_dout_valid == 1) begin
             if (mult_counter == stage_counter-1) begin
-              stage_counter        <= stage_counter + 1;
-              state                <= SM_ADD_STAGE_OUTPUT;
-              mult_counter         <= 0;
-              float_mult_din_valid <= 0;
+              float_mult_dout_store  <= float_mult_dout;
+              stage_counter          <= stage_counter + 1;
+              state                  <= SM_ADD_STAGE_OUTPUT;
+              mult_counter           <= 0;
+              float_mult_din_valid   <= 0;
             end
             else begin
-              float_mult_din1      <= float_mult_dout;
-              float_mult_din2      <= taps[stage_counter];
-              float_mult_din_valid <= 1;
+              float_mult_din1        <= float_mult_dout;
+              float_mult_din2        <= taps[stage_counter];
+              float_mult_din_valid   <= 1;
             end
           end
           else begin
-            float_mult_din_valid   <= 0;
+            float_mult_din_valid     <= 0;
           end
         end
 
-        default: begin
+        SM_ADD_STAGE_OUTPUT : begin
+          float_add_din1      <= accumulate_reg;
+          float_add_din2      <= float_mult_dout_store;
+          
+          if (float_add_dout_valid == 1) begin
+            accumulate_reg <= float_add_dout;
+            float_add_din_valid <= 0;
+          end
+          else begin
+        end
+
+        default : begin
         end
       endcase
     end
@@ -116,19 +137,17 @@ module polynomial_estimator
       .dout_valid      (float_mult_dout_valid)
     );
   
-entity floating_point_add_valid_only is
-  port
-  (
-    clk             : in  std_logic;
-    reset           : in  std_logic;
-    enable          : in  std_logic;
+  floating_point_add_valid_only
+  u_floating_point_add_valid_only
+    (
+      .clk             (clk),
 
-    din1            : in  std_logic_vector(31 downto 0);
-    din2            : in  std_logic_vector(31 downto 0);
-    din_valid       : in  std_logic;
+      .din1            (float_add_din1),
+      .din2            (float_add_din2),
+      .din_valid       (float_add_din_valid),
 
-    dout            : out std_logic_vector(31 downto 0);
-    dout_valid      : out std_logic
-  );
+      .dout            (float_add_dout),
+      .dout_valid      (float_add_dout_valid)
+    );
   
 endmodule
