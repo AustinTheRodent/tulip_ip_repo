@@ -33,9 +33,12 @@ module polynomial_estimator
   typedef logic [31:0] float_t;
   float_t accumulate_reg;
 
-  logic [G_DWIDTH-1:0] input_store;
+  float_t input_store;
+  float_t x;
 
   float_t taps [0:G_POLY_ORDER-1];
+
+  logic unsigned [7:0] stage_counter;
 
 //////////////////////////////////////////
 
@@ -55,9 +58,13 @@ module polynomial_estimator
             state       <= SM_CALCULATE_STAGE_0;
           end
         end
+
         SM_CALCULATE_STAGE_0 : begin
-          
+          accumulate_reg <= taps[0];
+          stage_counter  <= 1;
+          state 
         end
+
         SM_POWER_STAGE_N : begin
         end
 
@@ -67,6 +74,21 @@ module polynomial_estimator
     end
   end
 
+  floating_point_mult_valid_only
+  u_floating_point_mult_valid_only
+    (
+      .clk             (),
+      .reset           (),
+      .enable          (),
+
+      .din1            (),
+      .din2            (),
+      .din_valid       (),
+
+      .dout            (),
+      .dout_valid      ()
+    );
+  
 entity floating_point_add_valid_only is
   port
   (
