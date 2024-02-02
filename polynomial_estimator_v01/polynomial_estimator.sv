@@ -8,6 +8,11 @@ module polynomial_estimator
   input  logic                   reset,
   input  logic                   enable,
 
+  input  logic [C_FP_DWIDTH-1:0] taps_prog_din,
+  input  logic                   taps_prog_din_valid,
+  output logic                   taps_prog_din_ready,
+  output logic                   taps_prog_done,
+
   input  logic [C_FP_DWIDTH-1:0] din,
   input  logic                   din_valid,
   output logic                   din_ready,
@@ -21,6 +26,7 @@ module polynomial_estimator
   typedef enum
   {
     SM_INIT,
+    SM_PROG_TAPS,
     SM_GET_INPUT,
     SM_START_STAGE_N,
     SM_GET_STAGE_N,
@@ -50,6 +56,7 @@ module polynomial_estimator
 
   logic unsigned [7:0] stage_counter;
   logic unsigned [7:0] mult_counter;
+  logic unsigned [7:0] taps_prog_counter;
 
 //////////////////////////////////////////
 
@@ -59,14 +66,35 @@ module polynomial_estimator
       dout_valid           <= 0;
       float_mult_din_valid <= 0;
       float_add_din_valid  <= 0;
+      taps_prog_din_ready  <= 0;
+      taps_prog_done       <= 0;
       state <= SM_INIT;
     end
     else begin
       case (state)
         SM_INIT : begin
-          din_ready <= 1;
-          state     <= SM_GET_INPUT;
+          taps_prog_din_ready <= 1;
+          taps_prog_counter   <= 0;
+          state               <= SM_PROG_TAPS;
         end
+
+        SM_PROG_TAPS : begin
+          if (taps_prog_din_valid == 1 && taps_prog_din_ready == 1) begin
+
+            taps[taps_prog_counter] <= taps_prog_din;
+
+            if (taps_prog_counter == G_POLY_ORDER-1) begin
+              taps_prog_din_ready   <= 0;
+              taps_prog_done        <= 1;
+              din_ready             <= 1;
+              state                 <= SM_GET_INPUT;
+            end
+            else begin
+              taps_prog_counter     <= taps_prog_counter + 1;
+            end
+          end
+        end
+
         SM_GET_INPUT : begin
           if (din_valid == 1 && din_ready == 1) begin
             din_ready      <= 0;
