@@ -123,7 +123,8 @@ module polynomial_estimator
             end
             else begin
               float_mult_din1        <= float_mult_dout;
-              float_mult_din2        <= taps[stage_counter];
+              float_mult_din2        <= input_store;
+              mult_counter           <= mult_counter + 1;
               float_mult_din_valid   <= 1;
             end
           end
@@ -135,13 +136,13 @@ module polynomial_estimator
         SM_ADD_STAGE_OUTPUT : begin
           float_add_din1      <= accumulate_reg;
           float_add_din2      <= float_mult_dout_store;
-          
+
           if (float_add_dout_valid == 1) begin
             accumulate_reg      <= float_add_dout;
             float_add_din_valid <= 0;
             if (stage_counter == G_POLY_ORDER-1) begin
               stage_counter <= 0;
-              dout          <= accumulate_reg;
+              dout          <= float_add_dout;
               dout_valid    <= 1;
               state         <= SM_SEND_OUTPUT;
             end
@@ -181,7 +182,7 @@ module polynomial_estimator
       .dout            (float_mult_dout),
       .dout_valid      (float_mult_dout_valid)
     );
-  
+
   floating_point_add_valid_only
   u_floating_point_add_valid_only
     (
@@ -194,5 +195,5 @@ module polynomial_estimator
       .dout            (float_add_dout),
       .dout_valid      (float_add_dout_valid)
     );
-  
+
 endmodule
