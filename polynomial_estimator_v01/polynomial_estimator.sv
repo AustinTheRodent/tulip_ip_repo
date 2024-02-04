@@ -20,7 +20,6 @@ module polynomial_estimator
   output logic [C_FP_DWIDTH-1:0] dout,
   output logic                   dout_valid,
   input  logic                   dout_ready
-
 );
 
   typedef enum
