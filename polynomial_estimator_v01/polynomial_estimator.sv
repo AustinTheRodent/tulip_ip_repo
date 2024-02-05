@@ -1,26 +1,33 @@
+//todo: add symetric mode
+
 module polynomial_estimator
 #(
   parameter  int G_POLY_ORDER = 5,
   localparam int C_FP_DWIDTH = 32
 )
 (
-  input  logic                   clk,
-  input  logic                   reset,
-  input  logic                   enable,
+  input  logic                    clk,
+  input  logic                    reset,
+  input  logic                    enable,
+  input  logic                    bypass,
 
-  input  logic [C_FP_DWIDTH-1:0] taps_prog_din,
-  input  logic                   taps_prog_din_valid,
-  output logic                   taps_prog_din_ready,
-  output logic                   taps_prog_done,
+  input  logic [C_FP_DWIDTH-1:0]  taps_prog_din,
+  input  logic                    taps_prog_din_valid,
+  output logic                    taps_prog_din_ready,
+  output logic                    taps_prog_done,
 
-  input  logic [C_FP_DWIDTH-1:0] din,
-  input  logic                   din_valid,
-  output logic                   din_ready,
+  input  logic [C_FP_DWIDTH-1:0]  din,
+  input  logic                    din_valid,
+  output logic                    din_ready,
 
-  output logic [C_FP_DWIDTH-1:0] dout,
-  output logic                   dout_valid,
-  input  logic                   dout_ready
+  output logic [C_FP_DWIDTH-1:0]  dout,
+  output logic                    dout_valid,
+  input  logic                    dout_ready
 );
+
+  logic                   din_ready_int;
+  logic [C_FP_DWIDTH-1:0] dout_int;
+  logic                   dout_valid_int;
 
   typedef enum
   {
@@ -59,15 +66,28 @@ module polynomial_estimator
 
 //////////////////////////////////////////
 
+  always_comb begin
+    if (bypass == 1) begin
+      din_ready   = dout_ready;
+      dout        = din;
+      dout_valid  = din_valid;
+    end
+    else begin
+      din_ready   = din_ready_int;
+      dout        = dout_int;
+      dout_valid  = dout_valid_int;
+    end
+  end
+
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
-      din_ready            <= 0;
-      dout_valid           <= 0;
-      float_mult_din_valid <= 0;
-      float_add_din_valid  <= 0;
-      taps_prog_din_ready  <= 0;
-      taps_prog_done       <= 0;
-      state <= SM_INIT;
+      din_ready_int         <= 0;
+      dout_valid_int        <= 0;
+      float_mult_din_valid  <= 0;
+      float_add_din_valid   <= 0;
+      taps_prog_din_ready   <= 0;
+      taps_prog_done        <= 0;
+      state                 <= SM_INIT;
     end
     else begin
       case (state)
@@ -85,7 +105,7 @@ module polynomial_estimator
             if (taps_prog_counter == G_POLY_ORDER-1) begin
               taps_prog_din_ready   <= 0;
               taps_prog_done        <= 1;
-              din_ready             <= 1;
+              din_ready_int         <= 1;
               state                 <= SM_GET_INPUT;
             end
             else begin
@@ -95,13 +115,13 @@ module polynomial_estimator
         end
 
         SM_GET_INPUT : begin
-          if (din_valid == 1 && din_ready == 1) begin
-            din_ready      <= 0;
-            input_store    <= din;
-            accumulate_reg <= taps[0];
-            stage_counter  <= 1;
-            mult_counter   <= 0;
-            state          <= SM_START_STAGE_N;
+          if (din_valid == 1 && din_ready_int == 1) begin
+            din_ready_int   <= 0;
+            input_store     <= din;
+            accumulate_reg  <= taps[0];
+            stage_counter   <= 1;
+            mult_counter    <= 0;
+            state           <= SM_START_STAGE_N;
           end
         end
 
@@ -133,17 +153,17 @@ module polynomial_estimator
         end
 
         SM_ADD_STAGE_OUTPUT : begin
-          float_add_din1      <= accumulate_reg;
-          float_add_din2      <= float_mult_dout_store;
+          float_add_din1        <= accumulate_reg;
+          float_add_din2        <= float_mult_dout_store;
 
           if (float_add_dout_valid == 1) begin
             accumulate_reg      <= float_add_dout;
             float_add_din_valid <= 0;
             if (stage_counter == G_POLY_ORDER-1) begin
-              stage_counter <= 0;
-              dout          <= float_add_dout;
-              dout_valid    <= 1;
-              state         <= SM_SEND_OUTPUT;
+              stage_counter     <= 0;
+              dout_int          <= float_add_dout;
+              dout_valid_int    <= 1;
+              state             <= SM_SEND_OUTPUT;
             end
             else begin
               stage_counter <= stage_counter + 1;
@@ -156,10 +176,10 @@ module polynomial_estimator
         end
 
         SM_SEND_OUTPUT : begin
-          if (dout_valid == 1 && dout_ready == 1) begin
-            dout_valid <= 0;
-            din_ready  <= 1;
-            state      <= SM_GET_INPUT;
+          if (dout_valid_int == 1 && dout_ready == 1) begin
+            dout_valid_int  <= 0;
+            din_ready_int   <= 1;
+            state           <= SM_GET_INPUT;
           end
         end
 

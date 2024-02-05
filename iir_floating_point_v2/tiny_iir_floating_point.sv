@@ -27,6 +27,10 @@ module tiny_iir_floating_point
   input  logic        dout_ready
 );
 
+  logic         din_ready_int;
+  logic [31:0]  dout_int;
+  logic         dout_valid_int;
+
   typedef logic [31:0] float_t;
 
   typedef enum
@@ -79,6 +83,19 @@ module tiny_iir_floating_point
 
 ////////////////////////////////////////////
 
+  always_comb begin
+    if (bypass == 1) begin
+      din_ready   = dout_ready;
+      dout        = din;
+      dout_valid  = din_valid;
+    end
+    else begin
+      din_ready   = din_ready_int;
+      dout        = dout_int;
+      dout_valid  = dout_valid_int;
+    end
+  end
+
   generate
     for (genvar i = 0 ; i < G_DEGREE ; i++) begin
       assign a_taps_neg[i] = {~a_taps[i][31] , a_taps[i][30 -: 31]};
@@ -94,8 +111,8 @@ module tiny_iir_floating_point
       end
       b_tap_done        <= 0;
       a_tap_done        <= 0;
-      din_ready         <= 0;
-      dout_valid        <= 0;
+      din_ready_int         <= 0;
+      dout_valid_int        <= 0;
       a_tap_ready       <= 0;
       b_tap_ready       <= 0;
       fp_mult_din_valid <= 0;
@@ -114,7 +131,7 @@ module tiny_iir_floating_point
 
         SM_PROGRAM_TAPS : begin
           if (a_tap_done == 1 && b_tap_done == 1) begin
-            din_ready <= 1;
+            din_ready_int <= 1;
             state     <= SM_GET_INPUT;
           end
 
@@ -143,12 +160,12 @@ module tiny_iir_floating_point
         end
 
         SM_GET_INPUT : begin
-          if (din_valid == 1 && din_ready == 1) begin
+          if (din_valid == 1 && din_ready_int == 1) begin
             x_nm[0]     <= din;
             for (int i = 0 ; i < G_DEGREE-1 ; i++) begin
               x_nm[i+1] <= x_nm[i];
             end
-            din_ready           <= 0;
+            din_ready_int           <= 0;
             fp_mult_din1        <= b_taps[0];
             fp_mult_din2        <= din;
             fp_mult_din_valid   <= 1;
@@ -260,20 +277,20 @@ module tiny_iir_floating_point
           fp_add_din_valid <= 0;
           if (fp_add_dout_valid == 1) begin
             ab_accumulate <= fp_add_dout;
-            dout          <= fp_add_dout;
-            dout_valid    <= 1;
+            dout_int          <= fp_add_dout;
+            dout_valid_int    <= 1;
             state         <= SM_SEND_OUTPUT;
           end
         end
 
         SM_SEND_OUTPUT : begin
           y_nm[1] <= ab_accumulate;
-          if (dout_valid == 1 && dout_ready == 1) begin
+          if (dout_valid_int == 1 && dout_ready == 1) begin
             for (int i = 1 ; i < G_DEGREE-1 ; i++) begin
               y_nm[i+1] <= y_nm[i];
             end
-            din_ready   <= 1;
-            dout_valid  <= 0;
+            din_ready_int   <= 1;
+            dout_valid_int  <= 0;
             state       <= SM_GET_INPUT;
           end
         end
