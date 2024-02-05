@@ -26,20 +26,54 @@ module tiny_fir
   typedef enum
   {
     SM_INIT,
+    SM_PROGRAM_TAPS,
     SM_GET_INPUT,
     SM_CALC_MULT,
     SM_ACCUMULATE,
     SM_SEND_OUTPUT
   } state_t;
+  state_t state;
+
+  logic unsigned [$clog2(G_NUM_TAPS)-1:0] prog_tap_address;
+
+  logic taps_bram_wr_accept;
 
 //////////////////////////////////////////////////////
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
+      din_ready <= 0;
+      dout_valid <= 0;
+      tap_din_ready <= 0;
+      state <= SM_INIT;
     end
     else begin
+      case (state)
+
+        SM_INIT : begin
+          prog_tap_address <= 0;
+          tap_din_ready <= 1;
+          state <= SM_PROGRAM_TAPS;
+        end
+
+        SM_PROGRAM_TAPS : begin
+          if (tap_din_valid == 1 && tap_din_ready == 1) begin
+            if (prog_tap_address == G_NUM_TAPS-1) begin
+              
+            end
+            else begin
+            end
+          end
+        end
+
+        defailt : begin
+        end
+
+      endcase
     end
   end
+
+  assign taps_bram_wr_accept = tap_din_valid & tap_din_ready;
   
   tiny_fir_bram
   #(
@@ -50,9 +84,9 @@ module tiny_fir
   (
     .clk            (clk),
   
-    .wr_din_addr    (),
-    .wr_din_value   (),
-    .wr_din_valid   (),
+    .wr_din_addr    (prog_tap_address),
+    .wr_din_value   (tap_din),
+    .wr_din_valid   (taps_bram_wr_accept),
   
     .rd_din_addr    (),
     .rd_din_valid   (),
