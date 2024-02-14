@@ -1,5 +1,3 @@
-//todo: add symetric mode
-
 module polynomial_estimator
 #(
   parameter  int G_POLY_ORDER = 5,

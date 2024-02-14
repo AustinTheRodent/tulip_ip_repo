@@ -105,8 +105,8 @@ module upsample_8x_tiny_fir
 
   tiny_fir
   #(
-    .G_DWIDTH     (G_DWIDTH),
-    .G_TAP_RES    (16),
+    .G_DATA_WIDTH (G_DWIDTH),
+    .G_TAP_WIDTH  (16),
     .G_NUM_TAPS   (63)
   )
   u_tiny_fir_4x
@@ -114,21 +114,17 @@ module upsample_8x_tiny_fir
     .clk          (clk),
     .reset        (reset),
     .enable       (enable),
-    .bypass       (1'b0),
 
-    .tap_wr       (brom_counter_4x_dout_valid),
-    .tap_val      (brom_counter_4x_dout),
-    .tap_wr_done  (),
+    .tap_din_valid  (brom_counter_4x_dout_valid),
+    .tap_din        (brom_counter_4x_dout),
 
     .din          (zi_4x_dout),
     .din_valid    (zi_4x_dout_valid),
     .din_ready    (zi_4x_dout_ready),
-    .din_last     (1'b0),
 
     .dout         (fir_4x_dout),
     .dout_valid   (fir_4x_dout_valid),
-    .dout_ready   (fir_4x_dout_ready),
-    .dout_last    ()
+    .dout_ready   (fir_4x_dout_ready)
   );
 
   always_comb begin
@@ -197,8 +193,8 @@ module upsample_8x_tiny_fir
 
   tiny_fir
   #(
-    .G_DWIDTH     (G_DWIDTH),
-    .G_TAP_RES    (16),
+    .G_DATA_WIDTH (G_DWIDTH),
+    .G_TAP_WIDTH  (16),
     .G_NUM_TAPS   (31)
   )
   u_tiny_fir_2x
@@ -206,21 +202,17 @@ module upsample_8x_tiny_fir
     .clk          (clk),
     .reset        (reset),
     .enable       (enable),
-    .bypass       (1'b0),
 
-    .tap_wr       (brom_counter_2x_dout_valid),
-    .tap_val      (brom_counter_2x_dout),
-    .tap_wr_done  (),
+    .tap_din_valid  (brom_counter_2x_dout_valid),
+    .tap_din        (brom_counter_2x_dout),
 
     .din          (zi_2x_dout),
     .din_valid    (zi_2x_dout_valid),
     .din_ready    (zi_2x_dout_ready),
-    .din_last     (1'b0),
 
     .dout         (fir_2x_dout),
     .dout_valid   (fir_2x_dout_valid),
-    .dout_ready   (fir_2x_dout_ready),
-    .dout_last    ()
+    .dout_ready   (fir_2x_dout_ready)
   );
 
   always_comb begin

@@ -52,6 +52,7 @@ end entity;
 architecture rtl of kr260_tulip_top_0_0_1 is
 
   constant C_ADC_RESOLUTION             : integer := 24;
+  constant C_FP_DWIDTH                  : integer := 32;
 
   signal registers : reg_t;
 
@@ -126,6 +127,28 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal ps_2_i2s_fifo_avail            : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH-1 downto 0);
   signal ps_2_i2s_sw_resetn             : std_logic;
 
+  signal polynomial0_taps_prog_din_ready  : std_logic_vector(0 downto 0);
+  signal polynomial0_taps_prog_done       : std_logic_vector(0 downto 0);
+  signal polynomial1_taps_prog_din_ready  : std_logic_vector(0 downto 0);
+  signal polynomial1_taps_prog_done       : std_logic_vector(0 downto 0);
+
+  signal usr_fir_taps_prog_din_ready    : std_logic_vector(0 downto 0);
+  signal usr_fir_taps_prog_done         : std_logic_vector(0 downto 0);
+
+  signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
+  signal dsp_l_din_valid                : std_logic;
+  signal dsp_l_din_ready                : std_logic;
+  signal dsp_l_dout                     : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
+  signal dsp_l_dout_valid               : std_logic;
+  signal dsp_l_dout_ready               : std_logic;
+  signal dsp_r_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
+  signal dsp_r_din_valid                : std_logic;
+  signal dsp_r_din_ready                : std_logic;
+  signal dsp_r_dout                     : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
+  signal dsp_r_dout_valid               : std_logic;
+  signal dsp_r_dout_ready               : std_logic;
+  signal dsp_sw_resetn                  : std_logic;
+
 begin
 
   u_reg_file : entity work.axil_reg_file
@@ -134,47 +157,65 @@ begin
       s_axi_aclk    => s_axi_aclk,
       a_axi_aresetn => a_axi_aresetn,
 
-      s_VERSION_VERSION               => (others => '0'),
-      s_VERSION_VERSION_v             => '0',
+      s_VERSION_VERSION                           => (others => '0'),
+      s_VERSION_VERSION_v                         => '0',
 
-      s_I2C_STATUS_DIN_READY          => wm8960_i2c_din_ready,
-      s_I2C_STATUS_DIN_READY_v        => '1',
+      s_I2C_STATUS_DIN_READY                      => wm8960_i2c_din_ready,
+      s_I2C_STATUS_DIN_READY_v                    => '1',
 
-      s_I2C_STATUS_DOUT_VALID         => wm8960_i2c_dout_valid,
-      s_I2C_STATUS_DOUT_VALID_v       => '1',
+      s_I2C_STATUS_DOUT_VALID                     => wm8960_i2c_dout_valid,
+      s_I2C_STATUS_DOUT_VALID_v                   => '1',
 
-      s_I2C_STATUS_ACK_2              => wm8960_i2c_acks(2 downto 2),
-      s_I2C_STATUS_ACK_2_v            => wm8960_i2c_dout_valid(0),
+      s_I2C_STATUS_ACK_2                          => wm8960_i2c_acks(2 downto 2),
+      s_I2C_STATUS_ACK_2_v                        => wm8960_i2c_dout_valid(0),
 
-      s_I2C_STATUS_ACK_1              => wm8960_i2c_acks(1 downto 1),
-      s_I2C_STATUS_ACK_1_v            => wm8960_i2c_dout_valid(0),
+      s_I2C_STATUS_ACK_1                          => wm8960_i2c_acks(1 downto 1),
+      s_I2C_STATUS_ACK_1_v                        => wm8960_i2c_dout_valid(0),
 
-      s_I2C_STATUS_ACK_0              => wm8960_i2c_acks(0 downto 0),
-      s_I2C_STATUS_ACK_0_v            => wm8960_i2c_dout_valid(0),
+      s_I2C_STATUS_ACK_0                          => wm8960_i2c_acks(0 downto 0),
+      s_I2C_STATUS_ACK_0_v                        => wm8960_i2c_dout_valid(0),
 
-      s_I2C_STATUS_REGISTER_RD_DATA   => wm8960_i2c_register_read_data,
-      s_I2C_STATUS_REGISTER_RD_DATA_v => wm8960_i2c_dout_valid(0),
+      s_I2C_STATUS_REGISTER_RD_DATA               => wm8960_i2c_register_read_data,
+      s_I2C_STATUS_REGISTER_RD_DATA_v             => wm8960_i2c_dout_valid(0),
 
-      s_I2S_STATUS_ADC_ERROR          => i2s_adc_error,
-      s_I2S_STATUS_ADC_ERROR_v        => '1',
+      s_I2S_STATUS_ADC_ERROR                      => i2s_adc_error,
+      s_I2S_STATUS_ADC_ERROR_v                    => '1',
 
-      s_I2S_STATUS_DAC_ERROR          => i2s_dac_error,
-      s_I2S_STATUS_DAC_ERROR_v        => '1',
+      s_I2S_STATUS_DAC_ERROR                      => i2s_dac_error,
+      s_I2S_STATUS_DAC_ERROR_v                    => '1',
 
-      s_I2S_FIFO_FIFO_USED            => std_logic_vector(resize(unsigned(i2s_fifo_used), 16)),
-      s_I2S_FIFO_FIFO_USED_v          => '1',
+      s_I2S_FIFO_FIFO_USED                        => std_logic_vector(resize(unsigned(i2s_fifo_used), 16)),
+      s_I2S_FIFO_FIFO_USED_v                      => '1',
 
-      s_I2S_2_PS_FIFO_COUNT_FIFO_USED       => std_logic_vector(resize(unsigned(i2s_2_ps_fifo_used), 16)),
-      s_I2S_2_PS_FIFO_COUNT_FIFO_USED_v     => '1',
+      s_I2S_2_PS_FIFO_COUNT_FIFO_USED             => std_logic_vector(resize(unsigned(i2s_2_ps_fifo_used), 16)),
+      s_I2S_2_PS_FIFO_COUNT_FIFO_USED_v           => '1',
 
-      s_I2S_2_PS_FIFO_READ_L_FIFO_VALUE_L   => i2s_2_ps_fifo_dout_l,
-      s_I2S_2_PS_FIFO_READ_L_FIFO_VALUE_L_v => '1',
+      s_I2S_2_PS_FIFO_READ_L_FIFO_VALUE_L         => i2s_2_ps_fifo_dout_l,
+      s_I2S_2_PS_FIFO_READ_L_FIFO_VALUE_L_v       => '1',
 
-      s_I2S_2_PS_FIFO_READ_R_FIFO_VALUE_R   => i2s_2_ps_fifo_dout_r,
-      s_I2S_2_PS_FIFO_READ_R_FIFO_VALUE_R_v => '1',
+      s_I2S_2_PS_FIFO_READ_R_FIFO_VALUE_R         => i2s_2_ps_fifo_dout_r,
+      s_I2S_2_PS_FIFO_READ_R_FIFO_VALUE_R_v       => '1',
 
-      s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE    => std_logic_vector(resize(unsigned(ps_2_i2s_fifo_avail), 16)),
-      s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v  => '1',
+      s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE        => std_logic_vector(resize(unsigned(ps_2_i2s_fifo_avail), 16)),
+      s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v      => '1',
+
+      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_DONE     => polynomial1_taps_prog_done,
+      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_DONE_v   => '1',
+
+      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_READY     => polynomial1_taps_prog_din_ready,
+      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_READY_v   => '1',
+
+      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_DONE     => polynomial0_taps_prog_done,
+      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_DONE_v   => '1',
+
+      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_READY    => polynomial0_taps_prog_din_ready,
+      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_READY_v  => '1',
+
+      s_TULIP_DSP_STATUS_FIR_TAP_DONE             => usr_fir_taps_prog_done,
+      s_TULIP_DSP_STATUS_FIR_TAP_DONE_v           => '1',
+
+      s_TULIP_DSP_STATUS_FIR_TAP_READY            => usr_fir_taps_prog_din_ready,
+      s_TULIP_DSP_STATUS_FIR_TAP_READY_v          => '1',
 
 
       s_axi_awaddr  => s_axi_awaddr,
@@ -284,11 +325,108 @@ begin
   adc24_l             <= adc32_l(adc24_l'range);
   adc24_r             <= adc32_r(adc24_r'range);
 
-  i2s_fifo_din <=
-    adc24_l & adc24_r when ps_2_i2s_fifo_dout_valid = '0' else
-    std_logic_vector(signed(adc24_l)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(adc24_r)+signed(ps_2_i2s_fifo_dout_r));
+  dsp_sw_resetn <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.DSP_ENABLE(0));
 
-  i2s_fifo_din_valid  <= adc_valid;
+  --polynomial_taps_prog_din        <= x"3F800000";
+  --polynomial_taps_prog_din_valid  <= '1';
+
+  dsp_l_din <= adc24_l;
+  dsp_r_din <= adc24_r;
+
+  dsp_l_din_valid <= adc_valid;
+  dsp_r_din_valid <= adc_valid;
+
+  u_tulip_dsp_l : entity work.tulip_dsp
+    generic map
+    (
+      G_POLY_ORDER                    => 9
+    )
+    port map
+    (
+      clk                             => s_axi_aclk,
+      reset                           => (not a_axi_aresetn),
+      enable                          => dsp_sw_resetn,
+
+      input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
+      output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
+
+      polynomial0_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL0_SYMMETRIC_MODE(0),
+
+      polynomial0_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL0_PROG.POLYNOMIAL0_TAP_VALUE_FP,
+      polynomial0_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL0_PROG_REG_wr_pulse,
+      polynomial0_taps_prog_din_ready => polynomial0_taps_prog_din_ready(0),
+      polynomial0_taps_prog_done      => polynomial0_taps_prog_done(0),
+
+      polynomial1_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL1_SYMMETRIC_MODE(0),
+
+      polynomial1_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL1_PROG.POLYNOMIAL1_TAP_VALUE_FP,
+      polynomial1_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL1_PROG_REG_wr_pulse,
+      polynomial1_taps_prog_din_ready => polynomial1_taps_prog_din_ready(0),
+      polynomial1_taps_prog_done      => polynomial1_taps_prog_done(0),
+
+      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
+      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
+      usr_fir_taps_prog_din_ready     => usr_fir_taps_prog_din_ready(0),
+      usr_fir_taps_prog_done          => usr_fir_taps_prog_done(0),
+
+      din                             => dsp_l_din,
+      din_valid                       => dsp_l_din_valid,
+      din_ready                       => dsp_l_din_ready,
+
+      dout                            => dsp_l_dout,
+      dout_valid                      => dsp_l_dout_valid,
+      dout_ready                      => dsp_l_dout_ready
+    );
+
+  u_tulip_dsp_r : entity work.tulip_dsp
+    generic map
+    (
+      G_POLY_ORDER                    => 9
+    )
+    port map
+    (
+      clk                             => s_axi_aclk,
+      reset                           => (not a_axi_aresetn),
+      enable                          => dsp_sw_resetn,
+
+      input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
+      output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
+
+      polynomial0_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL0_SYMMETRIC_MODE(0),
+
+      polynomial0_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL0_PROG.POLYNOMIAL0_TAP_VALUE_FP,
+      polynomial0_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL0_PROG_REG_wr_pulse,
+      polynomial0_taps_prog_din_ready => open,
+      polynomial0_taps_prog_done      => open,
+
+      polynomial1_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL1_SYMMETRIC_MODE(0),
+
+      polynomial1_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL1_PROG.POLYNOMIAL1_TAP_VALUE_FP,
+      polynomial1_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL1_PROG_REG_wr_pulse,
+      polynomial1_taps_prog_din_ready => open,
+      polynomial1_taps_prog_done      => open,
+
+      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
+      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
+      usr_fir_taps_prog_din_ready     => open,
+      usr_fir_taps_prog_done          => open,
+
+      din                             => dsp_r_din,
+      din_valid                       => dsp_r_din_valid,
+      din_ready                       => dsp_r_din_ready,
+
+      dout                            => dsp_r_dout,
+      dout_valid                      => dsp_r_dout_valid,
+      dout_ready                      => dsp_r_dout_ready
+    );
+
+  i2s_fifo_din <=
+    dsp_l_dout & dsp_r_dout when ps_2_i2s_fifo_dout_valid = '0' else
+    std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(dsp_r_dout)+signed(ps_2_i2s_fifo_dout_r));
+
+  i2s_fifo_din_valid  <= dsp_l_dout_valid;
+  dsp_l_dout_ready    <= i2s_fifo_din_ready;
+  dsp_r_dout_ready    <= i2s_fifo_din_ready;
 
   u_i2s_fifo : entity work.axis_sync_fifo
     generic map
@@ -357,8 +495,8 @@ begin
     );
 
   i2s_2_ps_sw_resetn        <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.I2S_2_PS_ENABLE(0));
-  i2s_2_ps_fifo_din         <= adc24_l & adc24_r;
-  i2s_2_ps_fifo_din_valid   <= adc_valid;
+  i2s_2_ps_fifo_din         <= dsp_l_dout & dsp_r_dout;
+  i2s_2_ps_fifo_din_valid   <= dsp_r_dout_valid;
 
   u_i2s_2_ps_fifo : entity work.axis_sync_fifo
     generic map

@@ -2,25 +2,25 @@ module tiny_fir
 #(
   parameter int G_NUM_TAPS = 16,
   parameter int G_DATA_WIDTH = 16,
-  parameter int G_TAP_WIDTH = 16,
+  parameter int G_TAP_WIDTH = 16
 )
 (
   input  logic clk,
   input  logic reset,
   input  logic enable,
 
-  input  logic [G_TAP_WIDTH-1:0] tap_din,
-  input  logic                   tap_din_valid,
-  output logic                   tap_din_ready,
-  output logic                   tap_din_done,
+  input  logic [G_TAP_WIDTH-1:0]  tap_din,
+  input  logic                    tap_din_valid,
+  output logic                    tap_din_ready,
+  output logic                    tap_din_done,
 
-  input  logic [G_DATA_WIDTH-1:0]  din,
-  input  logic                     din_valid,
-  output logic                     din_ready,
+  input  logic [G_DATA_WIDTH-1:0] din,
+  input  logic                    din_valid,
+  output logic                    din_ready,
 
-  output logic [G_DATA_WIDTH-1:0]  dout,
-  output logic                     dout_valid,
-  input  logic                     dout_ready
+  output logic [G_DATA_WIDTH-1:0] dout,
+  output logic                    dout_valid,
+  input  logic                    dout_ready
 );
 
   typedef enum
@@ -65,6 +65,7 @@ module tiny_fir
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
+      tap_din_done            <= 0;
       din_ready               <= 0;
       dout_valid              <= 0;
       taps_bram_rd_din_addr   <= 0;
@@ -104,6 +105,7 @@ module tiny_fir
 
         SM_GET_INPUT : begin
           if (din_valid == 1 && din_ready == 1) begin
+            din_ready             <= 0;
             din_bram_counter      <= 0;
             din_bram_wr_din_addr  <= din_bram_start_addr;
             din_bram_wr_din_value <= din;
@@ -122,8 +124,8 @@ module tiny_fir
             din_bram_rd_din_valid   <= 0;
           end
           else begin
-            if (din_bram_start_addr-din_bram_counter < 0) begin
-              din_bram_rd_din_addr  <= din_bram_start_addr-din_bram_counter+G_NUM_TAPS;
+            if (din_bram_start_addr < din_bram_counter) begin
+              din_bram_rd_din_addr  <= G_NUM_TAPS - (din_bram_counter - din_bram_start_addr);
             end
             else begin
               din_bram_rd_din_addr  <= din_bram_start_addr-din_bram_counter;
@@ -163,7 +165,12 @@ module tiny_fir
           if (dout_valid == 1 && dout_ready == 1) begin
             dout_valid          <= 0;
             din_ready           <= 1;
-            din_bram_start_addr <= din_bram_start_addr + 1;
+            if (din_bram_start_addr == G_NUM_TAPS-1) begin
+              din_bram_start_addr <= 0;
+            end
+            else begin
+              din_bram_start_addr <= din_bram_start_addr + 1;
+            end
             state               <= SM_GET_INPUT;
           end
           else begin
@@ -179,7 +186,7 @@ module tiny_fir
   end
 
   assign taps_bram_wr_accept = tap_din_valid & tap_din_ready;
-  
+
   tiny_fir_bram
   #(
     .G_ADDR_WIDTH  ($clog2(G_NUM_TAPS)),
@@ -188,14 +195,14 @@ module tiny_fir
   u_taps_bram
   (
     .clk            (clk),
-  
+
     .wr_din_addr    (prog_tap_address),
     .wr_din_value   (tap_din),
     .wr_din_valid   (taps_bram_wr_accept),
-  
+
     .rd_din_addr    (taps_bram_rd_din_addr),
     .rd_din_valid   (taps_bram_rd_din_valid),
-  
+
     .rd_dout_value  (taps_bram_rd_dout_value),
     .rd_dout_valid  (taps_bram_rd_dout_valid)
   );
@@ -203,19 +210,19 @@ module tiny_fir
   tiny_fir_bram
   #(
     .G_ADDR_WIDTH  ($clog2(G_NUM_TAPS)),
-    .G_DATA_WIDTH  (G_TAP_WIDTH)
+    .G_DATA_WIDTH  (G_DATA_WIDTH)
   )
   u_din_bram
   (
     .clk            (clk),
-  
+
     .wr_din_addr    (din_bram_wr_din_addr),
     .wr_din_value   (din_bram_wr_din_value),
     .wr_din_valid   (din_bram_wr_din_valid),
-  
+
     .rd_din_addr    (din_bram_rd_din_addr),
     .rd_din_valid   (din_bram_rd_din_valid),
-  
+
     .rd_dout_value  (din_bram_rd_dout_value),
     .rd_dout_valid  (din_bram_rd_dout_valid)
   );
