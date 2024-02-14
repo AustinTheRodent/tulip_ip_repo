@@ -43,18 +43,6 @@ architecture rtl of parallel_to_i2s is
 
 begin
 
-  --gen_lsb_first : if G_LSB_FIRST = true generate
-  --  dout_left   <= dout_left_construct;
-  --  dout_right  <= dout_right_construct;
-  --end generate;
-  --
-  --gen_msb_first : if G_LSB_FIRST = false generate
-  --  g_flip_bits : for i in 0 to G_DWIDTH-1 generate
-  --    dout_left(G_DWIDTH-1-i)   <= dout_left_construct(i);
-  --    dout_right(G_DWIDTH-1-i)  <= dout_right_construct(i);
-  --  end generate;
-  --end generate;
-
   din_ready <= din_ready_int;
 
   process(clk)
@@ -100,7 +88,11 @@ begin
 
           when wait_for_high_lrclk =>
             if v_posedge_count >= G_NUM_POSEDGE-1 then
-              serial_dout     <= din_left_store(symbol_pos_count);
+              if G_LSB_FIRST = true then
+                serial_dout   <= din_left_store(symbol_pos_count);
+              else
+                serial_dout   <= din_left_store(G_DWIDTH-symbol_pos_count-1);
+              end if;
               state           <= wait_for_low_bclk;
               next_state      <= output_l;
               v_posedge_count := 0;
@@ -164,9 +156,17 @@ begin
           when wait_for_low_bclk =>
             if v_posedge_count >= G_NUM_POSEDGE-1 then
               if next_state = output_l then
-                serial_dout   <= din_left_store(symbol_pos_count);
+                if G_LSB_FIRST = true then
+                  serial_dout <= din_left_store(symbol_pos_count);
+                else
+                  serial_dout <= din_left_store(G_DWIDTH-symbol_pos_count-1);
+                end if;
               else
-                serial_dout   <= din_right_store(symbol_pos_count);
+                if G_LSB_FIRST = true then
+                  serial_dout <= din_right_store(symbol_pos_count);
+                else
+                  serial_dout <= din_right_store(G_DWIDTH-symbol_pos_count-1);
+                end if;
               end if;
               state           <= next_state;
               v_posedge_count := 0;

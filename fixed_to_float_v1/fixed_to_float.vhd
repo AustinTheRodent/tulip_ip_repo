@@ -172,7 +172,9 @@ begin
       )
     );
 
-  exponent <= std_logic_vector(unsigned(exponent_no_fract) - to_unsigned(G_FRACT_BITS, exponent'length));
+  exponent <=
+    (others => '0') when unsigned(input_buff_dout) = 0 else
+    std_logic_vector(unsigned(exponent_no_fract) - to_unsigned(G_FRACT_BITS, exponent'length));
 
   output(31)            <= is_signed;
   output(30 downto 23)  <= exponent;

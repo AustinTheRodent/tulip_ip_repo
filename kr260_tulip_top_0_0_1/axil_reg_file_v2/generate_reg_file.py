@@ -238,6 +238,8 @@ def count_major_regs(data_file_name):
       pass
     elif line[0] == "[":
       pass
+    elif line[0] == "(":
+      pass
     elif line[0] == "{":
       subreg_process = True
     elif line[0] == "}":
@@ -267,6 +269,8 @@ def get_registers(data_file_name):
     elif line[0] == "#":
       pass
     elif line[0] == "[":
+      pass
+    elif line[0] == "(":
       pass
     elif line == "{":
       subreg_process = True
@@ -313,6 +317,55 @@ def get_registers(data_file_name):
   data_file_obj.close()
   return [registers, sub_registers]
 
+def write_h_file(data_file_name, constants, registers, sub_registers):
+  f = open(data_file_name, "r")
+  for line in f:
+    line = strip_whitespace(strip_newline(line))
+    try:
+      if line[0] == "(":
+        registers_name = strip_whitespace(line[1:-1])
+        break
+    except:
+      pass
+  f.close()
+  print(registers_name)
+  print("")
+
+  f = open(registers_name+".h", "w")
+  f.write("#ifndef "+registers_name+"_H\n")
+  f.write("#define "+registers_name+"_H\n\n")
+
+  for i in range(len(registers)):
+    f.write("#define %s 0x%X\n" % (registers[i][0], registers[i][2]))
+    print("%s 0x%X" % (registers[i][0], registers[i][2]))
+
+  f.write("\n")
+  print("")
+
+  for i in range(len(sub_registers)):
+    reg_name = sub_registers[i][0]
+    for j in range(len(sub_registers[i][1])):
+      subreg_name = sub_registers[i][1][j]
+      dt_n = sub_registers[i][2][j].find("downto")
+      lshift = int(sub_registers[i][2][j][dt_n+6:])
+      mask_len = int(sub_registers[i][2][j][0:dt_n]) - int(sub_registers[i][2][j][dt_n+6:]) + 1
+      mask = 0
+      for k in range(mask_len):
+        mask |= 1 << k
+      f.write("#define %s_%s_MASK 0x%X\n" % (reg_name, subreg_name, mask))
+      f.write("#define %s_%s_SHIFT %i\n" % (reg_name, subreg_name, lshift))
+      print("%s_%s_MASK 0x%X" % (reg_name, subreg_name, mask))
+      print("%s_%s_SHIFT %i" % (reg_name, subreg_name, lshift))
+      if mask_len == 1:
+        f.write("#define %s_%s (0x%X)\n" % (reg_name, subreg_name, 1<<lshift))
+        print("%s_%s (0x%X)" % (reg_name, subreg_name, 1<<lshift))
+    f.write("\n")
+    print("")
+
+  f.write("#endif\n")
+  f.close()
+
+
 def main():
   print("Starting Register File HDL Generator")
   template_file_name = "axil_reg_file.template"
@@ -324,6 +377,10 @@ def main():
   print("")
   print(constants)
   print(registers)
+  print("")
+  print("")
+
+  write_h_file(data_file_name, constants, registers, sub_registers)
 
   #return 1
 
