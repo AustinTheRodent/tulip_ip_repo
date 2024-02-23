@@ -16,7 +16,18 @@ module debounce_input
 
   typedef enum
   {
+    SM_INIT,
+    SM_GET_STARTING_STATE,
+    SM_IS_DEASSERTED,
+    SM_IS_ASSERTED,
+    SM_DELAY
   } state_t;
   state_t state;
+  state_t next_state;
+
+
+  always @ (posedge clk) begin
+  end
+
 
 endmodule
