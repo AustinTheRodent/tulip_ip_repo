@@ -11,7 +11,6 @@ module debounce_input
 
   input  logic din_bounce,
   output logic dout_debounced
-
 );
 
   function int return_larger_int(input int a, input int b);
