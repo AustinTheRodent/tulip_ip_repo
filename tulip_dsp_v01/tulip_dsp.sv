@@ -11,6 +11,7 @@ module tulip_dsp
   input  logic                    enable,
 
   input  logic                    bypass,
+  input  logic                    bypass_reverb,
 
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
@@ -26,6 +27,11 @@ module tulip_dsp
   input  logic                              usr_fir_taps_prog_din_valid,
   output logic                              usr_fir_taps_prog_din_ready,
   output logic                              usr_fir_taps_prog_done,
+
+  input  logic [C_USER_FILT_TAP_DWIDTH-1:0] reverb_taps_prog_din,
+  input  logic                              reverb_taps_prog_din_valid,
+  output logic                              reverb_taps_prog_din_ready,
+  output logic                              reverb_taps_prog_done,
 
   input  logic [C_ADC_DWIDTH-1:0] din,
   input  logic                    din_valid,
@@ -111,6 +117,13 @@ module tulip_dsp
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
 
+  logic signed [16-1:0]  reverb_din;
+  logic                     reverb_din_valid;
+  logic                     reverb_din_ready;
+  logic signed [16-1:0]  reverb_dout;
+  logic signed [C_ADC_DWIDTH-1:0]  reverb_dout_long;
+  logic                     reverb_dout_valid;
+  logic                     reverb_dout_ready;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -179,6 +192,8 @@ module tulip_dsp
     .clk                (clk),
     .reset              (reset),
     .enable             (enable),
+
+    //todo: add bypass
 
     .symmetric_mode     (symmetric_mode),
 
@@ -417,9 +432,43 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign dout             = (bypass == 0) ? gain1_dout : din;
-  assign dout_valid       = (bypass == 0) ? gain1_dout_valid : din_valid;
-  assign gain1_dout_ready = dout_ready;
+  assign reverb_din       = signed'(gain1_dout) >>> 8;
+  assign reverb_din_valid = gain1_dout_valid;
+  assign gain1_dout_ready = reverb_din_ready;
+
+  configurable_fir
+  #(
+    .G_NUM_STAGES_LOG2  (5),
+    .G_STAGE_DEPTH_LOG2 (10),
+    .G_DATA_WIDTH       (16),
+    .G_TAP_WIDTH        (16)
+  )
+  u_reverb
+  (
+    .clk                (clk),
+    .reset              (reset),
+    .enable             (enable),
+    .bypass             (bypass_reverb),
+
+    .tap_din            (reverb_taps_prog_din),
+    .tap_din_valid      (reverb_taps_prog_din_valid),
+    .tap_din_ready      (reverb_taps_prog_din_ready),
+    .tap_din_done       (reverb_taps_prog_done),
+
+    .din                (reverb_din),
+    .din_valid          (reverb_din_valid),
+    .din_ready          (reverb_din_ready),
+
+    .dout               (reverb_dout),
+    .dout_valid         (reverb_dout_valid),
+    .dout_ready         (reverb_dout_ready)
+  );
+
+  assign reverb_dout_long = reverb_dout;
+
+  assign dout               = (bypass == 0) ? reverb_dout_long : din;
+  assign dout_valid         = (bypass == 0) ? reverb_dout_valid : din_valid;
+  assign reverb_dout_ready  = dout_ready;
 
 
 endmodule

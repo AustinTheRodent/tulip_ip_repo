@@ -1,6 +1,6 @@
 module configurable_fir
 #(
-  parameter int G_NUM_STAGES = 4, // must be power of 2?, probably not nessisary
+  parameter int G_NUM_STAGES_LOG2 = 2,
   parameter int G_STAGE_DEPTH_LOG2 = 2,
   parameter int G_DATA_WIDTH = 16,
   parameter int G_TAP_WIDTH = 16
@@ -9,6 +9,7 @@ module configurable_fir
   input  logic clk,
   input  logic reset,
   input  logic enable,
+  input  logic bypass,
 
   input  logic [G_TAP_WIDTH-1:0]  tap_din,
   input  logic                    tap_din_valid,
@@ -24,7 +25,7 @@ module configurable_fir
   input  logic                    dout_ready
 );
 
-  localparam int N = G_NUM_STAGES;
+  localparam int N = 2**G_NUM_STAGES_LOG2;
   localparam int M = 2**G_STAGE_DEPTH_LOG2;
 
   typedef enum
@@ -34,6 +35,8 @@ module configurable_fir
     SM_GET_INPUT,
     SM_CALC,
     SM_RESCALE,
+    SM_ACCUM2,
+    SM_RESCALE2,
     SM_SEND_OUTPUT
   } state_t;
   state_t state;
@@ -41,10 +44,14 @@ module configurable_fir
   logic signed [G_DATA_WIDTH+G_TAP_WIDTH-1:0] mult [0:N-1];
   logic mult_valid;
 
-  logic signed [G_DATA_WIDTH+G_TAP_WIDTH+$clog2(N)+$clog2(M)-1:0] accumulate [0:N-1];
-  logic signed [G_DATA_WIDTH+G_TAP_WIDTH+$clog2(N)+$clog2(M)-1:0] accumulate_rs [0:N-1];
-  logic signed [G_DATA_WIDTH-1:0] accumulate_short [0:N-1];
-  logic unsigned [$clog2(N)+$clog2(M)-1:0] accumulate_counter;
+  logic signed [G_DATA_WIDTH+G_TAP_WIDTH+$clog2(M)-1:0] accumulate [0:N-1];
+  logic signed [G_DATA_WIDTH+G_TAP_WIDTH+$clog2(M)-1:0] accumulate_rs [0:N-1];
+  logic signed [G_DATA_WIDTH-1:0]                       accumulate_short [0:N-1];
+  logic unsigned [$clog2(M)-1:0]                        accumulate_counter;
+
+  logic signed [G_DATA_WIDTH+G_TAP_WIDTH+$clog2(N)-1:0] accumulate2;
+  logic signed [G_DATA_WIDTH-1:0]                       accumulate2_short;
+  logic unsigned [$clog2(N)-1:0]                        accumulate2_counter;
 
   logic unsigned [$clog2(N)+$clog2(M)-1:0]  din_bram_rd_start_addr;
   logic unsigned [$clog2(N)+$clog2(M):0] din_bram_counter;
@@ -81,22 +88,23 @@ module configurable_fir
   logic unsigned [$clog2(N)+$clog2(M)-1:0]  reselect_fullcount_start_address [0:N-1];
   logic unsigned [$clog2(N)-1:0]            reselect_fullcount_msbs [0:N-1];
 
+  logic din_ready_int;
+  logic [G_DATA_WIDTH-1:0] dout_int;
+  logic dout_valid_int;
+
 //////////////////////////////////////////////////////
+
+  assign din_ready  = (bypass == 0) ? din_ready_int : dout_ready;
+  assign dout       = (bypass == 0) ? dout_int : din;
+  assign dout_valid = (bypass == 0) ? dout_valid_int : din_valid;
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
-      //tap_din_done            <= 0;
-      //din_ready               <= 0;
-      //dout_valid              <= 0;
-      //taps_bram_rd_din_addr   <= 0;
-      //taps_bram_rd_din_valid  <= 0;
-      //din_bram_rd_din_valid   <= 0;
-      //tap_din_ready           <= 0;
-
-      //input_data_bram_wr_din_addr_full <= 0;
-
-
-      state                   <= SM_INIT;
+      tap_din_done    <= 0;
+      din_ready_int   <= 0;
+      dout_valid_int  <= 0;
+      tap_din_ready   <= 0;
+      state           <= SM_INIT;
     end
     else begin
       case (state)
@@ -104,15 +112,12 @@ module configurable_fir
         SM_INIT : begin
           taps_bram_rd_din_valid            <= 0;
           input_data_bram_rd_din_valid      <= 0;
-
           input_data_bram_wr_din_value      <= 0;
           tap_din_ready                     <= 1;
-
           taps_bram_wr_din_addr_full        <= 0;
           input_data_bram_wr_din_valid_gate <= 1;
           input_data_bram_wr_din_addr_full  <= 0;
-
-          state                 <= SM_PROGRAM_TAPS;
+          state                             <= SM_PROGRAM_TAPS;
         end
 
         SM_PROGRAM_TAPS : begin
@@ -123,12 +128,13 @@ module configurable_fir
                 reselect_fullcount_start_address[i] <= i*M;
               end
 
-              din_ready                             <= 1;
-
+              din_ready_int                         <= 1;
               input_data_bram_wr_din_valid_gate     <= 0;
               tap_din_ready                         <= 0;
               tap_din_done                          <= 1;
               din_bram_rd_start_addr                <= 0;
+              input_data_bram_wr_din_addr_full      <= 0;
+              taps_bram_wr_din_addr_full            <= 0;
               state                                 <= SM_GET_INPUT;
             end
             else begin
@@ -139,15 +145,15 @@ module configurable_fir
         end
 
         SM_GET_INPUT : begin
-          if (din_valid == 1 && din_ready == 1) begin
+          if (din_valid == 1 && din_ready_int == 1) begin
 
             for (int i = 0 ; i < N ; i++) begin
               reselect_fullcount[i]           <= reselect_fullcount_start_address[i];
             end
 
-            din_ready                         <= 0;
+            din_ready_int                     <= 0;
             din_bram_counter                  <= 0;
-            input_data_bram_rd_din_addr       <= din_bram_rd_start_addr;
+            input_data_bram_rd_din_addr       <= din_bram_rd_start_addr + 1;
             input_data_bram_wr_din_value      <= din;
             input_data_bram_wr_din_valid_gate <= 1;
             for (int i = 0 ; i < N ; i++) begin
@@ -162,31 +168,35 @@ module configurable_fir
           input_data_bram_wr_din_valid_gate <= 0;
 
           if (din_bram_counter == M) begin
-            taps_bram_rd_din_valid  <= 0;
-            input_data_bram_rd_din_valid <= 0;
+            taps_bram_rd_din_valid        <= 0;
+            input_data_bram_rd_din_valid  <= 0;
           end
           else begin
 
-            for (int i = 0 ; i < N ; i++) begin
-              reselect_fullcount[i] <= reselect_fullcount[i] - 1;
-            end
+            input_data_bram_rd_din_addr   <= input_data_bram_rd_din_addr - 1;
 
-            taps_bram_rd_din_addr   <= din_bram_counter;
-            din_bram_counter        <= din_bram_counter + 1;
-            taps_bram_rd_din_valid  <= 1;
-            input_data_bram_rd_din_valid <= 1;
+            taps_bram_rd_din_addr         <= din_bram_counter;
+            din_bram_counter              <= din_bram_counter + 1;
+            taps_bram_rd_din_valid        <= 1;
+            input_data_bram_rd_din_valid  <= 1;
+          end
+
+          if (taps_bram_rd_dout_valid[0] == 1) begin
+            for (int i = 0 ; i < N ; i++) begin
+              reselect_fullcount[i]       <= reselect_fullcount[i] - 1;
+            end
           end
 
           if (mult_valid == 1) begin
             if (accumulate_counter == M-1) begin
-              state                 <= SM_RESCALE;
+              state             <= SM_RESCALE;
             end
 
             for (int i = 0 ; i < N ; i++) begin
-              accumulate[i]         <= accumulate[i] + mult[i];
+              accumulate[i]     <= accumulate[i] + mult[i];
             end
 
-            accumulate_counter      <= accumulate_counter + 1;
+            accumulate_counter  <= accumulate_counter + 1;
           end
 
         end
@@ -205,22 +215,56 @@ module configurable_fir
             else begin
               accumulate_short[i] <= accumulate_rs[i][G_DATA_WIDTH-1 -: G_DATA_WIDTH];
             end
-            state <= SM_SEND_OUTPUT;
+
+            accumulate2         <= 0;
+            accumulate2_counter <= 0;
+
+            state <= SM_ACCUM2;
 
           end
 
         end
 
-        SM_SEND_OUTPUT : begin
-          //dout <= accumulate_short;
-          if (dout_valid == 1 && dout_ready == 1) begin
-            dout_valid              <= 0;
-            din_ready               <= 1;
-            din_bram_rd_start_addr  <= din_bram_rd_start_addr + 1;
-            state                   <= SM_GET_INPUT;
+        SM_ACCUM2 : begin
+          if (accumulate2_counter == N-1) begin
+            state               <= SM_RESCALE2;
           end
           else begin
-            dout_valid              <= 1;
+            accumulate2_counter <= accumulate2_counter + 1;
+          end
+
+          accumulate2 <= accumulate2 + accumulate_short[accumulate2_counter];
+
+        end
+
+        SM_RESCALE2 : begin
+          if (accumulate2 > 2**(G_DATA_WIDTH-1)-1) begin
+            accumulate2_short <= 2**(G_DATA_WIDTH-1)-1;
+          end
+          else if (accumulate2 < -2**(G_DATA_WIDTH-1)) begin
+            accumulate2_short <= -2**(G_DATA_WIDTH-1);
+          end
+          else begin
+            accumulate2_short <= accumulate2[G_DATA_WIDTH-1 -: G_DATA_WIDTH];
+          end
+
+          state <= SM_SEND_OUTPUT;
+        end
+
+        SM_SEND_OUTPUT : begin
+          dout_int <= accumulate2;
+          if (dout_valid_int == 1 && dout_ready == 1) begin
+            dout_valid_int                        <= 0;
+            din_ready_int                         <= 1;
+            din_bram_rd_start_addr                <= din_bram_rd_start_addr + 1;
+            input_data_bram_wr_din_addr_full      <= input_data_bram_wr_din_addr_full + 1;
+            for (int i = 0 ; i < N ; i++) begin
+              reselect_fullcount_start_address[i] <= reselect_fullcount_start_address[i] + 1;
+            end
+            state                                 <= SM_GET_INPUT;
+          end
+          else begin
+            dout_valid_int                        <= 1;
           end
         end
 
@@ -239,6 +283,7 @@ module configurable_fir
 
   assign taps_bram_wr_din_valid_gate = tap_din_valid & tap_din_ready;
 
+  assign taps_bram_wr_din_addr = taps_bram_wr_din_addr_full[$clog2(M)-1 -: $clog2(M)];
 
   generate
 
@@ -249,7 +294,9 @@ module configurable_fir
       assign input_data_bram_wr_din_valid[i]  = (input_data_bram_wr_din_addr_full_msbs == i) ? input_data_bram_wr_din_valid_gate : 0;
       assign taps_bram_wr_din_valid[i]        = (taps_bram_wr_din_addr_full_msbs == i) ? taps_bram_wr_din_valid_gate : 0;
 
-      assign bram_reselect[i] = input_data_bram_rd_dout_value[taps_bram_wr_din_addr_full_msbs];
+      assign bram_reselect[i] = input_data_bram_rd_dout_value[reselect_fullcount_msbs[i]];
+
+      assign taps_bram_wr_din_value = tap_din;
 
       config_fir_bram
       #(
