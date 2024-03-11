@@ -125,7 +125,7 @@ module configurable_fir
         SM_GET_INPUT : begin
           if (din_valid == 1 && din_ready == 1) begin
             din_ready <= 0;
-            brm_din_wr_din_addr <= M-1;
+            brm_din_wr_din_addr <= M+1-1;
             brm_din_rd_din_addr <= M-1;
             brm_din_rd_din_valid  <= 1;
             accumulate_counter    <= 0;
@@ -149,11 +149,7 @@ module configurable_fir
           end
 
           if (brm_din_wr_din_valid == 1) begin
-            if (brm_din_wr_din_addr == 0) begin
-            end
-            else begin
-              brm_din_wr_din_addr <= brm_din_wr_din_addr - 1;
-            end
+            brm_din_wr_din_addr <= brm_din_wr_din_addr - 1;
           end
 
 
@@ -212,10 +208,17 @@ module configurable_fir
       end
 
       SM_CALC : begin
-        brm_din_wr_din_valid        = brm_din_rd_dout_valid[0];
+        if (brm_din_wr_din_addr == 0) begin
+          brm_din_wr_din_valid      = 0;
+        end
+        else begin
+          brm_din_wr_din_valid      = brm_din_rd_dout_valid[0];
+        end
+
         for (int i = 0 ; i < N ; i++) begin
           brm_din_wr_din_value[i]   = brm_din_rd_dout_value[i];
         end
+
       end
 
       default : begin
