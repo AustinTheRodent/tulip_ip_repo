@@ -37,7 +37,10 @@ module configurable_fir
     SM_PROGRAM_TAPS,
     SM_GET_INPUT,
     SM_CALC,
-    SM_RESIZE
+    SM_RESIZE,
+    SM_ADD2,
+    SM_RESIZE2,
+    SM_OUTPUT
   } state_t;
 
   state_t state;
@@ -66,8 +69,14 @@ module configurable_fir
 
   logic [G_DATA_WIDTH-1:0] registered_bram_data [0:N-2];
 
-  logic signed [M_LOG2+G_DATA_WIDTH+G_TAP_WIDTH-1:0] accumulate [0:N-1];
-  logic unsigned [M_LOG2-1:0] accumulate_counter;
+  logic signed [M_LOG2+G_DATA_WIDTH+G_TAP_WIDTH-1:0]  accumulate        [0:N-1];
+  logic signed [M_LOG2+G_DATA_WIDTH+G_TAP_WIDTH-1:0]  accumulate_rs     [0:N-1];
+  logic signed [G_DATA_WIDTH-1:0]                     accumulate_short  [0:N-1];
+  logic unsigned [M_LOG2-1:0]                         accumulate_counter;
+
+  logic signed [M_LOG2+N_LOG2+G_DATA_WIDTH+G_TAP_WIDTH-1:0] accumulate_2;
+  logic signed [M_LOG2+N_LOG2+G_DATA_WIDTH+G_TAP_WIDTH-1:0] accumulate_2_rs;
+  logic signed [G_DATA_WIDTH-1:0]                           accumulate_2_short;
 
   logic mult_dout_valid;
   logic signed [G_DATA_WIDTH+G_TAP_WIDTH-1:0] mult [0:N-1];
@@ -148,7 +157,13 @@ module configurable_fir
             end
           end
 
-          if (brm_din_wr_din_valid == 1) begin
+          if (brm_din_rd_dout_valid[0] == 1 && brm_din_wr_din_valid == 0) begin
+            for (int i = 0 ; i < N-1 ; i++) begin
+              registered_bram_data[i] <= brm_din_rd_dout_value[i];
+            end
+          end
+
+          if (brm_din_rd_dout_valid[0] == 1) begin
             brm_din_wr_din_addr <= brm_din_wr_din_addr - 1;
           end
 
@@ -168,7 +183,69 @@ module configurable_fir
         end
 
         SM_RESIZE : begin
-          // todo: resize accumulation
+          for (int i = 0 ; i < N ; i++) begin
+            accumulate_rs[i] = accumulate[i] >>> G_TAP_WIDTH;
+            if (accumulate_rs[i] > (2**G_DATA_WIDTH)-1) begin
+              accumulate_short[i] <= (2**G_DATA_WIDTH)-1;
+            end
+            else if (accumulate_rs[i] < -(2**G_DATA_WIDTH)) begin
+              accumulate_short[i] <= -2**G_DATA_WIDTH;
+            end
+            else begin
+              accumulate_short[i] <= accumulate_rs[i];
+            end
+          end
+          accumulate_counter  <= 0;
+          accumulate_2        <= 0;
+          state               <= SM_ADD2;
+        end
+
+        SM_ADD2 : begin
+          if (accumulate_counter == N-1) begin
+            state               <= SM_RESIZE2;
+          end
+          else begin
+            accumulate_counter  <= accumulate_counter + 1;
+          end
+          //accumulate_2          <= accumulate_2 + accumulate_short[accumulate_counter];
+          accumulate_2          <= accumulate_2 + accumulate[accumulate_counter];
+        end
+
+        SM_RESIZE2 : begin
+          accumulate_2_rs = accumulate_2 >>> N_LOG2 + G_TAP_WIDTH;
+          if (accumulate_2_rs > (2**G_DATA_WIDTH)-1) begin
+            accumulate_2_short <= 2**G_DATA_WIDTH-1;
+          end
+          else if (accumulate_2_rs < -(2**G_DATA_WIDTH)) begin
+            accumulate_2_short <= -2**G_DATA_WIDTH;
+          end
+          else begin
+            accumulate_2_short <= accumulate_2_rs;
+          end
+
+          //brm_din_rd_din_addr   <= M-1;
+          //brm_din_rd_din_valid  <= 1;
+
+          state       <= SM_OUTPUT;
+        end
+
+        SM_OUTPUT : begin
+
+          //brm_din_rd_din_addr   <= 0;
+          //brm_din_rd_din_valid  <= 0;
+          //for (int i = 0 ; i < N-1 ; i++) begin
+          //  registered_bram_data[i] <= brm_din_rd_dout_value[i];
+          //end
+
+          if (dout_valid == 1 && dout_ready == 1) begin
+            din_ready   <= 1;
+            dout_valid  <= 0;
+            state       <= SM_GET_INPUT;
+          end
+          else begin
+            dout        <= accumulate_2_short;
+            dout_valid  <= 1;
+          end
         end
 
         default : begin
@@ -184,6 +261,7 @@ module configurable_fir
 
   assign brm_taps_wr_din_value = tap_din;
 
+  //todo: fit this combinational case into the clocked case
   always_comb begin
 
     case (state)

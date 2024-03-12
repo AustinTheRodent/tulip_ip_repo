@@ -438,7 +438,7 @@ module tulip_dsp
 
   configurable_fir
   #(
-    .G_NUM_STAGES_LOG2  (5),
+    .G_NUM_STAGES_LOG2  (6),
     .G_STAGE_DEPTH_LOG2 (10),
     .G_DATA_WIDTH       (16),
     .G_TAP_WIDTH        (16)
