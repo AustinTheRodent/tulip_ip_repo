@@ -300,6 +300,10 @@ module configurable_fir
       end
 
       default : begin
+        brm_din_wr_din_valid = 0;
+        for (int i = 0 ; i < N ; i++) begin
+          brm_din_wr_din_value[i]   = 0;
+        end
       end
 
     endcase
