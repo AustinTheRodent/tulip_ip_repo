@@ -11,7 +11,7 @@ module reverb_wrapper
   input  logic                    enable,
   input  logic                    bypass,
 
-  input  logic [15:0]             feedback_gain, // 1.16 unsigned fixed point
+  input  logic [15:0]             feedback_gain, // 1.15 unsigned fixed point
 
   input  logic [G_TAP_WIDTH-1:0]  tap_din,
   input  logic                    tap_din_valid,
