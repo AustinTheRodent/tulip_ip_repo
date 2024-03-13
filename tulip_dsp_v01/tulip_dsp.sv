@@ -117,10 +117,10 @@ module tulip_dsp
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
 
-  logic signed [16-1:0]  reverb_din;
+  logic signed [24-1:0]  reverb_din;
   logic                     reverb_din_valid;
   logic                     reverb_din_ready;
-  logic signed [16-1:0]  reverb_dout;
+  logic signed [24-1:0]  reverb_dout;
   logic signed [C_ADC_DWIDTH-1:0]  reverb_dout_long;
   logic                     reverb_dout_valid;
   logic                     reverb_dout_ready;
@@ -432,7 +432,7 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign reverb_din       = signed'(gain1_dout) >>> 8;
+  assign reverb_din       = signed'(gain1_dout) >>> 0;
   assign reverb_din_valid = gain1_dout_valid;
   assign gain1_dout_ready = reverb_din_ready;
 
@@ -440,7 +440,7 @@ module tulip_dsp
   #(
     .G_NUM_STAGES_LOG2  (6),
     .G_STAGE_DEPTH_LOG2 (10),
-    .G_DATA_WIDTH       (16),
+    .G_DATA_WIDTH       (24),
     .G_TAP_WIDTH        (16)
   )
   u_reverb
