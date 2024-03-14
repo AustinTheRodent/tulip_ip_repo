@@ -50,18 +50,27 @@ module reverb_wrapper
   logic                           fb_buff_dout_valid;
   logic                           fb_buff_dout_ready;
 
-  logic signed [G_DATA_WIDTH-1:0] fir_din;
+  localparam int C_FIR_DWIDTH = 16;
+  logic signed [C_FIR_DWIDTH-1:0] fir_din;
   logic                           fir_din_valid;
   logic                           fir_din_ready;
-  logic signed [G_DATA_WIDTH-1:0] fir_dout;
+  logic signed [C_FIR_DWIDTH-1:0] fir_dout;
   logic                           fir_dout_valid;
   logic                           fir_dout_ready;
 
+  logic signed [G_DATA_WIDTH-1:0] din_rs;
+  logic signed [C_FIR_DWIDTH-1:0] din_rs_short;
+
 ////////////////////////////////////////////////////////////
+
+  assign din_rs = din >>> (G_DATA_WIDTH-C_FIR_DWIDTH);
+  assign din_rs_short = din_rs;
+  assign fir_din = (first_samp_done == 0) ? din_rs_short : din_rs_short + fb_buff_dout;
 
   assign din_ready = (first_samp_done == 0) ? in_buff_din_ready & fir_din_ready : in_buff_din_ready & fir_din_ready & fb_buff_dout_valid;
 
   assign in_buff_din_valid = fir_din_valid & fir_din_ready;
+  assign in_buff_din = din;
 
   axis_buffer
   #(
@@ -103,7 +112,7 @@ module reverb_wrapper
   #(
     .G_NUM_STAGES_LOG2  (G_NUM_STAGES_LOG2),
     .G_STAGE_DEPTH_LOG2 (G_STAGE_DEPTH_LOG2),
-    .G_DATA_WIDTH       (G_DATA_WIDTH),
+    .G_DATA_WIDTH       (C_FIR_DWIDTH),
     .G_TAP_WIDTH        (G_TAP_WIDTH)
   )
   u_fir_core
