@@ -36,21 +36,26 @@ module reverb_wrapper
   logic                           in_buff_dout_valid;
   logic                           in_buff_dout_ready;
 
-  logic signed [G_DATA_WIDTH-1:0] out_buff_din;
+  localparam int C_FIR_DWIDTH = 16;
+
+  logic signed [C_FIR_DWIDTH-1:0] out_buff_din;
   logic                           out_buff_din_valid;
   logic                           out_buff_din_ready;
-  logic signed [G_DATA_WIDTH-1:0] out_buff_dout;
+  logic signed [C_FIR_DWIDTH-1:0] out_buff_dout;
+  logic signed [G_DATA_WIDTH-1:0] out_buff_dout_long;
+  logic signed [G_DATA_WIDTH-1:0] out_buff_dout_ls;
   logic                           out_buff_dout_valid;
   logic                           out_buff_dout_ready;
 
-  logic signed [G_DATA_WIDTH-1:0] fb_buff_din;
-  logic                           fb_buff_din_valid;
-  logic                           fb_buff_din_ready;
-  logic signed [G_DATA_WIDTH-1:0] fb_buff_dout;
-  logic                           fb_buff_dout_valid;
-  logic                           fb_buff_dout_ready;
+  logic signed [C_FIR_DWIDTH-1:0]      fb_buff_din;
+  logic signed [C_FIR_DWIDTH+16+1-1:0] fb_buff_din_long;
+  logic signed [C_FIR_DWIDTH+16+1-1:0] fb_buff_din_rs;
+  logic                                fb_buff_din_valid;
+  logic                                fb_buff_din_ready;
+  logic signed [C_FIR_DWIDTH-1:0]      fb_buff_dout;
+  logic                                fb_buff_dout_valid;
+  logic                                fb_buff_dout_ready;
 
-  localparam int C_FIR_DWIDTH = 16;
   logic signed [C_FIR_DWIDTH-1:0] fir_din;
   logic                           fir_din_valid;
   logic                           fir_din_ready;
@@ -140,9 +145,13 @@ module reverb_wrapper
   assign fb_buff_din_valid = fir_dout_valid & out_buff_din_ready;
   assign fir_dout_ready = out_buff_din_ready & fb_buff_din_ready;
 
+  assign fb_buff_din_long = fir_dout * signed'({1'b0 , feedback_gain});
+  assign fb_buff_din_rs = fb_buff_din_long >>> 15;
+  assign fb_buff_din = fb_buff_din_rs;
+
   axis_buffer
   #(
-    .G_DWIDTH         (G_DATA_WIDTH)
+    .G_DWIDTH         (C_FIR_DWIDTH)
   )
   u_feedback_buff
   (
@@ -163,9 +172,11 @@ module reverb_wrapper
 
   assign fb_buff_dout_ready = fir_din_valid & fir_din_ready;
 
+  assign out_buff_din = fir_dout;
+
   axis_buffer
   #(
-    .G_DWIDTH         (G_DATA_WIDTH)
+    .G_DWIDTH         (C_FIR_DWIDTH)
   )
   u_output_buff
   (
@@ -183,6 +194,10 @@ module reverb_wrapper
     .dout_ready       (out_buff_dout_ready),
     .dout_last        ()
   );
+
+  assign out_buff_dout_long = out_buff_dout;
+  assign out_buff_dout_ls = out_buff_dout_long <<< (G_DATA_WIDTH-C_FIR_DWIDTH);
+  assign dout = out_buff_dout_ls + in_buff_dout;
 
   assign out_buff_dout_ready = dout_valid & dout_ready;
 
