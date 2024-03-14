@@ -11,6 +11,7 @@ module reverb_wrapper
   input  logic                    enable,
   input  logic                    bypass,
 
+  input  logic [7:0]              feedback_right_shift,
   input  logic [15:0]             feedback_gain, // 1.15 unsigned fixed point
 
   input  logic [G_TAP_WIDTH-1:0]  tap_din,
@@ -146,6 +147,7 @@ module reverb_wrapper
   assign fb_buff_din_valid = fir_dout_valid & out_buff_din_ready;
   assign fir_dout_ready = out_buff_din_ready & fb_buff_din_ready;
 
+  //feedback_right_shift
   assign fb_buff_din_long = fir_dout * signed'({1'b0 , feedback_gain});
   assign fb_buff_din_rs = fb_buff_din_long >>> 15;
   assign fb_buff_din = fb_buff_din_rs;
