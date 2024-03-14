@@ -3,7 +3,8 @@ module configurable_fir
   parameter int G_NUM_STAGES_LOG2 = 2,
   parameter int G_STAGE_DEPTH_LOG2 = 2,
   parameter int G_DATA_WIDTH = 16,
-  parameter int G_TAP_WIDTH = 16
+  parameter int G_TAP_WIDTH = 16,
+  parameter int G_OUTPUT_UNSCALED = 0
 )
 (
   input  logic clk,
@@ -20,7 +21,7 @@ module configurable_fir
   input  logic                    din_valid,
   output logic                    din_ready,
 
-  output logic [G_DATA_WIDTH-1:0] dout,
+  output logic [G_DATA_WIDTH+(M_LOG2+N_LOG2+G_TAP_WIDTH)*G_OUTPUT_UNSCALED-1:0] dout,
   output logic                    dout_valid,
   input  logic                    dout_ready
 );
@@ -235,7 +236,12 @@ module configurable_fir
             state       <= SM_GET_INPUT;
           end
           else begin
-            dout        <= accumulate_2_short;
+            if (G_OUTPUT_UNSCALED == 1) begin
+              dout      <= accumulate_2;
+            end
+            else begin
+              dout      <= accumulate_2_short;
+            end
             dout_valid  <= 1;
           end
         end
