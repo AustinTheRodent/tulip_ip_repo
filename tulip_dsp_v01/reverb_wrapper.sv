@@ -84,6 +84,8 @@ module reverb_wrapper
     .dout_last        ()
   );
 
+  assign in_buff_dout_ready = dout_valid & dout_ready;
+
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
       first_samp_done <= 0;
@@ -172,6 +174,8 @@ module reverb_wrapper
     .dout_ready       (out_buff_dout_ready),
     .dout_last        ()
   );
+
+  assign out_buff_dout_ready = dout_valid & dout_ready;
 
   assign dout_valid = in_buff_dout_valid & out_buff_dout_valid;
 
