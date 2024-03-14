@@ -3,7 +3,10 @@ module reverb_wrapper
   parameter int G_NUM_STAGES_LOG2 = 2,
   parameter int G_STAGE_DEPTH_LOG2 = 2,
   parameter int G_DATA_WIDTH = 16,
-  parameter int G_TAP_WIDTH = 16
+  parameter int G_TAP_WIDTH = 16,
+
+  localparam int G_GAIN_INTEGER_BITS = 1,
+  localparam int G_GAIN_DECIMAL_BITS = 15
 )
 (
   input  logic                    clk,
@@ -12,7 +15,7 @@ module reverb_wrapper
   input  logic                    bypass,
 
   input  logic [7:0]              feedback_right_shift, // 8.0 unsigned fixed point
-  input  logic [15:0]             feedback_gain, // 1.15 unsigned fixed point
+  input  logic [G_GAIN_INTEGER_BITS+G_GAIN_DECIMAL_BITS-1:0] feedback_gain, // 1.15 unsigned fixed point
 
   input  logic [G_TAP_WIDTH-1:0]  tap_din,
   input  logic                    tap_din_valid,
@@ -49,8 +52,8 @@ module reverb_wrapper
   logic                           out_buff_dout_ready;
 
   logic signed [C_FIR_DWIDTH-1:0]      fb_buff_din;
-  logic signed [G_NUM_STAGES_LOG2+G_STAGE_DEPTH_LOG2+C_FIR_DWIDTH+G_TAP_WIDTH+16+1-1:0] fb_buff_din_long;
-  logic signed [C_FIR_DWIDTH+G_TAP_WIDTH+16+1-1:0] fb_buff_din_rs;
+  logic signed [C_FIR_DWIDTH+G_GAIN_INTEGER_BITS+G_GAIN_DECIMAL_BITS+1-1:0] fb_buff_din_long;
+  logic signed [C_FIR_DWIDTH+G_GAIN_INTEGER_BITS+G_GAIN_DECIMAL_BITS+1-1:0] fb_buff_din_rs;
   logic                                fb_buff_din_valid;
   logic                                fb_buff_din_ready;
   logic signed [C_FIR_DWIDTH-1:0]      fb_buff_dout;
@@ -154,7 +157,7 @@ module reverb_wrapper
   assign fir_dout_rs = fir_dout >>> feedback_right_shift;
   assign fir_dout_short = fir_dout_rs;
   assign fb_buff_din_long = fir_dout_short * signed'({1'b0 , feedback_gain});
-  assign fb_buff_din_rs = fb_buff_din_long >>> 15;
+  assign fb_buff_din_rs = fb_buff_din_long >>> G_GAIN_DECIMAL_BITS;
   assign fb_buff_din = fb_buff_din_rs;
 
   axis_buffer
