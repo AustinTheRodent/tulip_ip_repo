@@ -118,7 +118,8 @@ module reverb_wrapper
     .G_NUM_STAGES_LOG2  (G_NUM_STAGES_LOG2),
     .G_STAGE_DEPTH_LOG2 (G_STAGE_DEPTH_LOG2),
     .G_DATA_WIDTH       (C_FIR_DWIDTH),
-    .G_TAP_WIDTH        (G_TAP_WIDTH)
+    .G_TAP_WIDTH        (G_TAP_WIDTH),
+    .G_OUTPUT_UNSCALED  (0)
   )
   u_fir_core
   (
