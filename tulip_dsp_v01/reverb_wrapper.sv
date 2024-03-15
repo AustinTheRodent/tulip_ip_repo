@@ -79,7 +79,18 @@ module reverb_wrapper
   assign din_rs_short = din_rs;
   assign fir_din = (first_samp_done == 0) ? din_rs_short : din_rs_short + fb_buff_dout;
 
-  assign din_ready = (first_samp_done == 0) ? in_buff_din_ready & fir_din_ready : in_buff_din_ready & fir_din_ready & fb_buff_dout_valid;
+  always_comb begin
+    if (bypass == 1) begin
+      din_ready = dout_ready;
+    end
+    else if (first_samp_done == 0) begin
+      din_ready = in_buff_din_ready & fir_din_ready ;
+    end
+    else begin
+      din_ready = in_buff_din_ready & fir_din_ready & fb_buff_dout_valid;
+    end
+  end
+  //assign din_ready = (first_samp_done == 0) ? in_buff_din_ready & fir_din_ready : in_buff_din_ready & fir_din_ready & fb_buff_dout_valid;
 
   assign in_buff_din_valid = fir_din_valid & fir_din_ready;
   assign in_buff_din = din;
@@ -183,7 +194,7 @@ module reverb_wrapper
 
   assign fb_buff_dout_ready = fir_din_valid & fir_din_ready;
 
-  assign out_buff_din = fir_dout;
+  assign out_buff_din = fir_dout_short;
 
   axis_buffer
   #(
@@ -208,10 +219,11 @@ module reverb_wrapper
 
   assign out_buff_dout_long = out_buff_dout;
   assign out_buff_dout_ls = out_buff_dout_long <<< (G_DATA_WIDTH-C_FIR_DWIDTH);
-  assign dout = out_buff_dout_ls + in_buff_dout;
+
+  assign dout = (bypass == 1) ? din : out_buff_dout_ls + in_buff_dout;
 
   assign out_buff_dout_ready = dout_valid & dout_ready;
 
-  assign dout_valid = in_buff_dout_valid & out_buff_dout_valid;
+  assign dout_valid = (bypass == 1) ? din_valid : in_buff_dout_valid & out_buff_dout_valid;
 
 endmodule
