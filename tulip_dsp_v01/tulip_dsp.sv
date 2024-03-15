@@ -30,6 +30,7 @@ module tulip_dsp
 
   input  logic [7:0]                        feedback_right_shift, // 8.0 unsigned fixed point
   input  logic [15:0]                       feedback_gain, // 1.15 unsigned fixed point
+  input  logic [15:0]                       feedforward_gain, // 1.15 unsigned fixed point
 
   input  logic [C_USER_FILT_TAP_DWIDTH-1:0] reverb_taps_prog_din,
   input  logic                              reverb_taps_prog_din_valid,
@@ -454,6 +455,7 @@ module tulip_dsp
 
     .feedback_right_shift (feedback_right_shift),
     .feedback_gain        (feedback_gain),
+    .feedforward_gain     (feedforward_gain),
 
     .tap_din              (reverb_taps_prog_din),
     .tap_din_valid        (reverb_taps_prog_din_valid),
