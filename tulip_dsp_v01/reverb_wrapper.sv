@@ -16,6 +16,7 @@ module reverb_wrapper
 
   input  logic [7:0]              feedback_right_shift, // 8.0 unsigned fixed point
   input  logic [G_GAIN_INTEGER_BITS+G_GAIN_DECIMAL_BITS-1:0] feedback_gain, // 1.15 unsigned fixed point
+  input  logic [G_GAIN_INTEGER_BITS+G_GAIN_DECIMAL_BITS-1:0] feedforward_gain, // 1.15 unsigned fixed point
 
   input  logic [G_TAP_WIDTH-1:0]  tap_din,
   input  logic                    tap_din_valid,
@@ -34,6 +35,8 @@ module reverb_wrapper
   logic first_samp_done;
 
   logic signed [G_DATA_WIDTH-1:0] in_buff_din;
+  logic signed [$bits(feedforward_gain)+G_DATA_WIDTH-1:0] in_buff_din_long;
+  logic signed [$bits(feedforward_gain)+G_DATA_WIDTH-1:0] in_buff_din_rs;
   logic                           in_buff_din_valid;
   logic                           in_buff_din_ready;
   logic signed [G_DATA_WIDTH-1:0] in_buff_dout;
@@ -93,7 +96,10 @@ module reverb_wrapper
   //assign din_ready = (first_samp_done == 0) ? in_buff_din_ready & fir_din_ready : in_buff_din_ready & fir_din_ready & fb_buff_dout_valid;
 
   assign in_buff_din_valid = fir_din_valid & fir_din_ready;
-  assign in_buff_din = din;
+
+  assign in_buff_din_long = signed'(feedforward_gain) * din;
+  assign in_buff_din_rs = in_buff_din_long >>> G_GAIN_DECIMAL_BITS;
+  assign in_buff_din = in_buff_din_rs;
 
   axis_buffer
   #(
