@@ -367,7 +367,7 @@ begin
 
       feedback_right_shift            => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
       feedback_gain                   => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
-      feedforward_gain                => registers.TULIP_DSP_REVERB_SCALE.FEEDFORWARD_GAIN,
+      feedforward_gain                => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
 
       reverb_taps_prog_din            => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
       reverb_taps_prog_din_valid      => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
