@@ -8,6 +8,7 @@ module interpolating_lut_wrapper
   input  logic                clk,
   input  logic                reset,
   input  logic                enable,
+  input  logic                bypass,
 
   input  logic                symmetric_mode,
 
@@ -37,7 +38,11 @@ module interpolating_lut_wrapper
   localparam C_MIDPOINT_BIAS = 2**G_DWIDTH / 2;
 
   logic unsigned [G_DWIDTH-1:0] core_din;
+  logic                         core_din_valid;
+  logic                         core_din_ready;
   logic unsigned [G_DWIDTH-1:0] core_dout;
+  logic                         core_dout_valid;
+  logic                         core_dout_ready;
   logic unsigned [G_DWIDTH-1:0] core_biased_input;
   logic unsigned [G_DWIDTH-1:0] core_magnitude_input;
   logic                         din_sign_is_negative;
@@ -84,7 +89,9 @@ module interpolating_lut_wrapper
   end
 
   assign core_din = (symmetric_mode == 1) ? (core_magnitude_input <<< 1) : core_biased_input;
-
+  assign core_din_valid = din_valid;
+  assign din_ready = (bypass == 0) ? core_din_ready : dout_ready;
+  
   interpolating_lut
   #(
     .G_ADDR_WIDTH         (G_ADDR_WIDTH),
@@ -103,16 +110,22 @@ module interpolating_lut_wrapper
     .lut_prog_din_done    (lut_prog_din_done),
 
     .din                  (core_din),
-    .din_valid            (din_valid),
-    .din_ready            (din_ready),
+    .din_valid            (core_din_valid),
+    .din_ready            (core_din_ready),
 
     .dout                 (core_dout),
-    .dout_valid           (dout_valid),
-    .dout_ready           (dout_ready)
+    .dout_valid           (core_dout_valid),
+    .dout_ready           (core_dout_ready)
   );
 
+  assign dout_valid = (bypass == 0) ? core_dout_valid : din_valid;
+  assign core_dout_ready = dout_ready;
+
   always_comb begin
-    if (symmetric_mode == 1) begin
+    if (bypass == 0) begin
+      dout <= din;
+    end
+    else if (symmetric_mode == 1) begin
       if (din_sign_is_negative == 1) begin
         dout <= -signed'(core_dout >> 1);
       end
