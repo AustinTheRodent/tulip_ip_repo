@@ -11,8 +11,10 @@ module tulip_dsp
   input  logic                    enable,
 
   input  logic                    bypass,
+  input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
+  input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
-
+  
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
 
@@ -159,7 +161,7 @@ module tulip_dsp
 
   assign upsample_din       = gain0_dout;
   assign upsample_din_valid = gain0_dout_valid;
-  assign gain0_dout_ready   = upsample_din_ready;
+  assign gain0_dout_ready   = (bypass_lut_tf == 0) ? upsample_din_ready : float_to_fixed2_dout_ready;
 
   upsample_8x_tiny_fir
   #(
@@ -195,8 +197,7 @@ module tulip_dsp
     .clk                (clk),
     .reset              (reset),
     .enable             (enable),
-
-    //todo: add bypass
+    .bypass             (bypass_lut_tf),
 
     .symmetric_mode     (symmetric_mode),
 
@@ -378,9 +379,9 @@ module tulip_dsp
     .dout_last        ()
   );
 
-  assign user_fir_din = float_to_fixed2_dout;
-  assign user_fir_din_valid = float_to_fixed2_dout_valid;
-  assign float_to_fixed2_dout_ready = user_fir_din_ready;
+  assign user_fir_din = (bypass_lut_tf == 0) ? float_to_fixed2_dout : gain0_dout;
+  assign user_fir_din_valid = (bypass_lut_tf == 0) ? float_to_fixed2_dout_valid : gain0_dout_valid;
+  assign float_to_fixed2_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
 
   tiny_fir
   #(
@@ -408,8 +409,8 @@ module tulip_dsp
     .dout_ready       (user_fir_dout_ready)
   );
 
-  assign gain1_din            = user_fir_dout;
-  assign gain1_din_valid      = user_fir_dout_valid;
+  assign gain1_din            = (bypass_usr_fir == 0) ? user_fir_dout : user_fir_din;
+  assign gain1_din_valid      = (bypass_usr_fir == 0) ? user_fir_dout_valid : user_fir_din_valid;
   assign user_fir_dout_ready  = gain1_din_ready;
 
   gain_stage
