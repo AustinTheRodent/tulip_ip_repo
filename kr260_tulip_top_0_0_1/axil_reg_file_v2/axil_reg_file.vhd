@@ -63,6 +63,10 @@ package axil_reg_file_pkg is
     FEEDBACK_GAIN : std_logic_vector(15 downto 0);
   end record;
 
+  type TULIP_DSP_REVERB_FEEDFORWARD_GAIN_subreg_t is record
+    FEEDFORWARD_GAIN : std_logic_vector(15 downto 0);
+  end record;
+
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -85,6 +89,7 @@ package axil_reg_file_pkg is
     TULIP_DSP_OUTPUT_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_REVERB_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_REVERB_SCALE_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
     I2C_CONTROL : I2C_CONTROL_subreg_t;
     PS_2_I2S_FIFO_WRITE_L : PS_2_I2S_FIFO_WRITE_L_subreg_t;
@@ -96,6 +101,7 @@ package axil_reg_file_pkg is
     TULIP_DSP_OUTPUT_GAIN : TULIP_DSP_OUTPUT_GAIN_subreg_t;
     TULIP_DSP_REVERB_PROG : TULIP_DSP_REVERB_PROG_subreg_t;
     TULIP_DSP_REVERB_SCALE : TULIP_DSP_REVERB_SCALE_subreg_t;
+    TULIP_DSP_REVERB_FEEDFORWARD_GAIN : TULIP_DSP_REVERB_FEEDFORWARD_GAIN_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
     VERSION_REG_wr_pulse : std_logic;
     I2C_CONTROL_REG_wr_pulse : std_logic;
@@ -116,6 +122,7 @@ package axil_reg_file_pkg is
     TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse : std_logic;
     TULIP_DSP_REVERB_PROG_REG_wr_pulse : std_logic;
     TULIP_DSP_REVERB_SCALE_REG_wr_pulse : std_logic;
+    TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     VERSION_REG_rd_pulse : std_logic;
     I2C_CONTROL_REG_rd_pulse : std_logic;
@@ -136,6 +143,7 @@ package axil_reg_file_pkg is
     TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse : std_logic;
     TULIP_DSP_REVERB_PROG_REG_rd_pulse : std_logic;
     TULIP_DSP_REVERB_SCALE_REG_rd_pulse : std_logic;
+    TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -264,6 +272,7 @@ architecture rtl of axil_reg_file is
   constant TULIP_DSP_OUTPUT_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 68;
   constant TULIP_DSP_REVERB_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 72;
   constant TULIP_DSP_REVERB_SCALE_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 76;
+  constant TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 80;
 
   signal registers          : reg_t;
 
@@ -304,6 +313,7 @@ begin
   registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE <= registers.TULIP_DSP_REVERB_PROG_REG(15 downto 0);
   registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT <= registers.TULIP_DSP_REVERB_SCALE_REG(23 downto 16);
   registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN <= registers.TULIP_DSP_REVERB_SCALE_REG(15 downto 0);
+  registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN <= registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG(15 downto 0);
 
   registers_out <= registers;
 
@@ -407,6 +417,7 @@ begin
         registers.TULIP_DSP_OUTPUT_GAIN_REG <= x"00010000";
         registers.TULIP_DSP_REVERB_PROG_REG <= x"00000000";
         registers.TULIP_DSP_REVERB_SCALE_REG <= x"00000000";
+        registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
         registers.VERSION_REG_wr_pulse <= '0';
@@ -428,6 +439,7 @@ begin
         registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
         registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
         registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -454,6 +466,7 @@ begin
             registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -480,6 +493,7 @@ begin
             registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -524,6 +538,9 @@ begin
                 when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_REVERB_SCALE_REG <= s_axi_wdata;
                   registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -572,6 +589,7 @@ begin
         registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
         registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
         registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -598,6 +616,7 @@ begin
             registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -624,6 +643,7 @@ begin
             registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -673,6 +693,8 @@ begin
                 s_axi_rdata <= registers.TULIP_DSP_REVERB_PROG_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_REVERB_SCALE_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG;
               when others =>
                 null;
             end case;
@@ -719,6 +741,8 @@ begin
                   registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;
