@@ -150,7 +150,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (global_sw_resetn),
+    .enable     (),
 
     .gain       (input_gain),
 
@@ -200,7 +200,7 @@ module tulip_dsp
   (
     .clk                (clk),
     .reset              (reset),
-    .enable             (global_sw_resetn),
+    .enable             (global_sw_resetn && lut_tf_sw_resetn),
     .bypass             (bypass_lut_tf),
 
     .symmetric_mode     (symmetric_mode),
@@ -397,7 +397,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (global_sw_resetn),
+    .enable           (global_sw_resetn && usr_fir_sw_resetn),
 
     .tap_din          (usr_fir_taps_prog_din),
     .tap_din_valid    (usr_fir_taps_prog_din_valid),
@@ -455,7 +455,7 @@ module tulip_dsp
   (
     .clk                  (clk),
     .reset                (reset),
-    .enable               (global_sw_resetn),
+    .enable               (global_sw_resetn && reverb_sw_resetn),
     .bypass               (bypass_reverb),
 
     .feedback_right_shift (reverb_feedback_right_shift),
