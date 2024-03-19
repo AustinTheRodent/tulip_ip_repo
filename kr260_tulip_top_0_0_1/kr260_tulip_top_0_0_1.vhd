@@ -345,7 +345,11 @@ begin
     (
       clk                             => s_axi_aclk,
       reset                           => (not a_axi_aresetn),
-      enable                          => dsp_sw_resetn,
+      global_sw_resetn                => dsp_sw_resetn,
+
+      lut_tf_sw_resetn                => '1',
+      usr_fir_sw_resetn               => '1',
+      reverb_sw_resetn                => '1',
 
       bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
