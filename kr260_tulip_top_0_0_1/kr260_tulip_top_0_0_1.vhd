@@ -349,6 +349,8 @@ begin
 
       bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
+      bypass_lut_tf                   => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
+      bypass_usr_fir                  => registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR(0),
 
       input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
       output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
@@ -360,14 +362,14 @@ begin
       lut_prog_din_ready              => lut_prog_din_ready(0),
       lut_prog_din_done               => lut_prog_din_done(0),
 
-      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
-      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
+      usr_fir_taps_prog_din           => registers.TULIP_DSP_USR_FIR_PROG.FIR_TAP_VALUE,
+      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse,
       usr_fir_taps_prog_din_ready     => usr_fir_taps_prog_din_ready(0),
       usr_fir_taps_prog_done          => usr_fir_taps_prog_done(0),
 
-      feedback_right_shift            => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
-      feedback_gain                   => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
-      feedforward_gain                => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
+      reverb_feedback_right_shift     => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
+      reverb_feedback_gain            => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
+      reverb_feedforward_gain         => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
 
       reverb_taps_prog_din            => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
       reverb_taps_prog_din_valid      => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
@@ -382,49 +384,6 @@ begin
       dout_valid                      => dsp_l_dout_valid,
       dout_ready                      => dsp_l_dout_ready
     );
-
---  u_tulip_dsp_r : entity work.tulip_dsp
---    generic map
---    (
---      G_LUT_AWIDTH                    => 10
---    )
---    port map
---    (
---      clk                             => s_axi_aclk,
---      reset                           => (not a_axi_aresetn),
---      enable                          => dsp_sw_resetn,
---
---      bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
---      bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
---
---      input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
---      output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
---
---      symmetric_mode                  => registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE(0),
---
---      lut_prog_din                    => registers.TULIP_DSP_LUT_PROG.LUT_PROG_VAL,
---      lut_prog_din_valid              => registers.TULIP_DSP_LUT_PROG_REG_wr_pulse,
---      lut_prog_din_ready              => open,
---      lut_prog_din_done               => open,
---
---      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
---      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
---      usr_fir_taps_prog_din_ready     => open,
---      usr_fir_taps_prog_done          => open,
---
---      reverb_taps_prog_din            => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
---      reverb_taps_prog_din_valid      => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
---      reverb_taps_prog_din_ready      => open,
---      reverb_taps_prog_done           => open,
---
---      din                             => dsp_r_din,
---      din_valid                       => dsp_r_din_valid,
---      din_ready                       => dsp_r_din_ready,
---
---      dout                            => dsp_r_dout,
---      dout_valid                      => dsp_r_dout_valid,
---      dout_ready                      => dsp_r_dout_ready
---    );
 
   i2s_fifo_din <=
     dsp_l_dout & dsp_l_dout when ps_2_i2s_fifo_dout_valid = '0' else

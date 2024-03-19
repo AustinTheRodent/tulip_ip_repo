@@ -14,7 +14,7 @@ module tulip_dsp
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
-  
+
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
 
@@ -30,9 +30,9 @@ module tulip_dsp
   output logic                              usr_fir_taps_prog_din_ready,
   output logic                              usr_fir_taps_prog_done,
 
-  input  logic [7:0]                        feedback_right_shift, // 8.0 unsigned fixed point
-  input  logic [15:0]                       feedback_gain, // 1.15 unsigned fixed point
-  input  logic [15:0]                       feedforward_gain, // 1.15 unsigned fixed point
+  input  logic [7:0]                        reverb_feedback_right_shift, // 8.0 unsigned fixed point
+  input  logic [15:0]                       reverb_feedback_gain, // 1.15 unsigned fixed point
+  input  logic [15:0]                       reverb_feedforward_gain, // 1.15 unsigned fixed point
 
   input  logic [C_USER_FILT_TAP_DWIDTH-1:0] reverb_taps_prog_din,
   input  logic                              reverb_taps_prog_din_valid,
@@ -454,9 +454,9 @@ module tulip_dsp
     .enable               (enable),
     .bypass               (bypass_reverb),
 
-    .feedback_right_shift (feedback_right_shift),
-    .feedback_gain        (feedback_gain),
-    .feedforward_gain     (feedforward_gain),
+    .feedback_right_shift (reverb_feedback_right_shift),
+    .feedback_gain        (reverb_feedback_gain),
+    .feedforward_gain     (reverb_feedforward_gain),
 
     .tap_din              (reverb_taps_prog_din),
     .tap_din_valid        (reverb_taps_prog_din_valid),

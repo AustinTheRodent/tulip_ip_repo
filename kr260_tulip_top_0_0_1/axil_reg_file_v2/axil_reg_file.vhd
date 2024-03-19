@@ -31,12 +31,14 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    BYPASS_USR_FIR : std_logic_vector(0 downto 0);
+    BYPASS_LUT_TF : std_logic_vector(0 downto 0);
     BYPASS_REVERB : std_logic_vector(0 downto 0);
     SYMMETRIC_MODE : std_logic_vector(0 downto 0);
     BYPASS : std_logic_vector(0 downto 0);
   end record;
 
-  type TULIP_DSP_FIR_PROG_subreg_t is record
+  type TULIP_DSP_USR_FIR_PROG_subreg_t is record
     FIR_TAP_VALUE : std_logic_vector(15 downto 0);
   end record;
 
@@ -83,7 +85,7 @@ package axil_reg_file_pkg is
     PS_2_I2S_FIFO_WRITE_R_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
-    TULIP_DSP_FIR_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_USR_FIR_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_LUT_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_INPUT_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_OUTPUT_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -95,7 +97,7 @@ package axil_reg_file_pkg is
     PS_2_I2S_FIFO_WRITE_L : PS_2_I2S_FIFO_WRITE_L_subreg_t;
     PS_2_I2S_FIFO_WRITE_R : PS_2_I2S_FIFO_WRITE_R_subreg_t;
     TULIP_DSP_CONTROL : TULIP_DSP_CONTROL_subreg_t;
-    TULIP_DSP_FIR_PROG : TULIP_DSP_FIR_PROG_subreg_t;
+    TULIP_DSP_USR_FIR_PROG : TULIP_DSP_USR_FIR_PROG_subreg_t;
     TULIP_DSP_LUT_PROG : TULIP_DSP_LUT_PROG_subreg_t;
     TULIP_DSP_INPUT_GAIN : TULIP_DSP_INPUT_GAIN_subreg_t;
     TULIP_DSP_OUTPUT_GAIN : TULIP_DSP_OUTPUT_GAIN_subreg_t;
@@ -116,7 +118,7 @@ package axil_reg_file_pkg is
     PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse : std_logic;
     TULIP_DSP_CONTROL_REG_wr_pulse : std_logic;
     TULIP_DSP_STATUS_REG_wr_pulse : std_logic;
-    TULIP_DSP_FIR_PROG_REG_wr_pulse : std_logic;
+    TULIP_DSP_USR_FIR_PROG_REG_wr_pulse : std_logic;
     TULIP_DSP_LUT_PROG_REG_wr_pulse : std_logic;
     TULIP_DSP_INPUT_GAIN_REG_wr_pulse : std_logic;
     TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse : std_logic;
@@ -137,7 +139,7 @@ package axil_reg_file_pkg is
     PS_2_I2S_FIFO_WRITE_R_REG_rd_pulse : std_logic;
     TULIP_DSP_CONTROL_REG_rd_pulse : std_logic;
     TULIP_DSP_STATUS_REG_rd_pulse : std_logic;
-    TULIP_DSP_FIR_PROG_REG_rd_pulse : std_logic;
+    TULIP_DSP_USR_FIR_PROG_REG_rd_pulse : std_logic;
     TULIP_DSP_LUT_PROG_REG_rd_pulse : std_logic;
     TULIP_DSP_INPUT_GAIN_REG_rd_pulse : std_logic;
     TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse : std_logic;
@@ -266,7 +268,7 @@ architecture rtl of axil_reg_file is
   constant PS_2_I2S_FIFO_WRITE_R_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 44;
   constant TULIP_DSP_CONTROL_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 48;
   constant TULIP_DSP_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 52;
-  constant TULIP_DSP_FIR_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 56;
+  constant TULIP_DSP_USR_FIR_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 56;
   constant TULIP_DSP_LUT_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 60;
   constant TULIP_DSP_INPUT_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 64;
   constant TULIP_DSP_OUTPUT_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 68;
@@ -301,10 +303,12 @@ begin
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR <= registers.TULIP_DSP_CONTROL_REG(4 downto 4);
+  registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(3 downto 3);
   registers.TULIP_DSP_CONTROL.BYPASS_REVERB <= registers.TULIP_DSP_CONTROL_REG(2 downto 2);
   registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE <= registers.TULIP_DSP_CONTROL_REG(1 downto 1);
   registers.TULIP_DSP_CONTROL.BYPASS <= registers.TULIP_DSP_CONTROL_REG(0 downto 0);
-  registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE <= registers.TULIP_DSP_FIR_PROG_REG(15 downto 0);
+  registers.TULIP_DSP_USR_FIR_PROG.FIR_TAP_VALUE <= registers.TULIP_DSP_USR_FIR_PROG_REG(15 downto 0);
   registers.TULIP_DSP_LUT_PROG.LUT_PROG_VAL <= registers.TULIP_DSP_LUT_PROG_REG(23 downto 0);
   registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS <= registers.TULIP_DSP_INPUT_GAIN_REG(31 downto 16);
   registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS <= registers.TULIP_DSP_INPUT_GAIN_REG(15 downto 0);
@@ -411,7 +415,7 @@ begin
         registers.PS_2_I2S_FIFO_WRITE_L_REG <= x"00000000";
         registers.PS_2_I2S_FIFO_WRITE_R_REG <= x"00000000";
         registers.TULIP_DSP_CONTROL_REG <= x"00000000";
-        registers.TULIP_DSP_FIR_PROG_REG <= x"00000000";
+        registers.TULIP_DSP_USR_FIR_PROG_REG <= x"00000000";
         registers.TULIP_DSP_LUT_PROG_REG <= x"00000000";
         registers.TULIP_DSP_INPUT_GAIN_REG <= x"00010000";
         registers.TULIP_DSP_OUTPUT_GAIN_REG <= x"00010000";
@@ -433,7 +437,7 @@ begin
         registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse <= '0';
         registers.TULIP_DSP_CONTROL_REG_wr_pulse <= '0';
         registers.TULIP_DSP_STATUS_REG_wr_pulse <= '0';
-        registers.TULIP_DSP_FIR_PROG_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse <= '0';
         registers.TULIP_DSP_LUT_PROG_REG_wr_pulse <= '0';
         registers.TULIP_DSP_INPUT_GAIN_REG_wr_pulse <= '0';
         registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
@@ -460,7 +464,7 @@ begin
             registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CONTROL_REG_wr_pulse <= '0';
             registers.TULIP_DSP_STATUS_REG_wr_pulse <= '0';
-            registers.TULIP_DSP_FIR_PROG_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_LUT_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_INPUT_GAIN_REG_wr_pulse <= '0';
             registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
@@ -487,7 +491,7 @@ begin
             registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CONTROL_REG_wr_pulse <= '0';
             registers.TULIP_DSP_STATUS_REG_wr_pulse <= '0';
-            registers.TULIP_DSP_FIR_PROG_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_LUT_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_INPUT_GAIN_REG_wr_pulse <= '0';
             registers.TULIP_DSP_OUTPUT_GAIN_REG_wr_pulse <= '0';
@@ -520,9 +524,9 @@ begin
                 when std_logic_vector(to_unsigned(TULIP_DSP_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_CONTROL_REG <= s_axi_wdata;
                   registers.TULIP_DSP_CONTROL_REG_wr_pulse <= '1';
-                when std_logic_vector(to_unsigned(TULIP_DSP_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.TULIP_DSP_FIR_PROG_REG <= s_axi_wdata;
-                  registers.TULIP_DSP_FIR_PROG_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_USR_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_USR_FIR_PROG_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_LUT_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_LUT_PROG_REG <= s_axi_wdata;
                   registers.TULIP_DSP_LUT_PROG_REG_wr_pulse <= '1';
@@ -583,7 +587,7 @@ begin
         registers.PS_2_I2S_FIFO_WRITE_R_REG_rd_pulse <= '0';
         registers.TULIP_DSP_CONTROL_REG_rd_pulse <= '0';
         registers.TULIP_DSP_STATUS_REG_rd_pulse <= '0';
-        registers.TULIP_DSP_FIR_PROG_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_USR_FIR_PROG_REG_rd_pulse <= '0';
         registers.TULIP_DSP_LUT_PROG_REG_rd_pulse <= '0';
         registers.TULIP_DSP_INPUT_GAIN_REG_rd_pulse <= '0';
         registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
@@ -610,7 +614,7 @@ begin
             registers.PS_2_I2S_FIFO_WRITE_R_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CONTROL_REG_rd_pulse <= '0';
             registers.TULIP_DSP_STATUS_REG_rd_pulse <= '0';
-            registers.TULIP_DSP_FIR_PROG_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_USR_FIR_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_LUT_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_INPUT_GAIN_REG_rd_pulse <= '0';
             registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
@@ -637,7 +641,7 @@ begin
             registers.PS_2_I2S_FIFO_WRITE_R_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CONTROL_REG_rd_pulse <= '0';
             registers.TULIP_DSP_STATUS_REG_rd_pulse <= '0';
-            registers.TULIP_DSP_FIR_PROG_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_USR_FIR_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_LUT_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_INPUT_GAIN_REG_rd_pulse <= '0';
             registers.TULIP_DSP_OUTPUT_GAIN_REG_rd_pulse <= '0';
@@ -681,8 +685,8 @@ begin
                 s_axi_rdata <= registers.TULIP_DSP_CONTROL_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_STATUS_REG;
-              when std_logic_vector(to_unsigned(TULIP_DSP_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                s_axi_rdata <= registers.TULIP_DSP_FIR_PROG_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_USR_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_USR_FIR_PROG_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_LUT_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_LUT_PROG_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_INPUT_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
@@ -729,8 +733,8 @@ begin
                   registers.TULIP_DSP_CONTROL_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_STATUS_REG_rd_pulse <= '1';
-                when std_logic_vector(to_unsigned(TULIP_DSP_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.TULIP_DSP_FIR_PROG_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_USR_FIR_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_USR_FIR_PROG_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_LUT_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_LUT_PROG_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_INPUT_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
