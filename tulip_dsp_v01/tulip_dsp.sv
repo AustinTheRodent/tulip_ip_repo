@@ -8,7 +8,11 @@ module tulip_dsp
 (
   input  logic                    clk,
   input  logic                    reset,
-  input  logic                    enable,
+  input  logic                    global_sw_resetn,
+
+  input  logic                    lut_tf_sw_resetn,
+  input  logic                    usr_fir_sw_resetn,
+  input  logic                    reverb_sw_resetn,
 
   input  logic                    bypass,
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
@@ -146,7 +150,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .gain       (input_gain),
 
@@ -171,7 +175,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .din        (upsample_din),
     .din_valid  (upsample_din_valid),
@@ -196,7 +200,7 @@ module tulip_dsp
   (
     .clk                (clk),
     .reset              (reset),
-    .enable             (enable),
+    .enable             (global_sw_resetn),
     .bypass             (bypass_lut_tf),
 
     .symmetric_mode     (symmetric_mode),
@@ -227,7 +231,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .din        (downsample_din),
     .din_valid  (downsample_din_valid),
@@ -254,7 +258,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn),
 
     .din              (fixed_to_float2_din),
     .din_valid        (fixed_to_float2_din_valid),
@@ -290,7 +294,7 @@ module tulip_dsp
       32'h3F7EDD7A
     };
 
-    if (reset == 1 || enable == 0) begin
+    if (reset == 1 || global_sw_resetn == 0) begin
       iir_b_tap_din       <= iir_b_tap_din_array[0];
       iir_a_tap_din       <= iir_a_tap_din_array[0];
       b_taps_prog_counter <= 0;
@@ -328,7 +332,7 @@ module tulip_dsp
   (
     .clk            (clk),
     .reset          (reset),
-    .enable         (enable),
+    .enable         (global_sw_resetn),
     .bypass         (1'b0),
 
     .b_tap          (iir_b_tap_din),
@@ -366,7 +370,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn),
 
     .din              (float_to_fixed2_din),
     .din_valid        (float_to_fixed2_din_valid),
@@ -393,7 +397,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn),
 
     .tap_din          (usr_fir_taps_prog_din),
     .tap_din_valid    (usr_fir_taps_prog_din_valid),
@@ -423,7 +427,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .gain       (output_gain),
 
@@ -451,7 +455,7 @@ module tulip_dsp
   (
     .clk                  (clk),
     .reset                (reset),
-    .enable               (enable),
+    .enable               (global_sw_resetn),
     .bypass               (bypass_reverb),
 
     .feedback_right_shift (reverb_feedback_right_shift),
