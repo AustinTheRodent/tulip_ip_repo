@@ -347,9 +347,9 @@ begin
       reset                           => (not a_axi_aresetn),
       global_sw_resetn                => dsp_sw_resetn,
 
-      lut_tf_sw_resetn                => '1',
-      usr_fir_sw_resetn               => '1',
-      reverb_sw_resetn                => '1',
+      lut_tf_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
+      usr_fir_sw_resetn               => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
+      reverb_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
 
       bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
