@@ -31,6 +31,9 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    SW_RESETN_USR_FIR : std_logic_vector(0 downto 0);
+    SW_RESETN_LUT_TF : std_logic_vector(0 downto 0);
+    SW_RESETN_REVERB : std_logic_vector(0 downto 0);
     BYPASS_USR_FIR : std_logic_vector(0 downto 0);
     BYPASS_LUT_TF : std_logic_vector(0 downto 0);
     BYPASS_REVERB : std_logic_vector(0 downto 0);
@@ -303,6 +306,9 @@ begin
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR <= registers.TULIP_DSP_CONTROL_REG(7 downto 7);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(6 downto 6);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB <= registers.TULIP_DSP_CONTROL_REG(5 downto 5);
   registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR <= registers.TULIP_DSP_CONTROL_REG(4 downto 4);
   registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(3 downto 3);
   registers.TULIP_DSP_CONTROL.BYPASS_REVERB <= registers.TULIP_DSP_CONTROL_REG(2 downto 2);
@@ -332,7 +338,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"0000001D";
+        registers.VERSION_REG <= x"0000001F";
         registers.I2C_STATUS_REG <= x"00000000";
         registers.I2S_STATUS_REG <= x"00000000";
         registers.I2S_FIFO_REG <= x"00000000";

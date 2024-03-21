@@ -119,11 +119,12 @@ module configurable_fir
         SM_PROGRAM_TAPS : begin
           if (tap_din_valid == 1 && tap_din_ready == 1) begin
             if (program_counter == M*N-1) begin
-              din_ready       <= 1;
-              tap_din_ready   <= 0;
-              brm_din_rd_din_valid_gate   <= 0;
-              brm_din_wr_din_addr <= 0;
-              state           <= SM_GET_INPUT;
+              din_ready                 <= 1;
+              tap_din_ready             <= 0;
+              brm_din_rd_din_valid_gate <= 0;
+              brm_din_wr_din_addr       <= 0;
+              tap_din_done              <= 1;
+              state                     <= SM_GET_INPUT;
             end
             else begin
               program_counter <= program_counter + 1;
