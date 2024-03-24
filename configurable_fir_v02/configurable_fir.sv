@@ -4,7 +4,10 @@ module configurable_fir
   parameter int G_STAGE_DEPTH_LOG2 = 2,
   parameter int G_DATA_WIDTH = 16,
   parameter int G_TAP_WIDTH = 16,
-  parameter int G_OUTPUT_UNSCALED = 0
+  parameter int G_OUTPUT_UNSCALED = 0,
+
+  localparam int N_LOG2 = G_NUM_STAGES_LOG2,
+  localparam int M_LOG2 = G_STAGE_DEPTH_LOG2
 )
 (
   input  logic clk,
@@ -28,9 +31,6 @@ module configurable_fir
 
   localparam int N = 2**G_NUM_STAGES_LOG2;
   localparam int M = 2**G_STAGE_DEPTH_LOG2;
-
-  localparam int N_LOG2 = G_NUM_STAGES_LOG2;
-  localparam int M_LOG2 = G_STAGE_DEPTH_LOG2;
 
   typedef enum
   {

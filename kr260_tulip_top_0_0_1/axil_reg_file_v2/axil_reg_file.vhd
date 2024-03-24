@@ -338,7 +338,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"0000001F";
+        registers.VERSION_REG <= x"00000027";
         registers.I2C_STATUS_REG <= x"00000000";
         registers.I2S_STATUS_REG <= x"00000000";
         registers.I2S_FIFO_REG <= x"00000000";

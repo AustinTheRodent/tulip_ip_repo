@@ -150,7 +150,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (),
+    .enable     (global_sw_resetn),
 
     .gain       (input_gain),
 

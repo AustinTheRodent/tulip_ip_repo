@@ -91,7 +91,7 @@ module interpolating_lut_wrapper
   assign core_din = (symmetric_mode == 1) ? (core_magnitude_input <<< 1) : core_biased_input;
   assign core_din_valid = din_valid;
   assign din_ready = (bypass == 0) ? core_din_ready : dout_ready;
-  
+
   interpolating_lut
   #(
     .G_ADDR_WIDTH         (G_ADDR_WIDTH),
@@ -122,7 +122,7 @@ module interpolating_lut_wrapper
   assign core_dout_ready = dout_ready;
 
   always_comb begin
-    if (bypass == 0) begin
+    if (bypass == 1) begin
       dout <= din;
     end
     else if (symmetric_mode == 1) begin
