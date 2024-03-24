@@ -127,13 +127,14 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal ps_2_i2s_fifo_avail            : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH-1 downto 0);
   signal ps_2_i2s_sw_resetn             : std_logic;
 
-  signal polynomial0_taps_prog_din_ready  : std_logic_vector(0 downto 0);
-  signal polynomial0_taps_prog_done       : std_logic_vector(0 downto 0);
-  signal polynomial1_taps_prog_din_ready  : std_logic_vector(0 downto 0);
-  signal polynomial1_taps_prog_done       : std_logic_vector(0 downto 0);
+  signal lut_prog_din_ready             : std_logic_vector(0 downto 0);
+  signal lut_prog_din_done              : std_logic_vector(0 downto 0);
 
   signal usr_fir_taps_prog_din_ready    : std_logic_vector(0 downto 0);
   signal usr_fir_taps_prog_done         : std_logic_vector(0 downto 0);
+
+  signal reverb_taps_prog_din_ready     : std_logic_vector(0 downto 0);
+  signal reverb_taps_prog_done          : std_logic_vector(0 downto 0);
 
   signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_din_valid                : std_logic;
@@ -199,17 +200,11 @@ begin
       s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE        => std_logic_vector(resize(unsigned(ps_2_i2s_fifo_avail), 16)),
       s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v      => '1',
 
-      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_DONE     => polynomial1_taps_prog_done,
-      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_DONE_v   => '1',
+      s_TULIP_DSP_STATUS_LUT_PROG_DONE            => lut_prog_din_done,
+      s_TULIP_DSP_STATUS_LUT_PROG_DONE_v          => '1',
 
-      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_READY     => polynomial1_taps_prog_din_ready,
-      s_TULIP_DSP_STATUS_POLYNOMIAL1_TAP_READY_v   => '1',
-
-      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_DONE     => polynomial0_taps_prog_done,
-      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_DONE_v   => '1',
-
-      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_READY    => polynomial0_taps_prog_din_ready,
-      s_TULIP_DSP_STATUS_POLYNOMIAL0_TAP_READY_v  => '1',
+      s_TULIP_DSP_STATUS_LUT_PROG_READY           => lut_prog_din_ready,
+      s_TULIP_DSP_STATUS_LUT_PROG_READY_v         => '1',
 
       s_TULIP_DSP_STATUS_FIR_TAP_DONE             => usr_fir_taps_prog_done,
       s_TULIP_DSP_STATUS_FIR_TAP_DONE_v           => '1',
@@ -217,6 +212,11 @@ begin
       s_TULIP_DSP_STATUS_FIR_TAP_READY            => usr_fir_taps_prog_din_ready,
       s_TULIP_DSP_STATUS_FIR_TAP_READY_v          => '1',
 
+      s_TULIP_DSP_STATUS_REVERB_PROG_DONE         => reverb_taps_prog_done,
+      s_TULIP_DSP_STATUS_REVERB_PROG_DONE_v       => '1',
+
+      s_TULIP_DSP_STATUS_REVERB_PROG_READY        => reverb_taps_prog_din_ready,
+      s_TULIP_DSP_STATUS_REVERB_PROG_READY_v      => '1',
 
       s_axi_awaddr  => s_axi_awaddr,
       s_axi_awvalid => s_axi_awvalid,
@@ -336,38 +336,49 @@ begin
   dsp_l_din_valid <= adc_valid;
   dsp_r_din_valid <= adc_valid;
 
-  u_tulip_dsp_l : entity work.tulip_dsp
+  u_tulip_dsp : entity work.tulip_dsp
     generic map
     (
-      G_POLY_ORDER                    => 9
+      G_LUT_AWIDTH                    => 10
     )
     port map
     (
       clk                             => s_axi_aclk,
       reset                           => (not a_axi_aresetn),
-      enable                          => dsp_sw_resetn,
+      global_sw_resetn                => dsp_sw_resetn,
+
+      lut_tf_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
+      usr_fir_sw_resetn               => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
+      reverb_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+
+      bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
+      bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
+      bypass_lut_tf                   => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
+      bypass_usr_fir                  => registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR(0),
 
       input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
       output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
 
-      polynomial0_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL0_SYMMETRIC_MODE(0),
+      symmetric_mode                  =>registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE(0),
 
-      polynomial0_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL0_PROG.POLYNOMIAL0_TAP_VALUE_FP,
-      polynomial0_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL0_PROG_REG_wr_pulse,
-      polynomial0_taps_prog_din_ready => polynomial0_taps_prog_din_ready(0),
-      polynomial0_taps_prog_done      => polynomial0_taps_prog_done(0),
+      lut_prog_din                    => registers.TULIP_DSP_LUT_PROG.LUT_PROG_VAL,
+      lut_prog_din_valid              => registers.TULIP_DSP_LUT_PROG_REG_wr_pulse,
+      lut_prog_din_ready              => lut_prog_din_ready(0),
+      lut_prog_din_done               => lut_prog_din_done(0),
 
-      polynomial1_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL1_SYMMETRIC_MODE(0),
-
-      polynomial1_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL1_PROG.POLYNOMIAL1_TAP_VALUE_FP,
-      polynomial1_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL1_PROG_REG_wr_pulse,
-      polynomial1_taps_prog_din_ready => polynomial1_taps_prog_din_ready(0),
-      polynomial1_taps_prog_done      => polynomial1_taps_prog_done(0),
-
-      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
-      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
+      usr_fir_taps_prog_din           => registers.TULIP_DSP_USR_FIR_PROG.FIR_TAP_VALUE,
+      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse,
       usr_fir_taps_prog_din_ready     => usr_fir_taps_prog_din_ready(0),
       usr_fir_taps_prog_done          => usr_fir_taps_prog_done(0),
+
+      reverb_feedback_right_shift     => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
+      reverb_feedback_gain            => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
+      reverb_feedforward_gain         => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
+
+      reverb_taps_prog_din            => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
+      reverb_taps_prog_din_valid      => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
+      reverb_taps_prog_din_ready      =>  reverb_taps_prog_din_ready(0),
+      reverb_taps_prog_done           =>  reverb_taps_prog_done(0),
 
       din                             => dsp_l_din,
       din_valid                       => dsp_l_din_valid,
@@ -378,55 +389,13 @@ begin
       dout_ready                      => dsp_l_dout_ready
     );
 
-  u_tulip_dsp_r : entity work.tulip_dsp
-    generic map
-    (
-      G_POLY_ORDER                    => 9
-    )
-    port map
-    (
-      clk                             => s_axi_aclk,
-      reset                           => (not a_axi_aresetn),
-      enable                          => dsp_sw_resetn,
-
-      input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
-      output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
-
-      polynomial0_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL0_SYMMETRIC_MODE(0),
-
-      polynomial0_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL0_PROG.POLYNOMIAL0_TAP_VALUE_FP,
-      polynomial0_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL0_PROG_REG_wr_pulse,
-      polynomial0_taps_prog_din_ready => open,
-      polynomial0_taps_prog_done      => open,
-
-      polynomial1_symmetric_mode      => registers.TULIP_DSP_CONTROL.POLYNOMIAL1_SYMMETRIC_MODE(0),
-
-      polynomial1_taps_prog_din       => registers.TULIP_DSP_POLYNOMIAL1_PROG.POLYNOMIAL1_TAP_VALUE_FP,
-      polynomial1_taps_prog_din_valid => registers.TULIP_DSP_POLYNOMIAL1_PROG_REG_wr_pulse,
-      polynomial1_taps_prog_din_ready => open,
-      polynomial1_taps_prog_done      => open,
-
-      usr_fir_taps_prog_din           => registers.TULIP_DSP_FIR_PROG.FIR_TAP_VALUE,
-      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_FIR_PROG_REG_wr_pulse,
-      usr_fir_taps_prog_din_ready     => open,
-      usr_fir_taps_prog_done          => open,
-
-      din                             => dsp_r_din,
-      din_valid                       => dsp_r_din_valid,
-      din_ready                       => dsp_r_din_ready,
-
-      dout                            => dsp_r_dout,
-      dout_valid                      => dsp_r_dout_valid,
-      dout_ready                      => dsp_r_dout_ready
-    );
-
   i2s_fifo_din <=
-    dsp_l_dout & dsp_r_dout when ps_2_i2s_fifo_dout_valid = '0' else
-    std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(dsp_r_dout)+signed(ps_2_i2s_fifo_dout_r));
+    dsp_l_dout & dsp_l_dout when ps_2_i2s_fifo_dout_valid = '0' else
+    std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_r));
 
   i2s_fifo_din_valid  <= dsp_l_dout_valid;
   dsp_l_dout_ready    <= i2s_fifo_din_ready;
-  dsp_r_dout_ready    <= i2s_fifo_din_ready;
+  --dsp_r_dout_ready    <= i2s_fifo_din_ready;
 
   u_i2s_fifo : entity work.axis_sync_fifo
     generic map
@@ -495,8 +464,8 @@ begin
     );
 
   i2s_2_ps_sw_resetn        <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.I2S_2_PS_ENABLE(0));
-  i2s_2_ps_fifo_din         <= dsp_l_dout & dsp_r_dout;
-  i2s_2_ps_fifo_din_valid   <= dsp_r_dout_valid;
+  i2s_2_ps_fifo_din         <= dsp_l_dout & dsp_l_dout;
+  i2s_2_ps_fifo_din_valid   <= dsp_l_dout_valid;
 
   u_i2s_2_ps_fifo : entity work.axis_sync_fifo
     generic map
