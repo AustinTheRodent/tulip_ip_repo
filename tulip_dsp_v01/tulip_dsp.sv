@@ -1,6 +1,6 @@
 module tulip_dsp
 #(
-  parameter  int G_POLY_ORDER = 5,
+  parameter  int G_LUT_AWIDTH = 10,
   localparam int C_FP_DWIDTH = 32,
   localparam int C_USER_FILT_TAP_DWIDTH = 16,
   localparam int C_ADC_DWIDTH = 24
@@ -8,28 +8,40 @@ module tulip_dsp
 (
   input  logic                    clk,
   input  logic                    reset,
-  input  logic                    enable,
+  input  logic                    global_sw_resetn,
+
+  input  logic                    lut_tf_sw_resetn,
+  input  logic                    usr_fir_sw_resetn,
+  input  logic                    reverb_sw_resetn,
+
+  input  logic                    bypass,
+  input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
+  input  logic                    bypass_usr_fir,
+  input  logic                    bypass_reverb,
 
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
 
-  input  logic                    polynomial0_symmetric_mode,
-  input  logic                    polynomial1_symmetric_mode,
+  input  logic                    symmetric_mode,
 
-  input  logic [C_FP_DWIDTH-1:0]  polynomial0_taps_prog_din,
-  input  logic                    polynomial0_taps_prog_din_valid,
-  output logic                    polynomial0_taps_prog_din_ready,
-  output logic                    polynomial0_taps_prog_done,
-
-  input  logic [C_FP_DWIDTH-1:0]  polynomial1_taps_prog_din,
-  input  logic                    polynomial1_taps_prog_din_valid,
-  output logic                    polynomial1_taps_prog_din_ready,
-  output logic                    polynomial1_taps_prog_done,
+  input  logic [C_ADC_DWIDTH-1:0] lut_prog_din,
+  input  logic                    lut_prog_din_valid,
+  output logic                    lut_prog_din_ready,
+  output logic                    lut_prog_din_done,
 
   input  logic [C_USER_FILT_TAP_DWIDTH-1:0] usr_fir_taps_prog_din,
   input  logic                              usr_fir_taps_prog_din_valid,
   output logic                              usr_fir_taps_prog_din_ready,
   output logic                              usr_fir_taps_prog_done,
+
+  input  logic [7:0]                        reverb_feedback_right_shift, // 8.0 unsigned fixed point
+  input  logic [15:0]                       reverb_feedback_gain, // 1.15 unsigned fixed point
+  input  logic [15:0]                       reverb_feedforward_gain, // 1.15 unsigned fixed point
+
+  input  logic [C_USER_FILT_TAP_DWIDTH-1:0] reverb_taps_prog_din,
+  input  logic                              reverb_taps_prog_din_valid,
+  output logic                              reverb_taps_prog_din_ready,
+  output logic                              reverb_taps_prog_done,
 
   input  logic [C_ADC_DWIDTH-1:0] din,
   input  logic                    din_valid,
@@ -49,6 +61,13 @@ module tulip_dsp
   logic                     gain0_dout_valid;
   logic                     gain0_dout_ready;
 
+  logic [C_ADC_DWIDTH-1:0]  lut_din;
+  logic                     lut_din_valid;
+  logic                     lut_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  lut_dout;
+  logic                     lut_dout_valid;
+  logic                     lut_dout_ready;
+
   logic [C_ADC_DWIDTH-1:0]  gain1_din;
   logic                     gain1_din_valid;
   logic                     gain1_din_ready;
@@ -64,40 +83,12 @@ module tulip_dsp
   logic                     upsample_dout_valid;
   logic                     upsample_dout_ready;
 
-  logic [C_ADC_DWIDTH-1:0]  fixed_to_float_din;
-  logic                     fixed_to_float_din_valid;
-  logic                     fixed_to_float_din_ready;
-  float_t                   fixed_to_float_dout;
-  logic                     fixed_to_float_dout_valid;
-  logic                     fixed_to_float_dout_ready;
-
   logic [C_ADC_DWIDTH-1:0]  fixed_to_float2_din;
   logic                     fixed_to_float2_din_valid;
   logic                     fixed_to_float2_din_ready;
   float_t                   fixed_to_float2_dout;
   logic                     fixed_to_float2_dout_valid;
   logic                     fixed_to_float2_dout_ready;
-
-  float_t poly0_est_din;
-  logic   poly0_est_din_valid;
-  logic   poly0_est_din_ready;
-  float_t poly0_est_dout;
-  logic   poly0_est_dout_valid;
-  logic   poly0_est_dout_ready;
-
-  float_t poly1_est_din;
-  logic   poly1_est_din_valid;
-  logic   poly1_est_din_ready;
-  float_t poly1_est_dout;
-  logic   poly1_est_dout_valid;
-  logic   poly1_est_dout_ready;
-
-  float_t                   float_to_fixed_din;
-  logic                     float_to_fixed_din_valid;
-  logic                     float_to_fixed_din_ready;
-  logic [C_ADC_DWIDTH-1:0]  float_to_fixed_dout;
-  logic                     float_to_fixed_dout_valid;
-  logic                     float_to_fixed_dout_ready;
 
   float_t                   float_to_fixed2_din;
   logic                     float_to_fixed2_din_valid;
@@ -136,12 +127,18 @@ module tulip_dsp
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
 
+  logic [C_ADC_DWIDTH-1:0]  reverb_din;
+  logic                     reverb_din_valid;
+  logic                     reverb_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  reverb_dout;
+  logic                     reverb_dout_valid;
+  logic                     reverb_dout_ready;
 
 /////////////////////////////////////////////////////////////////////
 
   assign gain0_din        = din;
   assign gain0_din_valid  = din_valid;
-  assign din_ready        = gain0_din_ready;
+  assign din_ready        =  (bypass == 0) ? gain0_din_ready : dout_ready;
 
   gain_stage
   #(
@@ -153,7 +150,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .gain       (input_gain),
 
@@ -168,7 +165,7 @@ module tulip_dsp
 
   assign upsample_din       = gain0_dout;
   assign upsample_din_valid = gain0_dout_valid;
-  assign gain0_dout_ready   = upsample_din_ready;
+  assign gain0_dout_ready   = (bypass_lut_tf == 0) ? upsample_din_ready : float_to_fixed2_dout_ready;
 
   upsample_8x_tiny_fir
   #(
@@ -178,7 +175,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .din        (upsample_din),
     .din_valid  (upsample_din_valid),
@@ -189,131 +186,42 @@ module tulip_dsp
     .dout_ready (upsample_dout_ready)
   );
 
-  assign fixed_to_float_din       = upsample_dout;
-  assign fixed_to_float_din_valid = upsample_dout_valid;
-  assign upsample_dout_ready      = fixed_to_float_din_ready;
+  assign lut_din = upsample_dout;
+  assign lut_din_valid = upsample_dout_valid;
+  assign upsample_dout_ready = lut_din_ready;
 
-  fixed_to_float
+  interpolating_lut_wrapper
   #(
-    .G_INTEGER_BITS   (0),
-    .G_FRACT_BITS     (C_ADC_DWIDTH),
-    .G_SIGNED_INPUT   (1),
-    .G_BUFFER_INPUT   (1),
-    .G_BUFFER_OUTPUT  (1)
+    .G_ADDR_WIDTH         (G_LUT_AWIDTH),
+    .G_DWIDTH             (C_ADC_DWIDTH),
+    .G_LOG2_LINEAR_STEPS  (8)
   )
-  u_fixed_to_float
+  u_interpolating_lut_transfer_function
   (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (enable),
+    .clk                (clk),
+    .reset              (reset),
+    .enable             (global_sw_resetn & lut_tf_sw_resetn),
+    .bypass             (bypass_lut_tf),
 
-    .din              (fixed_to_float_din),
-    .din_valid        (fixed_to_float_din_valid),
-    .din_ready        (fixed_to_float_din_ready),
-    .din_last         (1'b0),
+    .symmetric_mode     (symmetric_mode),
 
-    .dout             (fixed_to_float_dout),
-    .dout_valid       (fixed_to_float_dout_valid),
-    .dout_ready       (fixed_to_float_dout_ready),
-    .dout_last        ()
+    .lut_prog_din       (lut_prog_din),
+    .lut_prog_din_valid (lut_prog_din_valid),
+    .lut_prog_din_ready (lut_prog_din_ready),
+    .lut_prog_din_done  (lut_prog_din_done),
+
+    .din                (lut_din),
+    .din_valid          (lut_din_valid),
+    .din_ready          (lut_din_ready),
+
+    .dout               (lut_dout),
+    .dout_valid         (lut_dout_valid),
+    .dout_ready         (lut_dout_ready)
   );
 
-  assign poly0_est_din               = fixed_to_float_dout;
-  assign poly0_est_din_valid         = fixed_to_float_dout_valid;
-  assign fixed_to_float_dout_ready  = poly0_est_din_ready;
-
-  polynomial_estimator_wrapper
-  #(
-    .G_POLY_ORDER         (G_POLY_ORDER)
-  )
-  u_polynomial_estimator0
-  (
-    .clk                  (clk),
-    .reset                (reset),
-    .enable               (enable),
-    .bypass               (1'b0),
-
-    .symmetric_mode       (polynomial0_symmetric_mode),
-
-    .taps_prog_din        (polynomial0_taps_prog_din),
-    .taps_prog_din_valid  (polynomial0_taps_prog_din_valid),
-    .taps_prog_din_ready  (polynomial0_taps_prog_din_ready),
-    .taps_prog_done       (polynomial0_taps_prog_done),
-
-    .din                  (poly0_est_din),
-    .din_valid            (poly0_est_din_valid),
-    .din_ready            (poly0_est_din_ready),
-
-    .dout                 (poly0_est_dout),
-    .dout_valid           (poly0_est_dout_valid),
-    .dout_ready           (poly0_est_dout_ready)
-  );
-
-  assign poly1_est_din        = poly0_est_dout;
-  assign poly1_est_din_valid  = poly0_est_dout_valid;
-  assign poly0_est_dout_ready = poly1_est_din_ready;
-
-
-  polynomial_estimator_wrapper
-  #(
-    .G_POLY_ORDER         (G_POLY_ORDER)
-  )
-  u_polynomial_estimator1
-  (
-    .clk                  (clk),
-    .reset                (reset),
-    .enable               (enable),
-    .bypass               (1'b0),
-
-    .symmetric_mode       (polynomial1_symmetric_mode),
-
-    .taps_prog_din        (polynomial1_taps_prog_din),
-    .taps_prog_din_valid  (polynomial1_taps_prog_din_valid),
-    .taps_prog_din_ready  (polynomial1_taps_prog_din_ready),
-    .taps_prog_done       (polynomial1_taps_prog_done),
-
-    .din                  (poly1_est_din),
-    .din_valid            (poly1_est_din_valid),
-    .din_ready            (poly1_est_din_ready),
-
-    .dout                 (poly1_est_dout),
-    .dout_valid           (poly1_est_dout_valid),
-    .dout_ready           (poly1_est_dout_ready)
-  );
-
-  assign float_to_fixed_din       = poly1_est_dout;
-  assign float_to_fixed_din_valid = poly1_est_dout_valid;
-  assign poly1_est_dout_ready     = float_to_fixed_din_ready;
-
-  float_to_fixed
-  #(
-    .G_INTEGER_BITS   (0),
-    .G_FRACT_BITS     (C_ADC_DWIDTH),
-    .G_SIGNED_OUTPUT  (1),
-    .G_BUFFER_INPUT   (1),
-    .G_BUFFER_OUTPUT  (1)
-  )
-  u_float_to_fixed
-  (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (enable),
-
-    .din              (float_to_fixed_din),
-    .din_valid        (float_to_fixed_din_valid),
-    .din_ready        (float_to_fixed_din_ready),
-    .din_last         (1'b0),
-
-    .dout             (float_to_fixed_dout),
-    .dout_valid       (float_to_fixed_dout_valid),
-    .dout_ready       (float_to_fixed_dout_ready),
-    .dout_last        ()
-  );
-
-  assign downsample_din             = float_to_fixed_dout;
-  assign downsample_din_valid       = float_to_fixed_dout_valid;
-  assign float_to_fixed_dout_ready  = downsample_din_ready;
-
+  assign downsample_din = lut_dout;
+  assign downsample_din_valid = lut_dout_valid;
+  assign lut_dout_ready = downsample_din_ready;
 
   downsample_8x_tiny_fir
   #(
@@ -323,7 +231,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .din        (downsample_din),
     .din_valid  (downsample_din_valid),
@@ -350,7 +258,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn),
 
     .din              (fixed_to_float2_din),
     .din_valid        (fixed_to_float2_din_valid),
@@ -386,7 +294,7 @@ module tulip_dsp
       32'h3F7EDD7A
     };
 
-    if (reset == 1 || enable == 0) begin
+    if (reset == 1 || global_sw_resetn == 0) begin
       iir_b_tap_din       <= iir_b_tap_din_array[0];
       iir_a_tap_din       <= iir_a_tap_din_array[0];
       b_taps_prog_counter <= 0;
@@ -424,7 +332,7 @@ module tulip_dsp
   (
     .clk            (clk),
     .reset          (reset),
-    .enable         (enable),
+    .enable         (global_sw_resetn),
     .bypass         (1'b0),
 
     .b_tap          (iir_b_tap_din),
@@ -462,7 +370,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn),
 
     .din              (float_to_fixed2_din),
     .din_valid        (float_to_fixed2_din_valid),
@@ -475,9 +383,9 @@ module tulip_dsp
     .dout_last        ()
   );
 
-  assign user_fir_din = float_to_fixed2_dout;
-  assign user_fir_din_valid = float_to_fixed2_dout_valid;
-  assign float_to_fixed2_dout_ready = user_fir_din_ready;
+  assign user_fir_din = (bypass_lut_tf == 0) ? float_to_fixed2_dout : gain0_dout;
+  assign user_fir_din_valid = (bypass_lut_tf == 0) ? float_to_fixed2_dout_valid : gain0_dout_valid;
+  assign float_to_fixed2_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
 
   tiny_fir
   #(
@@ -489,7 +397,7 @@ module tulip_dsp
   (
     .clk              (clk),
     .reset            (reset),
-    .enable           (enable),
+    .enable           (global_sw_resetn & usr_fir_sw_resetn),
 
     .tap_din          (usr_fir_taps_prog_din),
     .tap_din_valid    (usr_fir_taps_prog_din_valid),
@@ -505,8 +413,8 @@ module tulip_dsp
     .dout_ready       (user_fir_dout_ready)
   );
 
-  assign gain1_din            = user_fir_dout;
-  assign gain1_din_valid      = user_fir_dout_valid;
+  assign gain1_din            = (bypass_usr_fir == 0) ? user_fir_dout : user_fir_din;
+  assign gain1_din_valid      = (bypass_usr_fir == 0) ? user_fir_dout_valid : user_fir_din_valid;
   assign user_fir_dout_ready  = gain1_din_ready;
 
   gain_stage
@@ -519,7 +427,7 @@ module tulip_dsp
   (
     .clk        (clk),
     .reset      (reset),
-    .enable     (enable),
+    .enable     (global_sw_resetn),
 
     .gain       (output_gain),
 
@@ -532,9 +440,45 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign dout             = gain1_dout;
-  assign dout_valid       = gain1_dout_valid;
-  assign gain1_dout_ready = dout_ready;
+  assign reverb_din       = gain1_dout;
+  assign reverb_din_valid = gain1_dout_valid;
+  assign gain1_dout_ready = reverb_din_ready;
+
+  reverb_wrapper
+  #(
+    .G_NUM_STAGES_LOG2  (6),
+    .G_STAGE_DEPTH_LOG2 (10),
+    .G_DATA_WIDTH       (C_ADC_DWIDTH),
+    .G_TAP_WIDTH        (16)
+  )
+  u_reverb
+  (
+    .clk                  (clk),
+    .reset                (reset),
+    .enable               (global_sw_resetn & reverb_sw_resetn),
+    .bypass               (bypass_reverb),
+
+    .feedback_right_shift (reverb_feedback_right_shift),
+    .feedback_gain        (reverb_feedback_gain),
+    .feedforward_gain     (reverb_feedforward_gain),
+
+    .tap_din              (reverb_taps_prog_din),
+    .tap_din_valid        (reverb_taps_prog_din_valid),
+    .tap_din_ready        (reverb_taps_prog_din_ready),
+    .tap_din_done         (reverb_taps_prog_done),
+
+    .din                  (reverb_din),
+    .din_valid            (reverb_din_valid),
+    .din_ready            (reverb_din_ready),
+
+    .dout                 (reverb_dout),
+    .dout_valid           (reverb_dout_valid),
+    .dout_ready           (reverb_dout_ready)
+  );
+
+  assign dout               = (bypass == 0) ? reverb_dout : din;
+  assign dout_valid         = (bypass == 0) ? reverb_dout_valid : din_valid;
+  assign reverb_dout_ready  = dout_ready;
 
 
 endmodule

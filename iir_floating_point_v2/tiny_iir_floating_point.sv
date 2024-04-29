@@ -62,7 +62,7 @@ module tiny_iir_floating_point
   float_t x_nm        [0:G_DEGREE-1];
   float_t y_nm        [0:G_DEGREE-1];
   float_t a_mult      [0:G_DEGREE-1];
-  float_t a_mult      [0:G_DEGREE-1];
+  //float_t a_mult      [0:G_DEGREE-1];
   float_t b_mult      [0:G_DEGREE-1];
 
   float_t b_accumulate;
