@@ -368,8 +368,8 @@ endmodule
 
 module config_fir_bram
 #(
-  parameter int G_ADDR_WIDTH,
-  parameter int G_DATA_WIDTH
+  parameter int G_ADDR_WIDTH = 4,
+  parameter int G_DATA_WIDTH = 4
 )
 (
   input logic                     clk,

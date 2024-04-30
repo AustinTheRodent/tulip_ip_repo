@@ -280,14 +280,14 @@ module tulip_dsp
     logic unsigned [7:0] b_taps_prog_counter;
     logic unsigned [7:0] a_taps_prog_counter;
 
-    float_t iir_b_tap_din_array [0:2] =
+    static float_t iir_b_tap_din_array [0:2] =
     {
       32'h3F7F6E94,
       32'hBFFF6E94,
       32'h3F7F6E94
     };
 
-    float_t iir_a_tap_din_array [0:2] =
+    static float_t iir_a_tap_din_array [0:2] =
     {
       32'h3F800000,
       32'hBFFF6E6A,
