@@ -44,6 +44,10 @@ module reverb_wrapper
   logic                           in_buff_dout_ready;
 
   localparam int C_FIR_DWIDTH = 16;
+  localparam int C_FB_LIM_MAX = 2**(C_FIR_DWIDTH-1)-1;
+  localparam int C_FB_LIM_MIN = -2**(C_FIR_DWIDTH-1);
+  localparam int C_FF_LIM_MAX = 2**(G_DATA_WIDTH-1)-1;
+  localparam int C_FF_LIM_MIN = -2**(G_DATA_WIDTH-1);
 
   logic signed [C_FIR_DWIDTH-1:0] out_buff_din;
   logic                           out_buff_din_valid;
@@ -97,30 +101,68 @@ module reverb_wrapper
 
   assign in_buff_din_valid = fir_din_valid & fir_din_ready;
 
-  assign in_buff_din_long = signed'(feedforward_gain) * din;
-  assign in_buff_din_rs = in_buff_din_long >>> G_GAIN_DECIMAL_BITS;
-  assign in_buff_din = in_buff_din_rs;
+  //assign in_buff_din_long = signed'(feedforward_gain) * din;
+  //assign in_buff_din_rs = in_buff_din_long >>> G_GAIN_DECIMAL_BITS;
 
-  axis_buffer
+  //assign in_buff_din = in_buff_din_rs;
+//  always_comb begin
+//    if (in_buff_din_rs > C_FF_LIM_MAX) begin
+//      in_buff_din = C_FF_LIM_MAX;
+//    end
+//    else if (in_buff_din_rs < C_FF_LIM_MIN) begin
+//      in_buff_din = C_FF_LIM_MIN;
+//    end
+//    else begin
+//      in_buff_din = in_buff_din_rs;
+//    end
+//  end
+
+  assign in_buff_din = din;
+
+  gain_stage
   #(
-    .G_DWIDTH         (G_DATA_WIDTH)
+    .G_INTEGER_BITS (G_GAIN_INTEGER_BITS),
+    .G_DECIMAL_BITS (G_GAIN_DECIMAL_BITS),
+    .G_DWIDTH       ($bits(in_buff_din))
   )
-  u_input_in_buff
+  u_ff_gain_stage
   (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (enable),
+    .clk            (clk),
+    .reset          (reset),
+    .enable         (enable),
 
-    .din              (in_buff_din),
-    .din_valid        (in_buff_din_valid),
-    .din_ready        (in_buff_din_ready),
-    .din_last         (0),
+    .gain           (feedforward_gain),
 
-    .dout             (in_buff_dout),
-    .dout_valid       (in_buff_dout_valid),
-    .dout_ready       (in_buff_dout_ready),
-    .dout_last        ()
+    .din            (in_buff_din),
+    .din_valid      (in_buff_din_valid),
+    .din_ready      (in_buff_din_ready),
+
+    .dout           (in_buff_dout),
+    .dout_valid     (in_buff_dout_valid),
+    .dout_ready     (in_buff_dout_ready)
   );
+
+
+//  axis_buffer
+//  #(
+//    .G_DWIDTH         (G_DATA_WIDTH)
+//  )
+//  u_input_in_buff
+//  (
+//    .clk              (clk),
+//    .reset            (reset),
+//    .enable           (enable),
+//
+//    .din              (in_buff_din),
+//    .din_valid        (in_buff_din_valid),
+//    .din_ready        (in_buff_din_ready),
+//    .din_last         (0),
+//
+//    .dout             (in_buff_dout),
+//    .dout_valid       (in_buff_dout_valid),
+//    .dout_ready       (in_buff_dout_ready),
+//    .dout_last        ()
+//  );
 
   assign in_buff_dout_ready = dout_valid & dout_ready;
 
@@ -167,35 +209,51 @@ module reverb_wrapper
   );
 
   assign out_buff_din_valid = fir_dout_valid & fb_buff_din_ready;
-  assign fb_buff_din_valid = fir_dout_valid & out_buff_din_ready;
-  assign fir_dout_ready = out_buff_din_ready & fb_buff_din_ready;
+  assign fb_buff_din_valid  = fir_dout_valid & out_buff_din_ready;
+  assign fir_dout_ready     = out_buff_din_ready & fb_buff_din_ready;
 
-  //todo: clip output (no rollover)
-  assign fir_dout_rs = fir_dout >>> feedback_right_shift;
-  assign fir_dout_short = fir_dout_rs;
-  assign fb_buff_din_long = fir_dout_short * signed'({1'b0 , feedback_gain});
-  assign fb_buff_din_rs = fb_buff_din_long >>> G_GAIN_DECIMAL_BITS;
-  assign fb_buff_din = fb_buff_din_rs;
+  assign fir_dout_rs      = fir_dout >>> feedback_right_shift;
+  assign fir_dout_short   = fir_dout_rs;
+  //assign fb_buff_din_long = fir_dout_short * signed'({1'b0 , feedback_gain});
+  //assign fb_buff_din_rs   = fb_buff_din_long >>> G_GAIN_DECIMAL_BITS;
 
-  axis_buffer
+  assign fb_buff_din = fir_dout_short;
+
+//  always_comb begin
+//    if (fb_buff_din_rs > C_FB_LIM_MAX) begin
+//      fb_buff_din = C_FB_LIM_MAX;
+//    end
+//    else if (fb_buff_din_rs < C_FB_LIM_MIN) begin
+//      fb_buff_din = C_FB_LIM_MIN;
+//    end
+//    else begin
+//      fb_buff_din = fb_buff_din_rs;
+//    end
+//  end
+
+
+
+  gain_stage
   #(
-    .G_DWIDTH         (C_FIR_DWIDTH)
+    .G_INTEGER_BITS (G_GAIN_INTEGER_BITS),
+    .G_DECIMAL_BITS (G_GAIN_DECIMAL_BITS),
+    .G_DWIDTH       ($bits(in_buff_din))
   )
-  u_feedback_buff
+  u_fb_gain_stage
   (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (enable),
+    .clk            (clk),
+    .reset          (reset),
+    .enable         (enable),
 
-    .din              (fb_buff_din),
-    .din_valid        (fb_buff_din_valid),
-    .din_ready        (fb_buff_din_ready),
-    .din_last         (0),
+    .gain           (feedback_gain),
 
-    .dout             (fb_buff_dout),
-    .dout_valid       (fb_buff_dout_valid),
-    .dout_ready       (fb_buff_dout_ready),
-    .dout_last        ()
+    .din            (fb_buff_din),
+    .din_valid      (fb_buff_din_valid),
+    .din_ready      (fb_buff_din_ready),
+
+    .dout           (fb_buff_dout),
+    .dout_valid     (fb_buff_dout_valid),
+    .dout_ready     (fb_buff_dout_ready)
   );
 
   assign fb_buff_dout_ready = fir_din_valid & fir_din_ready;
