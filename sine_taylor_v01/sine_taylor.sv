@@ -69,6 +69,7 @@ module sine_taylor
     SM_APPLY_EXPONENT,
     SM_GET_MULT,
     SM_ACCUMULATE,
+    SM_RESCALE,
     SM_SEND_OUTPUT
   } state_t;
 
@@ -137,16 +138,23 @@ module sine_taylor
         end
 
         SM_ADD_STAGE_OUTPUT : begin
-          estimate_value_long <= estimate_value_long + estimate_value_n;
+          estimate_value_long   <= estimate_value_long + estimate_value_n;
           if (alg_counter == C_TAYLOR_PARAMS-1) begin
-            estimate_value_n  <= estimate_value_n >>> (G_TAP_WIDTH); // >>> (G_TAP_WIDTH+1) ?
-            dout_valid        <= 1;
-            state             <= SM_SEND_OUTPUT;
+            //estimate_value_long <= estimate_value_long >>> (G_TAP_WIDTH); // >>> (G_TAP_WIDTH+1) ?
+            //dout_valid          <= 1;
+            state               <= SM_RESCALE;
+            //state               <= SM_SEND_OUTPUT;
           end
           else begin
             state             <= SM_GET_MULT;
             alg_counter       <= alg_counter + 1;
           end
+        end
+
+        SM_RESCALE : begin
+          estimate_value_long <= estimate_value_long >>> (G_TAP_WIDTH); // >>> (G_TAP_WIDTH+1) ?
+          dout_valid          <= 1;
+          state               <= SM_SEND_OUTPUT;
         end
 
         SM_SEND_OUTPUT : begin
