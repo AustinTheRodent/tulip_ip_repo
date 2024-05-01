@@ -56,7 +56,7 @@ module sine_taylor
 
   generate
     for (genvar i = 0 ; i < C_TAYLOR_PARAMS ; i++) begin
-      assign taylor_param[i] = logic'(2**(G_TAPWIDTH-1) * talor_parmas_double[i]);
+      assign taylor_param[i] = logic'(2**(G_TAPWIDTH-2) * talor_parmas_double[i]);
     end
   endgenerate
 
