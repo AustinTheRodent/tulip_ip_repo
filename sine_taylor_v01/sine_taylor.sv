@@ -18,15 +18,14 @@ module sine_taylor
   input  logic                dout_ready
 );
 
-  localparam C_TAYLOR_PARAMS = 5;
+  localparam C_TAYLOR_PARAMS = 4;
 
   static real talor_parmas_double [0:C_TAYLOR_PARAMS-1] =
   {
-    1.570796326794897,
-    -0.2617993877991494,
-    0.01308996938995747,
-    -0.0003116659378561302,
-    4.328693581335143e-06
+    1.0,
+    -0.1666666666666667,
+    0.008333333333333333,
+    -0.0001984126984126984
   };
 
   function real max_mag (ref real input_array [], int array_len);
