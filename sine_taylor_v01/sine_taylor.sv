@@ -18,7 +18,7 @@ module sine_taylor
 );
 
   localparam real C_PI = 1.57079632;
-  localparam logic signed [G_DWIDTH-1:0] C_PI_INT = logic'(C_PI*real'(2**(G_TAPWIDTH-1)));
+  localparam int C_PI_INT = int'(C_PI*2**(G_TAPWIDTH-1));
 
 
 
@@ -57,7 +57,8 @@ module sine_taylor
   state_t state;
 
   logic signed [1+G_DWIDTH-1:0] input_store;
-  logic signed [$bits(input_store)*(C_TAYLOR_PARAMS*2)-1:0] exponential_value;
+  logic signed [$bits(input_store)*(C_TAYLOR_PARAMS*2-1)-1:0] exponential_value;
+  logic signed [$bits(input_store)*(C_TAYLOR_PARAMS*2-1)-1:0] exponential_value_rs;
 
   logic signed [$bits(input_store)+G_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_n;
   logic signed [$bits(input_store)+G_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_long;
@@ -100,7 +101,7 @@ module sine_taylor
             exponent_counter    <= 1;
             alg_counter         <= 0;
             estimate_value_long <= 0;
-            exponential_value   <= (signed'(din) * C_PI_INT);
+            exponential_value   <= (signed'(din) * C_PI_INT) >>> (G_DWIDTH-1);
             state               <= SM_APPLY_EXPONENT;
           end
         end
@@ -114,7 +115,7 @@ module sine_taylor
 
           if (op_counter == exponent_counter) begin
             op_counter        <= 0;
-            exponential_value <= exponential_value >>> ((G_DWIDTH-1)*(exponent_counter));
+            exponential_value_rs <= exponential_value >>> ((G_DWIDTH-1)*(exponent_counter-1));
             exponent_counter  <= exponent_counter + 2;
             state             <= SM_GET_MULT;
           end
@@ -126,7 +127,7 @@ module sine_taylor
         end
 
         SM_GET_MULT : begin
-          estimate_value_n  <= exponential_value * taylor_param[alg_counter];
+          estimate_value_n  <= exponential_value_rs * taylor_param[alg_counter];
           state             <= SM_ACCUMULATE;
         end
 
@@ -136,8 +137,8 @@ module sine_taylor
             state               <= SM_RESCALE;
           end
           else begin
-            exponential_value <= input_store;
-            op_counter        <= 1;
+            //exponential_value <= input_store;
+            op_counter        <= exponent_counter-2;
             state             <= SM_APPLY_EXPONENT;
             alg_counter       <= alg_counter + 1;
           end
