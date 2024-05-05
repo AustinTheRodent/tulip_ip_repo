@@ -1,6 +1,7 @@
 module sine_taylor
 #(
-  parameter int G_DWIDTH = 16,
+  parameter int G_DIN_WIDTH = 16,
+  parameter int G_DOUT_WIDTH = 16,
   parameter int G_TAPWIDTH = 16
 )
 (
@@ -8,19 +9,32 @@ module sine_taylor
   input  logic                reset,
   input  logic                enable,
 
-  input  logic [G_DWIDTH-1:0] din,
+  input  logic [G_DIN_WIDTH-1:0] din,
   input  logic                din_valid,
   output logic                din_ready,
 
-  output logic [G_DWIDTH-1:0] dout,
+  output logic [G_DOUT_WIDTH-1:0] dout,
   output logic                dout_valid,
   input  logic                dout_ready
 );
 
+  function int get_dwidth_expansion(int G_DIN_WIDTH, int G_DOUT_WIDTH);
+    if (G_DOUT_WIDTH >= G_DIN_WIDTH) begin
+      return (G_DOUT_WIDTH - G_DIN_WIDTH) + 2;;
+    end
+    else begin
+      return 0;
+    end
+  endfunction
+
+  localparam int C_DWIDTH_EXPANSION = get_dwidth_expansion(G_DIN_WIDTH, G_DOUT_WIDTH);
+
+  localparam int C_DWIDTH = G_DIN_WIDTH + C_DWIDTH_EXPANSION;
+  localparam int C_TAPWIDTH = G_TAPWIDTH;
+
   localparam real C_PI = 1.57079632;
-  localparam int C_PI_INT = int'(C_PI*2**(G_TAPWIDTH-1));
-
-
+  localparam int C_PI_INT0 = int'(C_PI*2**(C_TAPWIDTH-1));
+  localparam logic signed [C_TAPWIDTH+1-1:0] C_PI_INT = int'(C_PI*2**(C_TAPWIDTH-1));
 
   localparam int C_TAYLOR_PARAMS = 4;
 
@@ -32,16 +46,13 @@ module sine_taylor
     -0.0001984126984126984
   };
 
-  logic signed [G_TAPWIDTH+1-1:0] taylor_param [0:C_TAYLOR_PARAMS-1] =
+  localparam logic signed [C_TAPWIDTH+1-1:0] taylor_param [0:C_TAYLOR_PARAMS-1] =
   {
-    logic'(real'(2**(G_TAPWIDTH-1)) * talor_parmas_double[0]),
-    logic'(real'(2**(G_TAPWIDTH-1)) * talor_parmas_double[1]),
-    logic'(real'(2**(G_TAPWIDTH-1)) * talor_parmas_double[2]),
-    logic'(real'(2**(G_TAPWIDTH-1)) * talor_parmas_double[3])
+    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[0]),
+    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[1]),
+    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[2]),
+    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[3])
   };
-
-
-
 
   typedef enum
   {
@@ -56,13 +67,12 @@ module sine_taylor
 
   state_t state;
 
-  logic signed [1+G_DWIDTH-1:0] input_store;
-  logic signed [$bits(input_store)*(C_TAYLOR_PARAMS*2-1)-1:0] exponential_value;
-  logic signed [$bits(input_store)*(C_TAYLOR_PARAMS*2-1)-1:0] exponential_value_rs;
+  logic signed [1+C_DWIDTH-1:0] input_store;
+  logic signed [$bits(input_store)+C_TAPWIDTH*2-1:0] exponential_value;
+  logic signed [$bits(input_store)+C_TAPWIDTH*2-1:0] exponential_value_rs;
 
-  logic signed [$bits(input_store)+G_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_n;
-  logic signed [$bits(input_store)+G_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_long;
-  //logic signed [$bits(input_store)+G_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] dout_long;
+  logic signed [$bits(input_store)+C_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_n;
+  logic signed [$bits(input_store)+C_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_long;
 
   logic unsigned [$clog2(C_TAYLOR_PARAMS)-1:0] alg_counter;
   logic unsigned [7:0] op_counter;
@@ -95,13 +105,13 @@ module sine_taylor
         SM_GET_INPUT : begin
           if (din_valid & din_ready == 1) begin
             din_ready           <= 0;
-            //input_store         <= (signed'(din) * C_PI_INT) >> (G_DWIDTH-1);
+            //input_store         <= (signed'(din) * C_PI_INT) >> (C_DWIDTH-1);
             input_store_done    <= 0;
             op_counter          <= 1;
             exponent_counter    <= 1;
             alg_counter         <= 0;
             estimate_value_long <= 0;
-            exponential_value   <= (signed'(din) * C_PI_INT) >>> (G_DWIDTH-1);
+            exponential_value   <= (signed'(din) * C_PI_INT) >>> (C_TAPWIDTH-C_DWIDTH_EXPANSION-1);
             state               <= SM_APPLY_EXPONENT;
           end
         end
@@ -115,12 +125,13 @@ module sine_taylor
 
           if (op_counter == exponent_counter) begin
             op_counter        <= 0;
-            exponential_value_rs <= exponential_value >>> ((G_DWIDTH-1)*(exponent_counter-1));
+            //exponential_value_rs <= exponential_value >>> ((C_DWIDTH-1)*(exponent_counter-1));
+            exponential_value_rs <= exponential_value;
             exponent_counter  <= exponent_counter + 2;
             state             <= SM_GET_MULT;
           end
           else begin
-            exponential_value <= exponential_value * input_store;
+            exponential_value <= (exponential_value * input_store) >>> (C_DWIDTH-1);
             op_counter        <= op_counter + 1;
           end
 
@@ -145,9 +156,13 @@ module sine_taylor
         end
 
         SM_RESCALE : begin
-          //estimate_value_long <= estimate_value_long >>> (G_TAPWIDTH-1);
-          //dout_long           <= estimate_value_long >>> (G_TAPWIDTH-1);
-          dout                <= estimate_value_long >>> (G_TAPWIDTH-1);
+          if (C_DWIDTH_EXPANSION == 0) begin
+            dout              <= estimate_value_long >>> (C_TAPWIDTH+(G_DIN_WIDTH-G_DOUT_WIDTH)-1);
+          end
+          else begin
+            dout              <= estimate_value_long >>> (C_TAPWIDTH+(G_DIN_WIDTH-G_DOUT_WIDTH)+C_DWIDTH_EXPANSION-1);
+          end
+
           dout_valid          <= 1;
           state               <= SM_SEND_OUTPUT;
         end
