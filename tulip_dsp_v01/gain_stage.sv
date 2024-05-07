@@ -87,8 +87,8 @@ module gain_stage
     if (dout_buff_dout > 2**(G_DWIDTH-1)-1) begin
       dout = 2**(G_DWIDTH-1)-1;
     end
-    else if (dout_buff_dout < -2**(G_DWIDTH-1)) begin
-      dout = -2**(G_DWIDTH-1);
+    else if (dout_buff_dout < -(2**(G_DWIDTH-1))) begin
+      dout = -(2**(G_DWIDTH-1));
     end
     else begin
       dout = dout_buff_dout[G_DWIDTH-1 -: G_DWIDTH];

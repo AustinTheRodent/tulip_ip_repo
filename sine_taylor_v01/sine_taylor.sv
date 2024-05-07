@@ -5,17 +5,17 @@ module sine_taylor
   parameter int G_TAPWIDTH = 16
 )
 (
-  input  logic                clk,
-  input  logic                reset,
-  input  logic                enable,
+  input  logic                    clk,
+  input  logic                    reset,
+  input  logic                    enable,
 
-  input  logic [G_DIN_WIDTH-1:0] din,
-  input  logic                din_valid,
-  output logic                din_ready,
+  input  logic [G_DIN_WIDTH-1:0]  din,
+  input  logic                    din_valid,
+  output logic                    din_ready,
 
   output logic [G_DOUT_WIDTH-1:0] dout,
-  output logic                dout_valid,
-  input  logic                dout_ready
+  output logic                    dout_valid,
+  input  logic                    dout_ready
 );
 
   function int get_dwidth_expansion(int G_DIN_WIDTH, int G_DOUT_WIDTH);
@@ -33,7 +33,6 @@ module sine_taylor
   localparam int C_TAPWIDTH = G_TAPWIDTH;
 
   localparam real C_PI = 1.57079632;
-  localparam int C_PI_INT0 = int'(C_PI*2**(C_TAPWIDTH-1));
   localparam logic signed [C_TAPWIDTH+1-1:0] C_PI_INT = int'(C_PI*2**(C_TAPWIDTH-1));
 
   localparam int C_TAYLOR_PARAMS = 4;
