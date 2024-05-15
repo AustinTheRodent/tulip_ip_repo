@@ -119,11 +119,13 @@ module sine_taylor
         SM_GET_INPUT : begin
           if (din_valid & din_ready == 1) begin
             din_ready           <= 0;
+            //input_store         <= (signed'(din) * C_PI_INT) >> (C_DWIDTH-1);
             input_store_done    <= 0;
             op_counter          <= 1;
             exponent_counter    <= 1;
             alg_counter         <= 0;
             estimate_value_long <= 0;
+            //exponential_value   <= (signed'(din) * C_PI_INT);
             exponential_mult_din_a  <= signed'(din);
             exponential_mult_din_b  <= C_PI_INT;
             exponent_rs_amount  <= (C_TAPWIDTH-C_DWIDTH_EXPANSION-1);
@@ -150,11 +152,13 @@ module sine_taylor
 
           if (op_counter == exponent_counter) begin
             op_counter        <= 0;
+            //exponential_value_rs <= exponential_value >>> ((C_DWIDTH-1)*(exponent_counter-1));
             exponential_value_rs <= exponential_value;
             exponent_counter  <= exponent_counter + 2;
             state             <= SM_GET_MULT;
           end
           else begin
+            //exponential_value   <= (exponential_value * input_store);
             exponential_mult_din_a  <= exponential_value;
             exponential_mult_din_b  <= input_store;
             exponent_rs_amount  <= (C_DWIDTH-1);
@@ -175,6 +179,7 @@ module sine_taylor
             state               <= SM_RESCALE;
           end
           else begin
+            //exponential_value <= input_store;
             op_counter        <= exponent_counter-2;
             state             <= SM_APPLY_EXPONENT;
             alg_counter       <= alg_counter + 1;

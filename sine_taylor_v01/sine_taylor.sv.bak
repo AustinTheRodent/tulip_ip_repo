@@ -18,15 +18,6 @@ module sine_taylor
   input  logic                    dout_ready
 );
 
-  function int return_larger(int a, int b);
-    if (a >= b) begin
-      return a;
-    end
-    else begin
-      return b;
-    end
-  endfunction
-
   function int get_dwidth_expansion(int G_DIN_WIDTH, int G_DOUT_WIDTH);
     if (G_DOUT_WIDTH >= G_DIN_WIDTH) begin
       return (G_DOUT_WIDTH - G_DIN_WIDTH) + 2;
@@ -66,8 +57,6 @@ module sine_taylor
   {
     SM_INIT,
     SM_GET_INPUT,
-    SM_MULT_EXPONENT,
-    SM_RIGHT_SHIFT_EXPONENT,
     SM_APPLY_EXPONENT,
     SM_GET_MULT,
     SM_ACCUMULATE,
@@ -78,11 +67,11 @@ module sine_taylor
   state_t state;
 
   logic signed [1+C_DWIDTH-1:0] input_store;
-  logic signed [$bits(input_store)+C_DWIDTH+5-1:0] exponential_value;
-  logic signed [$bits(input_store)+C_DWIDTH+5-1:0] exponential_value_rs;
+  logic signed [$bits(input_store)+C_TAPWIDTH*2-1:0] exponential_value;
+  logic signed [$bits(input_store)+C_TAPWIDTH*2-1:0] exponential_value_rs;
 
-  logic signed [$bits(input_store)+C_DWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_n;
-  logic signed [$bits(input_store)+C_DWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_long;
+  logic signed [$bits(input_store)+C_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_n;
+  logic signed [$bits(input_store)+C_TAPWIDTH+($clog2(C_TAYLOR_PARAMS)+1)-1:0] estimate_value_long;
 
   logic unsigned [$clog2(C_TAYLOR_PARAMS)-1:0] alg_counter;
   logic unsigned [7:0] op_counter;
@@ -93,10 +82,6 @@ module sine_taylor
   always @ (posedge clk) begin
 
     logic input_store_done;
-    logic unsigned [7:0] exponent_rs_amount;
-
-    logic signed [$bits(exponential_value)-1:0] exponential_mult_din_a;
-    logic signed [C_DWIDTH+1-1:0]               exponential_mult_din_b;
 
     if (reset == 1 || enable == 0) begin
       din_ready         <= 0;
@@ -119,26 +104,15 @@ module sine_taylor
         SM_GET_INPUT : begin
           if (din_valid & din_ready == 1) begin
             din_ready           <= 0;
+            //input_store         <= (signed'(din) * C_PI_INT) >> (C_DWIDTH-1);
             input_store_done    <= 0;
             op_counter          <= 1;
             exponent_counter    <= 1;
             alg_counter         <= 0;
             estimate_value_long <= 0;
-            exponential_mult_din_a  <= signed'(din);
-            exponential_mult_din_b  <= C_PI_INT;
-            exponent_rs_amount  <= (C_TAPWIDTH-C_DWIDTH_EXPANSION-1);
-            state               <= SM_MULT_EXPONENT;
+            exponential_value   <= (signed'(din) * C_PI_INT) >>> (C_TAPWIDTH-C_DWIDTH_EXPANSION-1);
+            state               <= SM_APPLY_EXPONENT;
           end
-        end
-
-        SM_MULT_EXPONENT : begin
-          exponential_value <= exponential_mult_din_a * exponential_mult_din_b;
-          state             <= SM_RIGHT_SHIFT_EXPONENT;
-        end
-
-        SM_RIGHT_SHIFT_EXPONENT : begin
-          exponential_value <= exponential_value >>> exponent_rs_amount;
-          state             <= SM_APPLY_EXPONENT;
         end
 
         SM_APPLY_EXPONENT : begin
@@ -150,16 +124,14 @@ module sine_taylor
 
           if (op_counter == exponent_counter) begin
             op_counter        <= 0;
+            //exponential_value_rs <= exponential_value >>> ((C_DWIDTH-1)*(exponent_counter-1));
             exponential_value_rs <= exponential_value;
             exponent_counter  <= exponent_counter + 2;
             state             <= SM_GET_MULT;
           end
           else begin
-            exponential_mult_din_a  <= exponential_value;
-            exponential_mult_din_b  <= input_store;
-            exponent_rs_amount  <= (C_DWIDTH-1);
-            op_counter          <= op_counter + 1;
-            state               <= SM_MULT_EXPONENT;
+            exponential_value <= (exponential_value * input_store) >>> (C_DWIDTH-1);
+            op_counter        <= op_counter + 1;
           end
 
         end
@@ -175,6 +147,7 @@ module sine_taylor
             state               <= SM_RESCALE;
           end
           else begin
+            //exponential_value <= input_store;
             op_counter        <= exponent_counter-2;
             state             <= SM_APPLY_EXPONENT;
             alg_counter       <= alg_counter + 1;
