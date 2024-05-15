@@ -66,7 +66,8 @@ module sine_taylor
   {
     SM_INIT,
     SM_GET_INPUT,
-    SM_MULT_EXPONENT,
+    SM_MULT_EXPONENT0,
+    SM_MULT_EXPONENT1,
     SM_RIGHT_SHIFT_EXPONENT,
     SM_APPLY_EXPONENT,
     SM_GET_MULT,
@@ -88,15 +89,20 @@ module sine_taylor
   logic unsigned [7:0] op_counter;
   logic unsigned [7:0] exponent_counter;
 
+  logic signed [$bits(exponential_value)-1:0] exponential_mult_din_a;
+  logic signed [C_DWIDTH+1-1:0]               exponential_mult_din_b;
+  logic signed [$bits(exponential_value)-1:0] exponential_mult_dout;
+
 //////////////////////////////////////////
+
+  always @ (posedge clk) begin
+    exponential_mult_dout <= exponential_mult_din_a*exponential_mult_din_b;
+  end
 
   always @ (posedge clk) begin
 
     logic input_store_done;
     logic unsigned [7:0] exponent_rs_amount;
-
-    logic signed [$bits(exponential_value)-1:0] exponential_mult_din_a;
-    logic signed [C_DWIDTH+1-1:0]               exponential_mult_din_b;
 
     if (reset == 1 || enable == 0) begin
       din_ready         <= 0;
@@ -127,12 +133,17 @@ module sine_taylor
             exponential_mult_din_a  <= signed'(din);
             exponential_mult_din_b  <= C_PI_INT;
             exponent_rs_amount  <= (C_TAPWIDTH-C_DWIDTH_EXPANSION-1);
-            state               <= SM_MULT_EXPONENT;
+            state               <= SM_MULT_EXPONENT0;
           end
         end
 
-        SM_MULT_EXPONENT : begin
-          exponential_value <= exponential_mult_din_a * exponential_mult_din_b;
+        SM_MULT_EXPONENT0 : begin
+          //exponential_value <= exponential_mult_din_a * exponential_mult_din_b;
+          state             <= SM_MULT_EXPONENT1;
+        end
+
+        SM_MULT_EXPONENT1 : begin
+          exponential_value <= exponential_mult_dout;
           state             <= SM_RIGHT_SHIFT_EXPONENT;
         end
 
@@ -159,7 +170,7 @@ module sine_taylor
             exponential_mult_din_b  <= input_store;
             exponent_rs_amount  <= (C_DWIDTH-1);
             op_counter          <= op_counter + 1;
-            state               <= SM_MULT_EXPONENT;
+            state               <= SM_MULT_EXPONENT0;
           end
 
         end

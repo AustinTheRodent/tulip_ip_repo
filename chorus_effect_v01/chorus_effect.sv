@@ -2,7 +2,7 @@ module chorus_effect
 #(
   parameter int G_NUM_CHORUS_CHANNELS = 4,
   localparam int G_DWIDTH = 24,
-  localparam int C_PROG_CHIRP_DWIDTH = 24
+  localparam int C_PROG_CHIRP_DWIDTH = 32
 )
 (
   input  logic                            clk,
