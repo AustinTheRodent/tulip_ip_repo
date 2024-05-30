@@ -31,11 +31,13 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    SW_RESETN_VIBRATO : std_logic_vector(0 downto 0);
+    BYPASS_VIBRATO : std_logic_vector(0 downto 0);
     SW_RESETN_USR_FIR : std_logic_vector(0 downto 0);
-    SW_RESETN_LUT_TF : std_logic_vector(0 downto 0);
-    SW_RESETN_REVERB : std_logic_vector(0 downto 0);
     BYPASS_USR_FIR : std_logic_vector(0 downto 0);
+    SW_RESETN_LUT_TF : std_logic_vector(0 downto 0);
     BYPASS_LUT_TF : std_logic_vector(0 downto 0);
+    SW_RESETN_REVERB : std_logic_vector(0 downto 0);
     BYPASS_REVERB : std_logic_vector(0 downto 0);
     SYMMETRIC_MODE : std_logic_vector(0 downto 0);
     BYPASS : std_logic_vector(0 downto 0);
@@ -72,6 +74,22 @@ package axil_reg_file_pkg is
     FEEDFORWARD_GAIN : std_logic_vector(15 downto 0);
   end record;
 
+  type TULIP_DSP_VIBRATO_GAIN_subreg_t is record
+    GAIN : std_logic_vector(23 downto 0);
+  end record;
+
+  type TULIP_DSP_VIBRATO_CHIRP_DEPTH_subreg_t is record
+    CHIRP_DEPTH : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_VIBRATO_FREQ_DERIV_subreg_t is record
+    FREQ_DERIV : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_VIBRATO_FREQ_OFFSET_subreg_t is record
+    FREQ_OFFSET : std_logic_vector(31 downto 0);
+  end record;
+
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -95,6 +113,10 @@ package axil_reg_file_pkg is
     TULIP_DSP_REVERB_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_REVERB_SCALE_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_VIBRATO_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_VIBRATO_FREQ_DERIV_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_VIBRATO_FREQ_OFFSET_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
     I2C_CONTROL : I2C_CONTROL_subreg_t;
     PS_2_I2S_FIFO_WRITE_L : PS_2_I2S_FIFO_WRITE_L_subreg_t;
@@ -107,6 +129,10 @@ package axil_reg_file_pkg is
     TULIP_DSP_REVERB_PROG : TULIP_DSP_REVERB_PROG_subreg_t;
     TULIP_DSP_REVERB_SCALE : TULIP_DSP_REVERB_SCALE_subreg_t;
     TULIP_DSP_REVERB_FEEDFORWARD_GAIN : TULIP_DSP_REVERB_FEEDFORWARD_GAIN_subreg_t;
+    TULIP_DSP_VIBRATO_GAIN : TULIP_DSP_VIBRATO_GAIN_subreg_t;
+    TULIP_DSP_VIBRATO_CHIRP_DEPTH : TULIP_DSP_VIBRATO_CHIRP_DEPTH_subreg_t;
+    TULIP_DSP_VIBRATO_FREQ_DERIV : TULIP_DSP_VIBRATO_FREQ_DERIV_subreg_t;
+    TULIP_DSP_VIBRATO_FREQ_OFFSET : TULIP_DSP_VIBRATO_FREQ_OFFSET_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
     VERSION_REG_wr_pulse : std_logic;
     I2C_CONTROL_REG_wr_pulse : std_logic;
@@ -128,6 +154,10 @@ package axil_reg_file_pkg is
     TULIP_DSP_REVERB_PROG_REG_wr_pulse : std_logic;
     TULIP_DSP_REVERB_SCALE_REG_wr_pulse : std_logic;
     TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse : std_logic;
+    TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse : std_logic;
+    TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse : std_logic;
+    TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse : std_logic;
+    TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     VERSION_REG_rd_pulse : std_logic;
     I2C_CONTROL_REG_rd_pulse : std_logic;
@@ -149,6 +179,10 @@ package axil_reg_file_pkg is
     TULIP_DSP_REVERB_PROG_REG_rd_pulse : std_logic;
     TULIP_DSP_REVERB_SCALE_REG_rd_pulse : std_logic;
     TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse : std_logic;
+    TULIP_DSP_VIBRATO_GAIN_REG_rd_pulse : std_logic;
+    TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_rd_pulse : std_logic;
+    TULIP_DSP_VIBRATO_FREQ_DERIV_REG_rd_pulse : std_logic;
+    TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -209,6 +243,30 @@ entity axil_reg_file is
 
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE : in std_logic_vector(15 downto 0);
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY_v : in std_logic;
 
     s_TULIP_DSP_STATUS_REVERB_PROG_DONE : in std_logic_vector(0 downto 0);
     s_TULIP_DSP_STATUS_REVERB_PROG_DONE_v : in std_logic;
@@ -278,6 +336,10 @@ architecture rtl of axil_reg_file is
   constant TULIP_DSP_REVERB_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 72;
   constant TULIP_DSP_REVERB_SCALE_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 76;
   constant TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 80;
+  constant TULIP_DSP_VIBRATO_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 84;
+  constant TULIP_DSP_VIBRATO_CHIRP_DEPTH_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 88;
+  constant TULIP_DSP_VIBRATO_FREQ_DERIV_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 92;
+  constant TULIP_DSP_VIBRATO_FREQ_OFFSET_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 96;
 
   signal registers          : reg_t;
 
@@ -306,11 +368,13 @@ begin
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO <= registers.TULIP_DSP_CONTROL_REG(8 downto 8);
+  registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO <= registers.TULIP_DSP_CONTROL_REG(9 downto 9);
   registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR <= registers.TULIP_DSP_CONTROL_REG(7 downto 7);
-  registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(6 downto 6);
-  registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB <= registers.TULIP_DSP_CONTROL_REG(5 downto 5);
   registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR <= registers.TULIP_DSP_CONTROL_REG(4 downto 4);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(6 downto 6);
   registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF <= registers.TULIP_DSP_CONTROL_REG(3 downto 3);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB <= registers.TULIP_DSP_CONTROL_REG(5 downto 5);
   registers.TULIP_DSP_CONTROL.BYPASS_REVERB <= registers.TULIP_DSP_CONTROL_REG(2 downto 2);
   registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE <= registers.TULIP_DSP_CONTROL_REG(1 downto 1);
   registers.TULIP_DSP_CONTROL.BYPASS <= registers.TULIP_DSP_CONTROL_REG(0 downto 0);
@@ -324,6 +388,10 @@ begin
   registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT <= registers.TULIP_DSP_REVERB_SCALE_REG(23 downto 16);
   registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN <= registers.TULIP_DSP_REVERB_SCALE_REG(15 downto 0);
   registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN <= registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG(15 downto 0);
+  registers.TULIP_DSP_VIBRATO_GAIN.GAIN <= registers.TULIP_DSP_VIBRATO_GAIN_REG(23 downto 0);
+  registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH.CHIRP_DEPTH <= registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG(31 downto 0);
+  registers.TULIP_DSP_VIBRATO_FREQ_DERIV.FREQ_DERIV <= registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG(31 downto 0);
+  registers.TULIP_DSP_VIBRATO_FREQ_OFFSET.FREQ_OFFSET <= registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG(31 downto 0);
 
   registers_out <= registers;
 
@@ -338,7 +406,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"00000028";
+        registers.VERSION_REG <= x"0000002D";
         registers.I2C_STATUS_REG <= x"00000000";
         registers.I2S_STATUS_REG <= x"00000000";
         registers.I2S_FIFO_REG <= x"00000000";
@@ -390,6 +458,30 @@ begin
         if s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v = '1' then 
           registers.PS_2_I2S_FIFO_COUNT_REG(15 downto 0) <= s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE;
         end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(13 downto 13) <= s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(12 downto 12) <= s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(11 downto 11) <= s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(10 downto 10) <= s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(9 downto 9) <= s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(8 downto 8) <= s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(7 downto 7) <= s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(6 downto 6) <= s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY;
+        end if;
         if s_TULIP_DSP_STATUS_REVERB_PROG_DONE_v = '1' then 
           registers.TULIP_DSP_STATUS_REG(5 downto 5) <= s_TULIP_DSP_STATUS_REVERB_PROG_DONE;
         end if;
@@ -428,6 +520,10 @@ begin
         registers.TULIP_DSP_REVERB_PROG_REG <= x"00000000";
         registers.TULIP_DSP_REVERB_SCALE_REG <= x"00000000";
         registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG <= x"00000000";
+        registers.TULIP_DSP_VIBRATO_GAIN_REG <= x"00000000";
+        registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG <= x"00000000";
+        registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG <= x"00000000";
+        registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
         registers.VERSION_REG_wr_pulse <= '0';
@@ -450,6 +546,10 @@ begin
         registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
         registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
         registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -477,6 +577,10 @@ begin
             registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -504,6 +608,10 @@ begin
             registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_wr_pulse <= '0';
             registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -551,6 +659,18 @@ begin
                 when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG <= s_axi_wdata;
                   registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_GAIN_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_CHIRP_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_DERIV_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_OFFSET_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -600,6 +720,10 @@ begin
         registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
         registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
         registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_GAIN_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -627,6 +751,10 @@ begin
             registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_GAIN_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -654,6 +782,10 @@ begin
             registers.TULIP_DSP_REVERB_PROG_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '0';
             registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_GAIN_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -705,6 +837,14 @@ begin
                 s_axi_rdata <= registers.TULIP_DSP_REVERB_SCALE_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_VIBRATO_GAIN_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_CHIRP_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_DERIV_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_OFFSET_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG;
               when others =>
                 null;
             end case;
@@ -753,6 +893,14 @@ begin
                   registers.TULIP_DSP_REVERB_SCALE_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_REVERB_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_GAIN_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_CHIRP_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_DERIV_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_VIBRATO_FREQ_OFFSET_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;

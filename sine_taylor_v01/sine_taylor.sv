@@ -42,7 +42,8 @@ module sine_taylor
   localparam int C_TAPWIDTH = G_TAPWIDTH;
 
   localparam real C_PI = 1.57079632;
-  localparam logic signed [C_TAPWIDTH+1-1:0] C_PI_INT = int'(C_PI*2**(C_TAPWIDTH-1));
+  //localparam logic signed [C_TAPWIDTH+1-1:0] C_PI_INT = int'(C_PI*2**(C_TAPWIDTH-1));
+  localparam logic signed [C_TAPWIDTH+1-1:0] C_PI_INT = 51472;
 
   localparam int C_TAYLOR_PARAMS = 4;
 
@@ -56,10 +57,14 @@ module sine_taylor
 
   localparam logic signed [C_TAPWIDTH+1-1:0] taylor_param [0:C_TAYLOR_PARAMS-1] =
   {
-    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[0]),
-    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[1]),
-    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[2]),
-    logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[3])
+    //logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[0]),
+    //logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[1]),
+    //logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[2]),
+    //logic'(real'(2**(C_TAPWIDTH-1)) * talor_parmas_double[3])
+    32768,
+    -5461,
+    273,
+    -7
   };
 
   typedef enum

@@ -1,6 +1,6 @@
-module chorus_effect
+module vibrato
 #(
-  parameter int   G_NUM_CHORUS_CHANNELS = 4,
+  parameter int   G_NUM_VIBRATO_CHANNELS = 4,
   localparam int  G_DWIDTH = 24,
   localparam int  C_PROG_CHIRP_DWIDTH = 32
 )
@@ -42,10 +42,10 @@ module chorus_effect
   logic valid_ready_mod_gate;
   logic output_valid_ready_gate;
 
-  logic [G_DWIDTH-1:0]            prog_gain         [0:G_NUM_CHORUS_CHANNELS];
-  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_chirp_depth  [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_freq_deriv   [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_freq_offset  [0:G_NUM_CHORUS_CHANNELS-1];
+  logic [G_DWIDTH-1:0]            prog_gain         [0:G_NUM_VIBRATO_CHANNELS];
+  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_chirp_depth  [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_freq_deriv   [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [C_PROG_CHIRP_DWIDTH-1:0] prog_freq_offset  [0:G_NUM_VIBRATO_CHANNELS-1];
 
   logic                           all_prog_done;
 
@@ -102,32 +102,32 @@ module chorus_effect
   logic                 passthrough_gain_dout_valid;
   logic                 passthrough_gain_dout_ready;
 
-  logic [G_DWIDTH-1:0]  chorus_gain_din         [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 chorus_gain_din_valid   [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 chorus_gain_din_ready   [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [G_DWIDTH-1:0]  chorus_gain_dout        [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 chorus_gain_dout_valid  [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 chorus_gain_dout_ready;
+  logic [G_DWIDTH-1:0]  vibrato_gain_din         [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 vibrato_gain_din_valid   [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 vibrato_gain_din_ready   [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  vibrato_gain_dout        [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 vibrato_gain_dout_valid  [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 vibrato_gain_dout_ready;
 
-  logic [G_DWIDTH-1:0]  cyclic_chirp_dout_re    [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [G_DWIDTH-1:0]  cyclic_chirp_dout_im    [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 cyclic_chirp_dout_valid [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 cyclic_chirp_dout_ready [0:G_NUM_CHORUS_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  cyclic_chirp_dout_re    [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  cyclic_chirp_dout_im    [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 cyclic_chirp_dout_valid [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 cyclic_chirp_dout_ready [0:G_NUM_VIBRATO_CHANNELS-1];
 
   logic [G_DWIDTH-1:0]  complex_mult_din1_re;
   logic [G_DWIDTH-1:0]  complex_mult_din1_im;
   logic                 complex_mult_din1_valid;
-  logic                 complex_mult_din1_ready [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [G_DWIDTH-1:0]  complex_mult_din2_re    [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [G_DWIDTH-1:0]  complex_mult_din2_im    [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 complex_mult_din2_valid [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 complex_mult_din2_ready [0:G_NUM_CHORUS_CHANNELS-1];
-  logic [G_DWIDTH-1:0]  complex_mult_out_re     [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 complex_mult_out_valid  [0:G_NUM_CHORUS_CHANNELS-1];
-  logic                 complex_mult_out_ready  [0:G_NUM_CHORUS_CHANNELS-1];
+  logic                 complex_mult_din1_ready [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  complex_mult_din2_re    [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  complex_mult_din2_im    [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 complex_mult_din2_valid [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 complex_mult_din2_ready [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic [G_DWIDTH-1:0]  complex_mult_out_re     [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 complex_mult_out_valid  [0:G_NUM_VIBRATO_CHANNELS-1];
+  logic                 complex_mult_out_ready  [0:G_NUM_VIBRATO_CHANNELS-1];
 
 
-  logic [G_DWIDTH-1:0]  slow_add_din [0:G_NUM_CHORUS_CHANNELS];
+  logic [G_DWIDTH-1:0]  slow_add_din [0:G_NUM_VIBRATO_CHANNELS];
   logic                 slow_add_din_valid;
   logic                 slow_add_din_ready;
   logic [G_DWIDTH-1:0]  slow_add_dout;
@@ -140,10 +140,10 @@ module chorus_effect
 
   always @ (posedge clk) begin
 
-    logic [$clog2(G_NUM_CHORUS_CHANNELS)+1:0] prog_gain_counter;
-    logic [$clog2(G_NUM_CHORUS_CHANNELS):0]   prog_chirp_depth_counter;
-    logic [$clog2(G_NUM_CHORUS_CHANNELS):0]   prog_freq_deriv_counter;
-    logic [$clog2(G_NUM_CHORUS_CHANNELS):0]   prog_freq_offset_counter;
+    logic [$clog2(G_NUM_VIBRATO_CHANNELS)+1:0] prog_gain_counter;
+    logic [$clog2(G_NUM_VIBRATO_CHANNELS):0]   prog_chirp_depth_counter;
+    logic [$clog2(G_NUM_VIBRATO_CHANNELS):0]   prog_freq_deriv_counter;
+    logic [$clog2(G_NUM_VIBRATO_CHANNELS):0]   prog_freq_offset_counter;
     logic [3:0] delay_counter;
 
     if (reset == 1 || enable == 0) begin
@@ -195,7 +195,7 @@ module chorus_effect
 
             prog_gain[prog_gain_counter] <= prog_gain_din;
 
-            if (prog_gain_counter == G_NUM_CHORUS_CHANNELS) begin
+            if (prog_gain_counter == G_NUM_VIBRATO_CHANNELS) begin
               prog_gain_din_ready  <= 0;
               prog_gain_din_done   <= 1;
             end
@@ -208,7 +208,7 @@ module chorus_effect
 
             prog_chirp_depth[prog_chirp_depth_counter] <= prog_chirp_depth_din;
 
-            if (prog_chirp_depth_counter == G_NUM_CHORUS_CHANNELS-1) begin
+            if (prog_chirp_depth_counter == G_NUM_VIBRATO_CHANNELS-1) begin
               prog_chirp_depth_din_ready  <= 0;
               prog_chirp_depth_din_done   <= 1;
             end
@@ -221,7 +221,7 @@ module chorus_effect
 
             prog_freq_deriv[prog_freq_deriv_counter] <= prog_freq_deriv_din;
 
-            if (prog_freq_deriv_counter == G_NUM_CHORUS_CHANNELS-1) begin
+            if (prog_freq_deriv_counter == G_NUM_VIBRATO_CHANNELS-1) begin
               prog_freq_deriv_din_ready <= 0;
               prog_freq_deriv_din_done  <= 1;
             end
@@ -234,7 +234,7 @@ module chorus_effect
 
             prog_freq_offset[prog_freq_offset_counter] <= prog_freq_offset_din;
 
-            if (prog_freq_offset_counter == G_NUM_CHORUS_CHANNELS-1) begin
+            if (prog_freq_offset_counter == G_NUM_VIBRATO_CHANNELS-1) begin
               prog_freq_offset_din_ready  <= 0;
               prog_freq_offset_din_done   <= 1;
             end
@@ -402,7 +402,7 @@ module chorus_effect
     //  valid_ready_mod_gate = 0;
     //end
 
-    for (int i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin
+    for (int i = 0 ; i < G_NUM_VIBRATO_CHANNELS ; i++) begin
       if (complex_mult_din1_ready[i] == 0) begin
         valid_ready_mod_gate = 0;
       end
@@ -442,7 +442,7 @@ module chorus_effect
   assign complex_mult_din1_valid  = mod_p_dout_valid & valid_ready_mod_gate;
 
   generate
-    for (genvar i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin
+    for (genvar i = 0 ; i < G_NUM_VIBRATO_CHANNELS ; i++) begin
 
       cyclic_chirp
       #(
@@ -501,9 +501,9 @@ module chorus_effect
         .dout_ready       (complex_mult_out_ready[i])
       );
 
-      assign chorus_gain_din[i]         = complex_mult_out_re[i] <<< 2;
-      assign chorus_gain_din_valid[i]   = complex_mult_out_valid[i];
-      assign complex_mult_out_ready[i]  = chorus_gain_din_ready[i];
+      assign vibrato_gain_din[i]         = complex_mult_out_re[i] <<< 2;
+      assign vibrato_gain_din_valid[i]   = complex_mult_out_valid[i];
+      assign complex_mult_out_ready[i]  = vibrato_gain_din_ready[i];
 
       gain_stage
       #(
@@ -519,13 +519,13 @@ module chorus_effect
 
         .gain       (prog_gain[i+1]),
 
-        .din        (chorus_gain_din[i]),
-        .din_valid  (chorus_gain_din_valid[i]),
-        .din_ready  (chorus_gain_din_ready[i]),
+        .din        (vibrato_gain_din[i]),
+        .din_valid  (vibrato_gain_din_valid[i]),
+        .din_ready  (vibrato_gain_din_ready[i]),
 
-        .dout       (chorus_gain_dout[i]),
-        .dout_valid (chorus_gain_dout_valid[i]),
-        .dout_ready (chorus_gain_dout_ready)
+        .dout       (vibrato_gain_dout[i]),
+        .dout_valid (vibrato_gain_dout_valid[i]),
+        .dout_ready (vibrato_gain_dout_ready)
       );
 
     end
@@ -537,8 +537,8 @@ module chorus_effect
       output_valid_ready_gate = 0;
     end
 
-    for (int i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin
-      if (chorus_gain_dout_valid[i] == 0) begin
+    for (int i = 0 ; i < G_NUM_VIBRATO_CHANNELS ; i++) begin
+      if (vibrato_gain_dout_valid[i] == 0) begin
         output_valid_ready_gate = 0;
       end
     end
@@ -547,19 +547,19 @@ module chorus_effect
   assign slow_add_din[0] = signed'(passthrough_gain_dout);
 
   generate
-    for (genvar i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin
-      assign slow_add_din[i+1] = signed'(chorus_gain_dout[i]);
+    for (genvar i = 0 ; i < G_NUM_VIBRATO_CHANNELS ; i++) begin
+      assign slow_add_din[i+1] = signed'(vibrato_gain_dout[i]);
     end
   endgenerate
 
   assign slow_add_din_valid           = output_valid_ready_gate;
   assign passthrough_gain_dout_ready  = slow_add_din_ready & output_valid_ready_gate;
-  assign chorus_gain_dout_ready       = slow_add_din_ready & output_valid_ready_gate;
+  assign vibrato_gain_dout_ready       = slow_add_din_ready & output_valid_ready_gate;
 
   slow_add
   #(
     .G_DWIDTH     (G_DWIDTH),
-    .G_BUS_WIDTH  (G_NUM_CHORUS_CHANNELS+1)
+    .G_BUS_WIDTH  (G_NUM_VIBRATO_CHANNELS+1)
   )
   u_slow_add
   (

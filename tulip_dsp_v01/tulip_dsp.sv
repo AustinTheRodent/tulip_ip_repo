@@ -13,11 +13,13 @@ module tulip_dsp
   input  logic                    lut_tf_sw_resetn,
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
+  input  logic                    vibrato_sw_resetn,
 
   input  logic                    bypass,
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
+  input  logic                    bypass_vibrato,
 
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
@@ -42,6 +44,28 @@ module tulip_dsp
   input  logic                              reverb_taps_prog_din_valid,
   output logic                              reverb_taps_prog_din_ready,
   output logic                              reverb_taps_prog_done,
+
+
+  input  logic [23:0]                       prog_vibrato_gain_din, // fixed point, 2 integer bits
+  input  logic                              prog_vibrato_gain_din_valid,
+  output logic                              prog_vibrato_gain_din_ready,
+  output logic                              prog_vibrato_gain_din_done,
+
+  input  logic [31:0]                       prog_vibrato_chirp_depth_din,
+  input  logic                              prog_vibrato_chirp_depth_din_valid,
+  output logic                              prog_vibrato_chirp_depth_din_ready,
+  output logic                              prog_vibrato_chirp_depth_din_done,
+
+  input  logic [31:0]                       prog_vibrato_freq_deriv_din,
+  input  logic                              prog_vibrato_freq_deriv_din_valid,
+  output logic                              prog_vibrato_freq_deriv_din_ready,
+  output logic                              prog_vibrato_freq_deriv_din_done,
+
+  input  logic [31:0]                       prog_vibrato_freq_offset_din,
+  input  logic                              prog_vibrato_freq_offset_din_valid,
+  output logic                              prog_vibrato_freq_offset_din_ready,
+  output logic                              prog_vibrato_freq_offset_din_done,
+
 
   input  logic [C_ADC_DWIDTH-1:0] din,
   input  logic                    din_valid,
@@ -126,6 +150,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  user_fir_dout;
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  vibrato_din;
+  logic                     vibrato_din_valid;
+  logic                     vibrato_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  vibrato_dout;
+  logic                     vibrato_dout_valid;
+  logic                     vibrato_dout_ready;
 
   logic [C_ADC_DWIDTH-1:0]  reverb_din;
   logic                     reverb_din_valid;
@@ -440,9 +471,53 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign reverb_din       = gain1_dout;
-  assign reverb_din_valid = gain1_dout_valid;
-  assign gain1_dout_ready = reverb_din_ready;
+  assign vibrato_din       = gain1_dout;
+  assign vibrato_din_valid = gain1_dout_valid;
+  assign gain1_dout_ready = vibrato_din_ready;
+
+  vibrato
+  #(
+    .G_NUM_VIBRATO_CHANNELS      (1)
+  )
+  u_vibrato
+  (
+    .clk                        (clk),
+    .reset                      (reset),
+    .enable                     (global_sw_resetn & vibrato_sw_resetn),
+    .bypass                     (bypass_vibrato),
+
+    .prog_gain_din              (prog_vibrato_gain_din              ),
+    .prog_gain_din_valid        (prog_vibrato_gain_din_valid        ),
+    .prog_gain_din_ready        (prog_vibrato_gain_din_ready        ),
+    .prog_gain_din_done         (prog_vibrato_gain_din_done         ),
+
+    .prog_chirp_depth_din       (prog_vibrato_chirp_depth_din       ),
+    .prog_chirp_depth_din_valid (prog_vibrato_chirp_depth_din_valid ),
+    .prog_chirp_depth_din_ready (prog_vibrato_chirp_depth_din_ready ),
+    .prog_chirp_depth_din_done  (prog_vibrato_chirp_depth_din_done  ),
+
+    .prog_freq_deriv_din        (prog_vibrato_freq_deriv_din        ),
+    .prog_freq_deriv_din_valid  (prog_vibrato_freq_deriv_din_valid  ),
+    .prog_freq_deriv_din_ready  (prog_vibrato_freq_deriv_din_ready  ),
+    .prog_freq_deriv_din_done   (prog_vibrato_freq_deriv_din_done   ),
+
+    .prog_freq_offset_din       (prog_vibrato_freq_offset_din       ),
+    .prog_freq_offset_din_valid (prog_vibrato_freq_offset_din_valid ),
+    .prog_freq_offset_din_ready (prog_vibrato_freq_offset_din_ready ),
+    .prog_freq_offset_din_done  (prog_vibrato_freq_offset_din_done  ),
+
+    .din                        (vibrato_din        ),
+    .din_valid                  (vibrato_din_valid  ),
+    .din_ready                  (vibrato_din_ready  ),
+
+    .dout                       (vibrato_dout       ),
+    .dout_valid                 (vibrato_dout_valid ),
+    .dout_ready                 (vibrato_dout_ready )
+  );
+
+  assign reverb_din         = vibrato_dout;
+  assign reverb_din_valid   = vibrato_dout_valid;
+  assign vibrato_dout_ready  = reverb_din_ready;
 
   reverb_wrapper
   #(

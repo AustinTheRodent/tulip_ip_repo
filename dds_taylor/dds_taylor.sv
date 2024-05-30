@@ -31,8 +31,8 @@ module dds_taylor
 
   always @ (posedge clk) begin
     if (reset == 1 || enable == 0) begin
-      phi_re <= 0;
-      phi_im <= (1 <<< (G_DIN_WIDTH-2));
+      phi_re <= (1 <<< (G_DIN_WIDTH-2));
+      phi_im <= 0;
     end
     else begin
       if (din_valid & din_ready == 1) begin

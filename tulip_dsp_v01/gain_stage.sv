@@ -25,6 +25,15 @@ module gain_stage
   logic                       din_buff_dout_ready;
 
   logic signed [G_DWIDTH+G_INTEGER_BITS+G_DECIMAL_BITS-1:0] mult_long;
+  logic signed [G_DWIDTH+G_INTEGER_BITS+G_DECIMAL_BITS-1:0] mid_buff_din;
+  logic                                                     mid_buff_din_valid;
+  logic                                                     mid_buff_din_ready;
+  logic signed [G_DWIDTH+G_INTEGER_BITS+G_DECIMAL_BITS-1:0] mid_buff_dout;
+  logic                                                     mid_buff_dout_valid;
+  logic                                                     mid_buff_dout_ready;
+
+
+
   logic [G_DWIDTH+G_INTEGER_BITS+G_DECIMAL_BITS-1:0] mult_rs;
 
   logic signed [G_DWIDTH+G_INTEGER_BITS+G_DECIMAL_BITS-1:0] dout_buff_din;
@@ -56,11 +65,37 @@ module gain_stage
   );
 
   assign mult_long = din_buff_dout*signed'({1'b0,gain});
-  assign mult_rs = mult_long >>> G_DECIMAL_BITS;
+
+  assign mid_buff_din = mult_long;
+  assign mid_buff_din_valid = din_buff_dout_valid;
+  assign din_buff_dout_ready = mid_buff_din_ready;
+
+  axis_buffer
+  #(
+    .G_DWIDTH ($bits(dout_buff_din))
+  )
+  u_middle_axis_buffer
+  (
+    .clk        (clk),
+    .reset      (reset),
+    .enable     (enable),
+
+    .din        (mid_buff_din),
+    .din_valid  (mid_buff_din_valid),
+    .din_ready  (mid_buff_din_ready),
+    .din_last   (0),
+
+    .dout       (mid_buff_dout),
+    .dout_valid (mid_buff_dout_valid),
+    .dout_ready (mid_buff_dout_ready),
+    .dout_last  ()
+  );
+
+  assign mult_rs = mid_buff_dout >>> G_DECIMAL_BITS;
 
   assign dout_buff_din = mult_rs;
-  assign dout_buff_din_valid = din_buff_dout_valid;
-  assign din_buff_dout_ready = dout_buff_din_ready;
+  assign dout_buff_din_valid = mid_buff_dout_valid;
+  assign mid_buff_dout_ready = dout_buff_din_ready;
 
   axis_buffer
   #(
