@@ -1,0 +1,150 @@
+[1mdiff --git a/chorus_effect_v01/chorus_effect.sv b/chorus_effect_v01/chorus_effect.sv[m
+[1mindex f022f14..1b11782 100644[m
+[1m--- a/chorus_effect_v01/chorus_effect.sv[m
+[1m+++ b/chorus_effect_v01/chorus_effect.sv[m
+[36m@@ -1,13 +1,14 @@[m
+ module chorus_effect[m
+ #([m
+[31m-  parameter int G_NUM_CHORUS_CHANNELS = 4,[m
+[31m-  localparam int G_DWIDTH = 24,[m
+[31m-  localparam int C_PROG_CHIRP_DWIDTH = 32[m
+[32m+[m[32m  parameter int   G_NUM_CHORUS_CHANNELS = 4,[m
+[32m+[m[32m  localparam int  G_DWIDTH = 24,[m
+[32m+[m[32m  localparam int  C_PROG_CHIRP_DWIDTH = 32[m
+ )[m
+ ([m
+   input  logic                            clk,[m
+   input  logic                            reset,[m
+   input  logic                            enable,[m
+[32m+[m[32m  input  logic                            bypass,[m
+ [m
+   input  logic [G_DWIDTH-1:0]             prog_gain_din, // fixed point, 2 integer bits[m
+   input  logic                            prog_gain_din_valid,[m
+[36m@@ -48,7 +49,7 @@[m [mmodule chorus_effect[m
+ [m
+   logic                           all_prog_done;[m
+ [m
+[31m-  localparam int C_NUM_FILTER_TAPS = 255;[m
+[32m+[m[32m  localparam int C_NUM_FILTER_TAPS = 511;[m
+ [m
+   typedef enum[m
+   {[m
+[36m@@ -58,7 +59,7 @@[m [mmodule chorus_effect[m
+   } state_t;[m
+   state_t state;[m
+ [m
+[31m-  logic [7:0]   fir_rom_din_addr;[m
+[32m+[m[32m  logic [8:0]   fir_rom_din_addr;[m
+   logic         fir_rom_din_valid;[m
+   logic [15:0]  fir_rom_dout;[m
+   logic         fir_rom_dout_valid;[m
+[36m@@ -126,6 +127,15 @@[m [mmodule chorus_effect[m
+   logic                 complex_mult_out_ready  [0:G_NUM_CHORUS_CHANNELS-1];[m
+ [m
+ [m
+[32m+[m[32m  logic [G_DWIDTH-1:0]  slow_add_din [0:G_NUM_CHORUS_CHANNELS];[m
+[32m+[m[32m  logic                 slow_add_din_valid;[m
+[32m+[m[32m  logic                 slow_add_din_ready;[m
+[32m+[m[32m  logic [G_DWIDTH-1:0]  slow_add_dout;[m
+[32m+[m[32m  logic                 slow_add_dout_valid;[m
+[32m+[m[32m  logic                 slow_add_dout_ready;[m
+[32m+[m
+[32m+[m
+[32m+[m
+ //////////////////////////////////////////[m
+ [m
+   always @ (posedge clk) begin[m
+[36m@@ -262,8 +272,9 @@[m [mmodule chorus_effect[m
+ [m
+ [m
+   assign mod_np_din       = din;[m
+[31m-  assign mod_np_din_valid = din_valid & all_prog_done;[m
+[31m-  assign din_ready        = mod_np_din_ready & all_prog_done;[m
+[32m+[m[32m  assign mod_np_din_valid = din_valid & din_ready;[m
+[32m+[m
+[32m+[m[32m  assign din_ready = (bypass == 0) ? mod_np_din_ready & passthrough_gain_din_ready & all_prog_done : dout_ready;[m
+ [m
+   modulate_neg_pi_div2[m
+   #([m
+[36m@@ -387,9 +398,9 @@[m [mmodule chorus_effect[m
+   always_comb begin[m
+     valid_ready_mod_gate = 1;[m
+ [m
+[31m-    if (passthrough_gain_din_ready == 0) begin[m
+[31m-      valid_ready_mod_gate = 0;[m
+[31m-    end[m
+[32m+[m[32m    //if (passthrough_gain_din_ready == 0) begin[m
+[32m+[m[32m    //  valid_ready_mod_gate = 0;[m
+[32m+[m[32m    //end[m
+ [m
+     for (int i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin[m
+       if (complex_mult_din1_ready[i] == 0) begin[m
+[36m@@ -400,8 +411,8 @@[m [mmodule chorus_effect[m
+ [m
+   assign mod_p_dout_ready = valid_ready_mod_gate;[m
+ [m
+[31m-  assign passthrough_gain_din       = mod_p_dout_re;[m
+[31m-  assign passthrough_gain_din_valid = mod_p_dout_valid & valid_ready_mod_gate;[m
+[32m+[m[32m  assign passthrough_gain_din       = din;[m
+[32m+[m[32m  assign passthrough_gain_din_valid = din_valid & din_ready;[m
+ [m
+   gain_stage[m
+   #([m
+[36m@@ -463,8 +474,10 @@[m [mmodule chorus_effect[m
+ [m
+       complex_multiply[m
+       #([m
+[31m-        .G_DIN1_DWIDTH    (G_DWIDTH),[m
+[31m-        .G_DIN2_DWIDTH    (G_DWIDTH)[m
+[32m+[m[32m        .G_DIN1_DWIDTH        (G_DWIDTH),[m
+[32m+[m[32m        .G_DIN2_DWIDTH        (G_DWIDTH),[m
+[32m+[m[32m        .G_DOUT_WIDTH         (G_DWIDTH),[m
+[32m+[m[32m        .G_RIGHT_SHIFT_AMOUNT (G_DWIDTH)[m
+       )[m
+       u_complex_multiply[m
+       ([m
+[36m@@ -531,9 +544,40 @@[m [mmodule chorus_effect[m
+     end[m
+   end[m
+ [m
+[31m-  assign dout = signed'(passthrough_gain_dout) + signed'(chorus_gain_dout[0]) + signed'(chorus_gain_dout[1]) + signed'(chorus_gain_dout[2]) + signed'(chorus_gain_dout[3]);[m
+[31m-  assign dout_valid                   = output_valid_ready_gate;[m
+[31m-  assign passthrough_gain_dout_ready  = dout_ready & output_valid_ready_gate;[m
+[31m-  assign chorus_gain_dout_ready       = dout_ready & output_valid_ready_gate;[m
+[32m+[m[32m  assign slow_add_din[0] = signed'(passthrough_gain_dout);[m
+[32m+[m
+[32m+[m[32m  generate[m
+[32m+[m[32m    for (genvar i = 0 ; i < G_NUM_CHORUS_CHANNELS ; i++) begin[m
+[32m+[m[32m      assign slow_add_din[i+1] = signed'(chorus_gain_dout[i]);[m
+[32m+[m[32m    end[m
+[32m+[m[32m  endgenerate[m
+[32m+[m
+[32m+[m[32m  assign slow_add_din_valid           = output_valid_ready_gate;[m
+[32m+[m[32m  assign passthrough_gain_dout_ready  = slow_add_din_ready & output_valid_ready_gate;[m
+[32m+[m[32m  assign chorus_gain_dout_ready       = slow_add_din_ready & output_valid_ready_gate;[m
+[32m+[m
+[32m+[m[32m  slow_add[m
+[32m+[m[32m  #([m
+[32m+[m[32m    .G_DWIDTH     (G_DWIDTH),[m
+[32m+[m[32m    .G_BUS_WIDTH  (G_NUM_CHORUS_CHANNELS+1)[m
+[32m+[m[32m  )[m
+[32m+[m[32m  u_slow_add[m
+[32m+[m[32m  ([m
+[32m+[m[32m    .clk        (clk),[m
+[32m+[m[32m    .reset      (reset),[m
+[32m+[m[32m    .enable     (enable),[m
+[32m+[m
+[32m+[m[32m    .din        (slow_add_din),[m
+[32m+[m[32m    .din_valid  (slow_add_din_valid),[m
+[32m+[m[32m    .din_ready  (slow_add_din_ready),[m
+[32m+[m
+[32m+[m[32m    .dout       (slow_add_dout),[m
+[32m+[m[32m    .dout_valid (slow_add_dout_valid),[m
+[32m+[m[32m    .dout_ready (slow_add_dout_ready)[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  assign dout                 = (bypass == 0) ? slow_add_dout : din;[m
+[32m+[m[32m  assign dout_valid           = (bypass == 0) ? slow_add_dout_valid : din_valid;[m
+[32m+[m[32m  assign slow_add_dout_ready  = dout_ready;[m
+ [m
+ endmodule[m
