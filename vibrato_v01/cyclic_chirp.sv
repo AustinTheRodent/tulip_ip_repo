@@ -91,7 +91,6 @@ module cyclic_chirp
   #(
     .G_DIN_WIDTH      (G_DIN_WIDTH),
     .G_DOUT_WIDTH     (G_DIN_WIDTH),
-    .G_TAPWIDTH       (16),
     .G_COMPLEX_OUTPUT (0)
   )
   u_dds_taylor_freq_deriv
@@ -146,7 +145,6 @@ module cyclic_chirp
   #(
     .G_DIN_WIDTH      (G_DIN_WIDTH),
     .G_DOUT_WIDTH     (G_DOUT_WIDTH),
-    .G_TAPWIDTH       (16),
     .G_COMPLEX_OUTPUT (1)
   )
   u_dds_taylor_chirp_out

@@ -82,7 +82,7 @@ module reverb_wrapper
 
 ////////////////////////////////////////////////////////////
 
-  assign din_rs = din >>> (G_DATA_WIDTH-C_FIR_DWIDTH);
+  assign din_rs = signed'(din) >>> (G_DATA_WIDTH-C_FIR_DWIDTH);
   assign din_rs_short = din_rs;
   assign fir_din = (first_samp_done == 0) ? din_rs_short : din_rs_short + fb_buff_dout;
 
@@ -117,7 +117,7 @@ module reverb_wrapper
 //    end
 //  end
 
-  assign in_buff_din = din;
+  assign in_buff_din = signed'(din);
 
   gain_stage
   #(

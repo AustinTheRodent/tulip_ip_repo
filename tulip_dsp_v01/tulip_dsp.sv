@@ -1,6 +1,5 @@
 module tulip_dsp
 #(
-  parameter  int G_LUT_AWIDTH = 10,
   localparam int C_FP_DWIDTH = 32,
   localparam int C_USER_FILT_TAP_DWIDTH = 16,
   localparam int C_ADC_DWIDTH = 24
@@ -14,12 +13,14 @@ module tulip_dsp
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
   input  logic                    vibrato_sw_resetn,
+  input  logic                    chorus_sw_resetn,
 
   input  logic                    bypass,
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
   input  logic                    bypass_vibrato,
+  input  logic                    bypass_chorus,
 
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
@@ -66,6 +67,25 @@ module tulip_dsp
   output logic                              prog_vibrato_freq_offset_din_ready,
   output logic                              prog_vibrato_freq_offset_din_done,
 
+  input  logic [23:0]                       prog_chorus_gain_din, // fixed point, 2 integer bits
+  input  logic                              prog_chorus_gain_din_valid,
+  output logic                              prog_chorus_gain_din_ready,
+  output logic                              prog_chorus_gain_din_done,
+
+  input  logic [11:0]                       prog_chorus_avg_delay_din,
+  input  logic                              prog_chorus_avg_delay_din_valid,
+  output logic                              prog_chorus_avg_delay_din_ready,
+  output logic                              prog_chorus_avg_delay_din_done,
+
+  input  logic [11:0]                       prog_chorus_lfo_depth_din,
+  input  logic                              prog_chorus_lfo_depth_din_valid,
+  output logic                              prog_chorus_lfo_depth_din_ready,
+  output logic                              prog_chorus_lfo_depth_din_done,
+
+  input  logic [31:0]                       prog_chorus_lfo_freq_din,
+  input  logic                              prog_chorus_lfo_freq_din_valid,
+  output logic                              prog_chorus_lfo_freq_din_ready,
+  output logic                              prog_chorus_lfo_freq_din_done,
 
   input  logic [C_ADC_DWIDTH-1:0] din,
   input  logic                    din_valid,
@@ -158,6 +178,13 @@ module tulip_dsp
   logic                     vibrato_dout_valid;
   logic                     vibrato_dout_ready;
 
+  logic [C_ADC_DWIDTH-1:0]  chorus_din;
+  logic                     chorus_din_valid;
+  logic                     chorus_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  chorus_dout;
+  logic                     chorus_dout_valid;
+  logic                     chorus_dout_ready;
+
   logic [C_ADC_DWIDTH-1:0]  reverb_din;
   logic                     reverb_din_valid;
   logic                     reverb_din_ready;
@@ -223,7 +250,7 @@ module tulip_dsp
 
   interpolating_lut_wrapper
   #(
-    .G_ADDR_WIDTH         (G_LUT_AWIDTH),
+    .G_ADDR_WIDTH         (10),
     .G_DWIDTH             (C_ADC_DWIDTH),
     .G_LOG2_LINEAR_STEPS  (8)
   )
@@ -515,9 +542,53 @@ module tulip_dsp
     .dout_ready                 (vibrato_dout_ready )
   );
 
-  assign reverb_din         = vibrato_dout;
-  assign reverb_din_valid   = vibrato_dout_valid;
-  assign vibrato_dout_ready  = reverb_din_ready;
+  assign chorus_din         = vibrato_dout;
+  assign chorus_din_valid   = vibrato_dout_valid;
+  assign vibrato_dout_ready = chorus_din_ready;
+
+  chorus_effect
+  #(
+    .G_DWIDTH      (C_ADC_DWIDTH)
+  )
+  u_chorus_effect
+  (
+    .clk                      (clk),
+    .reset                    (reset),
+    .enable                   (global_sw_resetn & chorus_sw_resetn),
+    .bypass                   (bypass_chorus),
+
+    .prog_gain_din            (prog_chorus_gain_din),
+    .prog_gain_din_valid      (prog_chorus_gain_din_valid),
+    .prog_gain_din_ready      (prog_chorus_gain_din_ready),
+    .prog_gain_din_done       (prog_chorus_gain_din_done),
+
+    .prog_avg_delay_din       (prog_chorus_avg_delay_din),
+    .prog_avg_delay_din_valid (prog_chorus_avg_delay_din_valid),
+    .prog_avg_delay_din_ready (prog_chorus_avg_delay_din_ready),
+    .prog_avg_delay_din_done  (prog_chorus_avg_delay_din_done),
+
+    .prog_lfo_depth_din       (prog_chorus_lfo_depth_din),
+    .prog_lfo_depth_din_valid (prog_chorus_lfo_depth_din_valid),
+    .prog_lfo_depth_din_ready (prog_chorus_lfo_depth_din_ready),
+    .prog_lfo_depth_din_done  (prog_chorus_lfo_depth_din_done),
+
+    .prog_lfo_freq_din        (prog_chorus_lfo_freq_din),
+    .prog_lfo_freq_din_valid  (prog_chorus_lfo_freq_din_valid),
+    .prog_lfo_freq_din_ready  (prog_chorus_lfo_freq_din_ready),
+    .prog_lfo_freq_din_done   (prog_chorus_lfo_freq_din_done),
+
+    .din                      (chorus_din),
+    .din_valid                (chorus_din_valid),
+    .din_ready                (chorus_din_ready),
+
+    .dout                     (chorus_dout),
+    .dout_valid               (chorus_dout_valid),
+    .dout_ready               (chorus_dout_ready)
+  );
+
+  assign reverb_din         = chorus_dout;
+  assign reverb_din_valid   = chorus_dout_valid;
+  assign chorus_dout_ready  = reverb_din_ready;
 
   reverb_wrapper
   #(

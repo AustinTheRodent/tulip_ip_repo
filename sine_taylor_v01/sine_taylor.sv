@@ -1,8 +1,8 @@
 module sine_taylor
 #(
-  parameter int G_DIN_WIDTH = 16,
-  parameter int G_DOUT_WIDTH = 16,
-  parameter int G_TAPWIDTH = 16
+  parameter   int G_DIN_WIDTH = 16,
+  parameter   int G_DOUT_WIDTH = 16,
+  localparam  int G_TAPWIDTH = 16
 )
 (
   input  logic                    clk,

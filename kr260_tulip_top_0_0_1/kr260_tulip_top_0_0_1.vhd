@@ -146,6 +146,21 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal vibrato_gain_prog_ready         : std_logic_vector(0 downto 0);
 
 
+
+  signal chorus_lfo_freq_prog_done       : std_logic_vector(0 downto 0);
+  signal chorus_lfo_freq_prog_ready      : std_logic_vector(0 downto 0);
+  signal chorus_lfo_depth_prog_done      : std_logic_vector(0 downto 0);
+  signal chorus_lfo_depth_prog_ready     : std_logic_vector(0 downto 0);
+  signal chorus_avg_delay_prog_done      : std_logic_vector(0 downto 0);
+  signal chorus_avg_delay_prog_ready     : std_logic_vector(0 downto 0);
+  signal chorus_gain_prog_done           : std_logic_vector(0 downto 0);
+  signal chorus_gain_prog_ready          : std_logic_vector(0 downto 0);
+
+
+
+
+
+
   signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_din_valid                : std_logic;
   signal dsp_l_din_ready                : std_logic;
@@ -228,29 +243,53 @@ begin
       s_TULIP_DSP_STATUS_REVERB_PROG_READY        => reverb_taps_prog_din_ready,
       s_TULIP_DSP_STATUS_REVERB_PROG_READY_v      => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE     => vibrato_freq_offset_prog_done,
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE_v   => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE    => vibrato_freq_offset_prog_done,
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_DONE_v  => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY    => vibrato_freq_offset_prog_ready,
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY_v  => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY   => vibrato_freq_offset_prog_ready,
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_OFFSET_PROG_READY_v => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE      => vibrato_freq_deriv_prog_done,
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE_v    => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE     => vibrato_freq_deriv_prog_done,
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_DONE_v   => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY     => vibrato_freq_deriv_prog_ready,
-      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY_v   => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY    => vibrato_freq_deriv_prog_ready,
+      s_TULIP_DSP_STATUS_VIBRATO_FREQ_DERIV_PROG_READY_v  => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE     => vibrato_chirp_depth_prog_done,
-      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE_v   => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE    => vibrato_chirp_depth_prog_done,
+      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_DONE_v  => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY    => vibrato_chirp_depth_prog_ready,
-      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY_v  => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY   => vibrato_chirp_depth_prog_ready,
+      s_TULIP_DSP_STATUS_VIBRATO_CHIRP_DEPTH_PROG_READY_v => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE            => vibrato_gain_prog_done,
-      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE_v          => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE           => vibrato_gain_prog_done,
+      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_DONE_v         => '1',
 
-      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY           => vibrato_gain_prog_ready,
-      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY_v         => '1',
+      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY          => vibrato_gain_prog_ready,
+      s_TULIP_DSP_STATUS_VIBRATO_GAIN_PROG_READY_v        => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE        => chorus_lfo_freq_prog_done,
+      s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE_v      => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_READY       => chorus_lfo_freq_prog_ready,
+      s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_READY_v     => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_LFO_DEPTH_PROG_DONE       => chorus_lfo_depth_prog_done,
+      s_TULIP_DSP_STATUS_CHORUS_LFO_DEPTH_PROG_DONE_v     => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_LFO_DEPTH_PROG_READY      => chorus_lfo_depth_prog_ready,
+      s_TULIP_DSP_STATUS_CHORUS_LFO_DEPTH_PROG_READY_v    => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_AVG_DELAY_PROG_DONE       => chorus_avg_delay_prog_done,
+      s_TULIP_DSP_STATUS_CHORUS_AVG_DELAY_PROG_DONE_v     => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_AVG_DELAY_PROG_READY      => chorus_avg_delay_prog_ready,
+      s_TULIP_DSP_STATUS_CHORUS_AVG_DELAY_PROG_READY_v    => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_DONE            => chorus_gain_prog_done,
+      s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_DONE_v          => '1',
+
+      s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY           => chorus_gain_prog_ready,
+      s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY_v         => '1',
 
       s_axi_awaddr  => s_axi_awaddr,
       s_axi_awvalid => s_axi_awvalid,
@@ -371,78 +410,96 @@ begin
   dsp_r_din_valid <= adc_valid;
 
   u_tulip_dsp : entity work.tulip_dsp
-    generic map
-    (
-      G_LUT_AWIDTH                    => 10
-    )
     port map
     (
-      clk                             => s_axi_aclk,
-      reset                           => (not a_axi_aresetn),
-      global_sw_resetn                => dsp_sw_resetn,
+      clk                                 => s_axi_aclk,
+      reset                               => (not a_axi_aresetn),
+      global_sw_resetn                    => dsp_sw_resetn,
 
-      lut_tf_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
-      usr_fir_sw_resetn               => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
-      reverb_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
-      vibrato_sw_resetn                => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
+      lut_tf_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
+      usr_fir_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
+      reverb_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+      vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
+      chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
-      bypass                          => registers.TULIP_DSP_CONTROL.BYPASS(0),
-      bypass_vibrato                   => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
-      bypass_reverb                   => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
-      bypass_lut_tf                   => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
-      bypass_usr_fir                  => registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR(0),
+      bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
+      bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
+      bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
+      bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
+      bypass_lut_tf                       => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
+      bypass_usr_fir                      => registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR(0),
 
-      input_gain                      => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
-      output_gain                     => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
+      input_gain                          => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
+      output_gain                         => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
 
-      symmetric_mode                  =>registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE(0),
+      symmetric_mode                      =>registers.TULIP_DSP_CONTROL.SYMMETRIC_MODE(0),
 
-      lut_prog_din                    => registers.TULIP_DSP_LUT_PROG.LUT_PROG_VAL,
-      lut_prog_din_valid              => registers.TULIP_DSP_LUT_PROG_REG_wr_pulse,
-      lut_prog_din_ready              => lut_prog_din_ready(0),
-      lut_prog_din_done               => lut_prog_din_done(0),
+      lut_prog_din                        => registers.TULIP_DSP_LUT_PROG.LUT_PROG_VAL,
+      lut_prog_din_valid                  => registers.TULIP_DSP_LUT_PROG_REG_wr_pulse,
+      lut_prog_din_ready                  => lut_prog_din_ready(0),
+      lut_prog_din_done                   => lut_prog_din_done(0),
 
-      usr_fir_taps_prog_din           => registers.TULIP_DSP_USR_FIR_PROG.FIR_TAP_VALUE,
-      usr_fir_taps_prog_din_valid     => registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse,
-      usr_fir_taps_prog_din_ready     => usr_fir_taps_prog_din_ready(0),
-      usr_fir_taps_prog_done          => usr_fir_taps_prog_done(0),
+      usr_fir_taps_prog_din               => registers.TULIP_DSP_USR_FIR_PROG.FIR_TAP_VALUE,
+      usr_fir_taps_prog_din_valid         => registers.TULIP_DSP_USR_FIR_PROG_REG_wr_pulse,
+      usr_fir_taps_prog_din_ready         => usr_fir_taps_prog_din_ready(0),
+      usr_fir_taps_prog_done              => usr_fir_taps_prog_done(0),
 
-      reverb_feedback_right_shift     => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
-      reverb_feedback_gain            => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
-      reverb_feedforward_gain         => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
+      reverb_feedback_right_shift         => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_RIGHT_SHIFT,
+      reverb_feedback_gain                => registers.TULIP_DSP_REVERB_SCALE.FEEDBACK_GAIN,
+      reverb_feedforward_gain             => registers.TULIP_DSP_REVERB_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN,
 
-      reverb_taps_prog_din            => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
-      reverb_taps_prog_din_valid      => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
-      reverb_taps_prog_din_ready      => reverb_taps_prog_din_ready(0),
-      reverb_taps_prog_done           => reverb_taps_prog_done(0),
+      reverb_taps_prog_din                => registers.TULIP_DSP_REVERB_PROG.REVERB_TAP_VALUE,
+      reverb_taps_prog_din_valid          => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
+      reverb_taps_prog_din_ready          => reverb_taps_prog_din_ready(0),
+      reverb_taps_prog_done               => reverb_taps_prog_done(0),
 
-      prog_vibrato_gain_din              => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
-      prog_vibrato_gain_din_valid        => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,
-      prog_vibrato_gain_din_ready        => vibrato_gain_prog_ready,
-      prog_vibrato_gain_din_done         => vibrato_gain_prog_done,
+      prog_vibrato_gain_din               => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
+      prog_vibrato_gain_din_valid         => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,
+      prog_vibrato_gain_din_ready         => vibrato_gain_prog_ready,
+      prog_vibrato_gain_din_done          => vibrato_gain_prog_done,
 
-      prog_vibrato_chirp_depth_din       => registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH.CHIRP_DEPTH,
-      prog_vibrato_chirp_depth_din_valid => registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse,
-      prog_vibrato_chirp_depth_din_ready => vibrato_chirp_depth_prog_ready,
-      prog_vibrato_chirp_depth_din_done  => vibrato_chirp_depth_prog_done,
+      prog_vibrato_chirp_depth_din        => registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH.CHIRP_DEPTH,
+      prog_vibrato_chirp_depth_din_valid  => registers.TULIP_DSP_VIBRATO_CHIRP_DEPTH_REG_wr_pulse,
+      prog_vibrato_chirp_depth_din_ready  => vibrato_chirp_depth_prog_ready,
+      prog_vibrato_chirp_depth_din_done   => vibrato_chirp_depth_prog_done,
 
-      prog_vibrato_freq_deriv_din        => registers.TULIP_DSP_VIBRATO_FREQ_DERIV.FREQ_DERIV,
-      prog_vibrato_freq_deriv_din_valid  => registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse,
-      prog_vibrato_freq_deriv_din_ready  => vibrato_freq_deriv_prog_ready,
-      prog_vibrato_freq_deriv_din_done   => vibrato_freq_deriv_prog_done,
+      prog_vibrato_freq_deriv_din         => registers.TULIP_DSP_VIBRATO_FREQ_DERIV.FREQ_DERIV,
+      prog_vibrato_freq_deriv_din_valid   => registers.TULIP_DSP_VIBRATO_FREQ_DERIV_REG_wr_pulse,
+      prog_vibrato_freq_deriv_din_ready   => vibrato_freq_deriv_prog_ready,
+      prog_vibrato_freq_deriv_din_done    => vibrato_freq_deriv_prog_done,
 
-      prog_vibrato_freq_offset_din       => registers.TULIP_DSP_VIBRATO_FREQ_OFFSET.FREQ_OFFSET,
-      prog_vibrato_freq_offset_din_valid => registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse,
-      prog_vibrato_freq_offset_din_ready => vibrato_freq_offset_prog_ready,
-      prog_vibrato_freq_offset_din_done  => vibrato_freq_offset_prog_done,
+      prog_vibrato_freq_offset_din        => registers.TULIP_DSP_VIBRATO_FREQ_OFFSET.FREQ_OFFSET,
+      prog_vibrato_freq_offset_din_valid  => registers.TULIP_DSP_VIBRATO_FREQ_OFFSET_REG_wr_pulse,
+      prog_vibrato_freq_offset_din_ready  => vibrato_freq_offset_prog_ready,
+      prog_vibrato_freq_offset_din_done   => vibrato_freq_offset_prog_done,
 
-      din                             => dsp_l_din,
-      din_valid                       => dsp_l_din_valid,
-      din_ready                       => dsp_l_din_ready,
+      prog_chorus_gain_din                => registers.TULIP_DSP_CHORUS_GAIN.GAIN,
+      prog_chorus_gain_din_valid          => registers.TULIP_DSP_CHORUS_GAIN_REG_wr_pulse,
+      prog_chorus_gain_din_ready          => chorus_gain_prog_ready,
+      prog_chorus_gain_din_done           => chorus_gain_prog_done,
 
-      dout                            => dsp_l_dout,
-      dout_valid                      => dsp_l_dout_valid,
-      dout_ready                      => dsp_l_dout_ready
+      prog_chorus_avg_delay_din           => registers.TULIP_DSP_CHORUS_AVG_DELAY.AVG_DELAY,
+      prog_chorus_avg_delay_din_valid     => registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_wr_pulse,
+      prog_chorus_avg_delay_din_ready     => chorus_avg_delay_prog_ready,
+      prog_chorus_avg_delay_din_done      => chorus_avg_delay_prog_done,
+
+      prog_chorus_lfo_depth_din           => registers.TULIP_DSP_CHORUS_LFO_DEPTH.LFO_DEPTH,
+      prog_chorus_lfo_depth_din_valid     => registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_wr_pulse,
+      prog_chorus_lfo_depth_din_ready     => chorus_lfo_depth_prog_ready,
+      prog_chorus_lfo_depth_din_done      => chorus_lfo_depth_prog_done,
+
+      prog_chorus_lfo_freq_din            => registers.TULIP_DSP_CHORUS_LFO_FREQ.LFO_FREQ,
+      prog_chorus_lfo_freq_din_valid      => registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse,
+      prog_chorus_lfo_freq_din_ready      => chorus_lfo_freq_prog_ready,
+      prog_chorus_lfo_freq_din_done       => chorus_lfo_freq_prog_done,
+
+      din                                 => dsp_l_din,
+      din_valid                           => dsp_l_din_valid,
+      din_ready                           => dsp_l_din_ready,
+
+      dout                                => dsp_l_dout,
+      dout_valid                          => dsp_l_dout_valid,
+      dout_ready                          => dsp_l_dout_ready
     );
 
   i2s_fifo_din <=

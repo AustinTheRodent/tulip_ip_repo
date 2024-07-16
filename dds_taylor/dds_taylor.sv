@@ -2,7 +2,6 @@ module dds_taylor
 #(
   parameter int G_DIN_WIDTH = 24,
   parameter int G_DOUT_WIDTH = 16,
-  parameter int G_TAPWIDTH = 16,
   parameter int G_COMPLEX_OUTPUT = 0
 )
 (
@@ -78,8 +77,7 @@ module dds_taylor
   sine_taylor
   #(
     .G_DIN_WIDTH  (G_DIN_WIDTH-1),
-    .G_DOUT_WIDTH (G_DOUT_WIDTH),
-    .G_TAPWIDTH   (G_TAPWIDTH)
+    .G_DOUT_WIDTH (G_DOUT_WIDTH)
   )
   u_sine_taylor_re
   (
@@ -101,8 +99,7 @@ module dds_taylor
       sine_taylor
       #(
         .G_DIN_WIDTH  (G_DIN_WIDTH-1),
-        .G_DOUT_WIDTH (G_DOUT_WIDTH),
-        .G_TAPWIDTH   (G_TAPWIDTH)
+        .G_DOUT_WIDTH (G_DOUT_WIDTH)
       )
       u_sine_taylor_im
       (
