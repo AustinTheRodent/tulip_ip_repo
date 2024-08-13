@@ -578,7 +578,7 @@ begin
 
   i2s_2_ps_sw_resetn        <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.I2S_2_PS_ENABLE(0));
   i2s_2_ps_fifo_din         <= dsp_l_dout & dsp_l_dout;
-  i2s_2_ps_fifo_din_valid   <= dsp_l_dout_valid;
+  i2s_2_ps_fifo_din_valid   <= dsp_l_dout_valid and dsp_l_dout_ready;
 
   u_i2s_2_ps_fifo : entity work.axis_sync_fifo
     generic map
