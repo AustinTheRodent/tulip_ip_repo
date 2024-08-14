@@ -1,0 +1,35 @@
+# RW = read/write
+# RO = read only
+
+#name of the register set, used for H file header guard:
+(AXIS_SNIFFER0_REGISTERS)
+
+[REG_FILE_DATA_WIDTH 32]
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes):
+[REG_FILE_ADDR_WIDTH 12]
+
+#name type address reset_val
+
+CONTROL RW 0x000 0x00000000 {
+  SW_RESETN [0:0]
+}
+
+TRANSACTION_COUNT RO 0x004 0x00000000 {
+  COUNT [31:0]
+}
+
+TRANSACTION_VALUE RO 0x008 0x00000000 {
+  DATA [31:0]
+}
+
+GLOBAL_STATUS RO 0x00C 0x00000000 {
+  TRANSACTION_OVERFLOW [0:0]
+}
+
+FIFO_STATUS RO 0x010 0x00000000 {
+  FIFO_USED [31:0]
+}
+
+SCRATCHPAD RW 0x014 0xCAFEBABE {
+  SCRATCH [31:0]
+}
