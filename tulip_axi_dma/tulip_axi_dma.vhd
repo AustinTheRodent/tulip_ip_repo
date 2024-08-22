@@ -1,4 +1,3 @@
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -9,15 +8,29 @@ use work.axis_sniffer_reg_file_pkg.all;
 entity axi_dma is
   generic
   (
-    G_REG_FILE_DATA_WIDTH : integer := 32;
-    G_REG_FILE_ADDR_WIDTH : integer := 16
+    G_DMA_FILE_DATA_WIDTH : integer := 128; -- do not change ?
+    G_DMA_FILE_ADDR_WIDTH : integer := 16;
+    G_PS_ADDR_WIDTH       : integer := 40
   );
   port
   (
+    clk           : in  std_logic;
+    reset         : in  std_logic;
+
+    trigger_wr_sm : in  std_logic;
+    wr_burst_len  : in  std_logic_vector(11 downto 0); -- Bytes+1
+    wr_base_addr  : in  std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+
+    trigger_rd_sm : in  std_logic;
+    rd_burst_len  : in  std_logic_vector(11 downto 0); -- Bytes+1
+    rd_base_addr  : in  std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+
+    -------------------------------------------------------------------------------
+
     m_axi_aclk    : in  std_logic;
     m_axi_aresetn : in  std_logic;
 
-    m_axi_awaddr  : out std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
+    m_axi_awaddr  : out std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
     m_axi_awsize  : out std_logic_vector(2 downto 0);
     -- m_axi_awsize represents bytes in beat:
     -- b000 = 1
@@ -38,8 +51,8 @@ entity axi_dma is
     m_axi_awvalid : out std_logic;
     m_axi_awready : in  std_logic;
 
-    m_axi_wdata   : out std_logic_vector(G_REG_FILE_DATA_WIDTH-1 downto 0);
-    m_axi_wstrb   : out std_logic_vector(G_REG_FILE_DATA_WIDTH/8-1 downto 0);
+    m_axi_wdata   : out std_logic_vector(G_DMA_FILE_DATA_WIDTH-1 downto 0);
+    m_axi_wstrb   : out std_logic_vector(G_DMA_FILE_DATA_WIDTH/8-1 downto 0);
     m_axi_wvalid  : out std_logic;
     m_axi_wready  : in  std_logic;
     m_axi_wlast   : out std_logic;
@@ -50,9 +63,9 @@ entity axi_dma is
 
     -------------------------------------------------------------------------------
 
-    m_axi_araddr  : out std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
+    m_axi_araddr  : out std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
     m_axi_arsize  : out std_logic_vector(2 downto 0);
-    -- m_axi_awsize represents bytes in beat:
+    -- m_axi_arsize represents bytes in beat:
     -- b000 = 1
     -- b001 = 2
     -- b010 = 4
@@ -71,53 +84,59 @@ entity axi_dma is
     m_axi_arvalid : out std_logic;
     m_axi_arready : in  std_logic;
 
-    m_axi_rdata   : in  std_logic_vector(G_REG_FILE_DATA_WIDTH-1 downto 0);
-    m_axi_rresp   : in  std_logic_vector(G_REG_FILE_DATA_WIDTH/8-1 downto 0); -- 0 = okay
+    m_axi_rdata   : in  std_logic_vector(G_DMA_FILE_DATA_WIDTH-1 downto 0);
+    m_axi_rresp   : in  std_logic_vector(G_DMA_FILE_DATA_WIDTH/8-1 downto 0); -- 0 = okay
     m_axi_rvalid  : in  std_logic;
     m_axi_rready  : out std_logic;
     m_axi_rlast   : in  std_logic;
 
     -------------------------------------------------------------------------------
 
-    s_axis_aclk
-    s_axis_aresetn
-    s_axis_tdata
-    s_axis_tvalid
-    s_axis_tready
+    s_axis_aclk     : in  std_logic;
+    s_axis_aresetn  : in  std_logic;
+    s_axis_tdata    : in  std_logic_vector(127 downto 0);
+    s_axis_tvalid   : in  std_logic;
+    s_axis_tready   : out std_logic;
+    s_axis_tlast    : in  std_logic;
 
+    -------------------------------------------------------------------------------
 
+    m_axis_aclk     : in  std_logic;
+    m_axis_aresetn  : in  std_logic;
+    m_axis_tdata    : out std_logic_vector(127 downto 0);
+    m_axis_tvalid   : out std_logic;
+    m_axis_tready   : in  std_logic;
+    m_axis_tlast    : out std_logic;
 
   );
 end entity;
 
 architecture rtl of axi_dma is
 
-  signal trigger_wr_sm  : std_logic;
-  signal trigger_rd_sm  : std_logic;
-
   signal m_axi_awvalid_int  : std_logic;
   signal m_axi_arvalid_int  : std_logic;
-  signal m_axi_awaddr_int   : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_axi_awlen_int    : std_logic_vector(7 downto 0);
+  signal m_axi_awaddr_int   : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
   signal m_axi_wvalid_int   : std_logic;
   signal m_axi_bready_int   : std_logic;
   signal m_axi_rready_int   : std_logic;
+  signal m_axis_tvalid_int  : std_logic;
 
-  signal m_awaddr           : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_araddr           : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_awlen            : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_arlen            : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
+  signal m_awaddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal m_araddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal m_awlen            : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal m_arlen            : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
   signal m_wr_burst_counter : unsigned(7 downto 0);
   signal m_rd_burst_counter : unsigned(7 downto 0);
 
-  signal s_awaddr           : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
-  signal s_araddr           : std_logic_vector(G_REG_FILE_ADDR_WIDTH-1 downto 0);
+  signal s_awaddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal s_araddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
   signal s_axi_awready_int  : std_logic;
   signal s_axi_wready_int   : std_logic;
   signal s_axi_rvalid_int   : std_logic;
   signal s_axi_arready_int  : std_logic;
 
-
+  signal wstrb : std_logic_vector(G_DMA_FILE_DATA_WIDTH/8-1 downto 0);
+  signal rstrb : std_logic_vector(G_DMA_FILE_DATA_WIDTH/8-1 downto 0);
 
 
   type ms_wr_state_t is (init, set_addr, wr_data, get_bresp);
@@ -126,6 +145,63 @@ architecture rtl of axi_dma is
   signal m_rd_state : s_rd_state_t;
 
 begin
+
+  m_axi_awaddr      <= wr_base_addr;
+
+  m_axi_awlen       <= std_logic_vector(shift_right(unsigned(wr_burst_len), 4));
+
+  m_axi_wdata       <= s_axis_tdata;
+  s_axis_tready     <= m_axi_wready     when m_wr_state = wr_data                   else '0';
+  m_axi_wvalid_int  <= s_axis_tvalid    when m_wr_state = wr_data                   else '0';
+  m_axi_wlast       <= m_axi_wvalid_int when m_wr_burst_counter = unsigned(m_awlen) else '0';
+
+  p_wstrb : process(wr_burst_len(3 downto 0))
+  begin
+    case wr_burst_len(3 downto 0) is
+      when "0000" =>
+        wstrb <= x"FFFF";
+      when "0001" =>
+        wstrb <= x"0001";
+      when "0010" =>
+        wstrb <= x"0003";
+      when "0011" =>
+        wstrb <= x"0007";
+      when "0100" =>
+        wstrb <= x"000F";
+      when "0101" =>
+        wstrb <= x"001F";
+      when "0110" =>
+        wstrb <= x"003F";
+      when "0111" =>
+        wstrb <= x"007F";
+      when "1000" =>
+        wstrb <= x"00FF";
+      when "1001" =>
+        wstrb <= x"01FF";
+      when "1010" =>
+        wstrb <= x"03FF";
+      when "1011" =>
+        wstrb <= x"07FF";
+      when "1100" =>
+        wstrb <= x"0FFF";
+      when "1101" =>
+        wstrb <= x"1FFF";
+      when "1110" =>
+        wstrb <= x"3FFF";
+      when others =>
+        wstrb <= x"7FFF";
+    end case;
+  end;
+
+  m_axi_wstrb <=
+    (others => '1') when m_wr_burst_counter < unsigned(m_awlen) else
+    wstrb;
+
+  m_axi_awburst <= "01";
+  m_axi_awsize  <= "111";
+
+  m_axi_bready_int  <= '1' when m_wr_state = get_bresp else '0';
+  m_axi_bready      <= m_axi_bready_int;
 
   p_m_wr_state_machine : process(m_axi_aclk)
   begin
@@ -142,7 +218,7 @@ begin
           when set_addr =>
             if m_axi_awvalid_int = '1' and m_axi_awready = '1' then
               m_awaddr            <= m_axi_awaddr_int;
-              m_awlen             <= m_axi_awlen_int;
+              m_awlen             <= std_logic_vector(shift_right(unsigned(wr_burst_len), 4));
               m_wr_burst_counter  <= (others => '0');
               m_wr_state          <= wr_data;
             end if;
@@ -157,7 +233,7 @@ begin
             end if;
 
           when get_bresp =>
-            if m_ax_bvalid = '1' and m_axi_bready_int = '1' theni
+            if m_axi_bvalid = '1' and m_axi_bready_int = '1' theni
               m_wr_state <= init;
             end if;
 
@@ -168,6 +244,22 @@ begin
       end if;
     end process;
   end process;
+
+  -------------------------------------------------------------------------------
+
+  m_axi_araddr      <= rd_base_addr;
+
+  m_axi_arlen       <= rd_burst_len;
+
+  m_axis_tvalid     <= m_axis_tvalid_int;
+
+  m_axis_tdata      <= m_axi_rdata;
+  m_axis_tvalid_int <= m_axi_rvalid       when m_rd_state = rd_data                   else '0';
+  m_axi_rready_int  <= m_axis_tready      when m_rd_state = rd_data                   else '0';
+  m_axis_tlast      <= m_axis_tvalid_int  when m_rd_burst_counter = unsigned(m_arlen) else '0';
+
+  m_axi_arburst     <= "01";
+  m_axi_arsize      <= "111";
 
   p_m_rd_state_machine : process(m_axi_aclk)
   begin
@@ -183,8 +275,8 @@ begin
 
           when set_addr =>
             if m_axi_arvalid_int = '1' and m_axi_arready = '1' then
-              m_araddr            <= m_axi_awaddr_int;
-              m_arlen             <= m_axi_awlen_int;
+              m_araddr            <= m_axi_araddr_int;
+              m_arlen             <= std_logic_vector(shift_right(unsigned(rd_burst_len), 4));
               m_rd_burst_counter  <= (others => '0');
               m_rd_state          <= rd_data;
             end if;
@@ -205,151 +297,5 @@ begin
       end if;
     end process;
   end process;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---  ----------------------------------------------------------------------------
---
---  registers.SCRATCHPAD.SCRATCH  <= registers.SCRATCHPAD_REG(31 downto 0);
---
---  registers_out <= registers;
---
---  s_axi_rresp   <= (others => '0');
---  s_axi_bresp   <= (others => '0');
---  s_axi_bvalid  <= '1';
---
---  s_axi_awready <= s_axi_awready_int;
---  s_axi_wready  <= s_axi_wready_int;
---
---  p_s_wr_state_machine : process(s_axi_aclk)
---  begin
---    if rising_edge(s_axi_aclk) then
---      if s_axi_aresetn = '0' then
---        registers.SCRATCHPAD_REG          <= x"CAFEBABE";
---        s_awaddr                          <= (others => '0');
---        registers.SCRATCHPAD_REG_wr_pulse <= '0';
---        s_axi_awready_int                 <= '0';
---        s_axi_wready_int                  <= '0';
---        s_wr_state                          <= init;
---      else
---        case s_wr_state is
---          when init =>
---            registers.SCRATCHPAD_REG_wr_pulse <= '0';
---            s_axi_awready_int                 <= '1';
---            s_axi_wready_int                  <= '0';
---            s_awaddr                          <= (others => '0');
---            s_wr_state                        <= get_addr;
---
---          when get_addr =>
---            registers.SCRATCHPAD_REG_wr_pulse <= '0';
---            if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
---              s_axi_awready_int <= '0';
---              s_axi_wready_int  <= '1';
---              s_awaddr          <= s_axi_awaddr;
---              s_wr_state        <= wr_data;
---            end if;
---
---          when wr_data =>
---            if s_axi_wvalid = '1' and s_axi_wready_int = '1' then
---              case s_awaddr is
---                when std_logic_vector(to_unsigned(SCRATCHPAD_addr, G_REG_FILE_ADDR_WIDTH)) =>
---                  registers.SCRATCHPAD_REG          <= s_axi_wdata;
---                  registers.SCRATCHPAD_REG_wr_pulse <= '1';
---                when others =>
---                  null;
---              end case;
---
---              s_axi_awready_int <= '1';
---              s_axi_wready_int  <= '0';
---              s_wr_state          <= get_addr;
---            end if;
---
---          when others =>
---            s_wr_state <= init;
---
---        end case;
---      end if;
---    end if;
---  end process;
---
---  ----------------------------------------------------------------------------
---
---  s_axi_arready     <= s_axi_arready_int;
---  s_axi_rvalid      <= s_axi_rvalid_int;
---
---  p_s_rd_state_machine : process(s_axi_aclk)
---  begin
---    if rising_edge(s_axi_aclk) then
---      if s_axi_aresetn = '0' then
---        s_araddr                          <= (others => '0');
---        s_axi_rdata                       <= (others => '0');
---        registers.SCRATCHPAD_REG_rd_pulse <= '0';
---        s_axi_arready_int                 <= '0';
---        s_axi_rvalid_int                  <= '0';
---        s_rd_state                        <= init;
---      else
---        case s_rd_state is
---          when init =>
---            registers.SCRATCHPAD_REG_rd_pulse <= '0';
---            s_axi_arready_int                 <= '1';
---            s_axi_rvalid_int                  <= '0';
---            s_araddr                          <= (others => '0');
---            s_rd_state                        <= get_addr;
---
---          when get_addr =>
---            registers.SCRATCHPAD_REG_rd_pulse <= '0';
---            if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
---              s_axi_arready_int               <= '0';
---              s_axi_rvalid_int                <= '0';
---              s_araddr                        <= s_axi_araddr;
---              s_rd_state                      <= rd_data;
---            end if;
---
---          when rd_data =>
---            case s_araddr is
---              when std_logic_vector(to_unsigned(SCRATCHPAD_addr, G_REG_FILE_ADDR_WIDTH)) =>
---                s_axi_rdata <= registers.SCRATCHPAD_REG;
---              when others =>
---                null;
---            end case;
---
---            if s_axi_rvalid_int = '1' and s_axi_rready = '1' then
---              case s_araddr is
---                when std_logic_vector(to_unsigned(SCRATCHPAD_addr, G_REG_FILE_ADDR_WIDTH)) =>
---                  registers.SCRATCHPAD_REG_rd_pulse <= '1';
---                when others =>
---                  null;
---              end case;
---              s_axi_arready_int <= '1';
---              s_axi_rvalid_int  <= '0';
---              s_rd_state          <= get_addr;
---            else
---              s_axi_rvalid_int  <= '1';
---            end if;
---
---          when others =>
---            s_rd_state <= init;
---
---        end case;
---      end if;
---    end if;
---  end process;
 
 end rtl;
