@@ -2,14 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
-use work.axis_sniffer_reg_file_pkg.all;
-
-entity axi_dma is
+entity tulip_axi_dma is
   generic
   (
     G_DMA_FILE_DATA_WIDTH : integer := 128; -- do not change ?
-    G_DMA_FILE_ADDR_WIDTH : integer := 16;
     G_PS_ADDR_WIDTH       : integer := 40
   );
   port
@@ -106,30 +102,29 @@ entity axi_dma is
     m_axis_tdata    : out std_logic_vector(127 downto 0);
     m_axis_tvalid   : out std_logic;
     m_axis_tready   : in  std_logic;
-    m_axis_tlast    : out std_logic;
+    m_axis_tlast    : out std_logic
 
   );
 end entity;
 
-architecture rtl of axi_dma is
+architecture rtl of tulip_axi_dma is
 
   signal m_axi_awvalid_int  : std_logic;
   signal m_axi_arvalid_int  : std_logic;
-  signal m_axi_awaddr_int   : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
   signal m_axi_wvalid_int   : std_logic;
   signal m_axi_bready_int   : std_logic;
   signal m_axi_rready_int   : std_logic;
   signal m_axis_tvalid_int  : std_logic;
 
-  signal m_awaddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_araddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_awlen            : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
-  signal m_arlen            : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal m_awaddr           : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+  signal m_araddr           : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+  signal m_awlen            : std_logic_vector(7 downto 0);
+  signal m_arlen            : std_logic_vector(7 downto 0);
   signal m_wr_burst_counter : unsigned(7 downto 0);
   signal m_rd_burst_counter : unsigned(7 downto 0);
 
-  signal s_awaddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
-  signal s_araddr           : std_logic_vector(G_DMA_FILE_ADDR_WIDTH-1 downto 0);
+  signal s_awaddr           : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+  signal s_araddr           : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
   signal s_axi_awready_int  : std_logic;
   signal s_axi_wready_int   : std_logic;
   signal s_axi_rvalid_int   : std_logic;
@@ -139,16 +134,20 @@ architecture rtl of axi_dma is
   signal rstrb : std_logic_vector(G_DMA_FILE_DATA_WIDTH/8-1 downto 0);
 
 
-  type ms_wr_state_t is (init, set_addr, wr_data, get_bresp);
-  signal m_wr_state : s_wr_state_t;
+  type m_wr_state_t is (init, set_addr, wr_data, get_bresp);
+  signal m_wr_state : m_wr_state_t;
   type m_rd_state_t is (init, set_addr, rd_data);
-  signal m_rd_state : s_rd_state_t;
+  signal m_rd_state : m_rd_state_t;
 
 begin
 
+  m_axi_arvalid     <= m_axi_arvalid_int;
+  m_axi_awvalid     <= m_axi_awvalid_int;
+  m_axi_wvalid      <= m_axi_wvalid_int;
+
   m_axi_awaddr      <= wr_base_addr;
 
-  m_axi_awlen       <= std_logic_vector(shift_right(unsigned(wr_burst_len), 4));
+  m_axi_awlen       <= std_logic_vector(resize(shift_right(unsigned(wr_burst_len), 4), m_axi_awlen'length));
 
   m_axi_wdata       <= s_axis_tdata;
   s_axis_tready     <= m_axi_wready     when m_wr_state = wr_data                   else '0';
@@ -159,39 +158,39 @@ begin
   begin
     case wr_burst_len(3 downto 0) is
       when "0000" =>
-        wstrb <= x"FFFF";
-      when "0001" =>
         wstrb <= x"0001";
-      when "0010" =>
+      when "0001" =>
         wstrb <= x"0003";
-      when "0011" =>
+      when "0010" =>
         wstrb <= x"0007";
-      when "0100" =>
+      when "0011" =>
         wstrb <= x"000F";
-      when "0101" =>
+      when "0100" =>
         wstrb <= x"001F";
-      when "0110" =>
+      when "0101" =>
         wstrb <= x"003F";
-      when "0111" =>
+      when "0110" =>
         wstrb <= x"007F";
-      when "1000" =>
+      when "0111" =>
         wstrb <= x"00FF";
-      when "1001" =>
+      when "1000" =>
         wstrb <= x"01FF";
-      when "1010" =>
+      when "1001" =>
         wstrb <= x"03FF";
-      when "1011" =>
+      when "1010" =>
         wstrb <= x"07FF";
-      when "1100" =>
+      when "1011" =>
         wstrb <= x"0FFF";
-      when "1101" =>
+      when "1100" =>
         wstrb <= x"1FFF";
-      when "1110" =>
+      when "1101" =>
         wstrb <= x"3FFF";
-      when others =>
+      when "1110" =>
         wstrb <= x"7FFF";
+      when others =>
+        wstrb <= x"FFFF";
     end case;
-  end;
+  end process;
 
   m_axi_wstrb <=
     (others => '1') when m_wr_burst_counter < unsigned(m_awlen) else
@@ -202,6 +201,8 @@ begin
 
   m_axi_bready_int  <= '1' when m_wr_state = get_bresp else '0';
   m_axi_bready      <= m_axi_bready_int;
+
+  m_axi_awvalid_int <= '1' when m_wr_state = set_addr else '0';
 
   p_m_wr_state_machine : process(m_axi_aclk)
   begin
@@ -217,8 +218,8 @@ begin
 
           when set_addr =>
             if m_axi_awvalid_int = '1' and m_axi_awready = '1' then
-              m_awaddr            <= m_axi_awaddr_int;
-              m_awlen             <= std_logic_vector(shift_right(unsigned(wr_burst_len), 4));
+              m_awaddr            <= wr_base_addr;
+              m_awlen             <= std_logic_vector(resize(shift_right(unsigned(wr_burst_len), 4), m_awlen'length));
               m_wr_burst_counter  <= (others => '0');
               m_wr_state          <= wr_data;
             end if;
@@ -233,7 +234,7 @@ begin
             end if;
 
           when get_bresp =>
-            if m_axi_bvalid = '1' and m_axi_bready_int = '1' theni
+            if m_axi_bvalid = '1' and m_axi_bready_int = '1' then
               m_wr_state <= init;
             end if;
 
@@ -242,14 +243,15 @@ begin
 
         end case;
       end if;
-    end process;
+    end if;
   end process;
 
   -------------------------------------------------------------------------------
 
+  m_axi_rready      <= m_axi_rready_int;
   m_axi_araddr      <= rd_base_addr;
 
-  m_axi_arlen       <= rd_burst_len;
+  m_axi_arlen       <= std_logic_vector(resize(shift_right(unsigned(rd_burst_len), 4), m_axi_arlen'length));
 
   m_axis_tvalid     <= m_axis_tvalid_int;
 
@@ -260,6 +262,8 @@ begin
 
   m_axi_arburst     <= "01";
   m_axi_arsize      <= "111";
+
+  m_axi_arvalid_int <= '1' when m_rd_state = set_addr else '0';
 
   p_m_rd_state_machine : process(m_axi_aclk)
   begin
@@ -275,8 +279,8 @@ begin
 
           when set_addr =>
             if m_axi_arvalid_int = '1' and m_axi_arready = '1' then
-              m_araddr            <= m_axi_araddr_int;
-              m_arlen             <= std_logic_vector(shift_right(unsigned(rd_burst_len), 4));
+              m_araddr            <= rd_base_addr;
+              m_arlen             <= std_logic_vector(resize(shift_right(unsigned(rd_burst_len), 4), m_arlen'length));
               m_rd_burst_counter  <= (others => '0');
               m_rd_state          <= rd_data;
             end if;
@@ -295,7 +299,7 @@ begin
 
         end case;
       end if;
-    end process;
+    end if;
   end process;
 
 end rtl;
