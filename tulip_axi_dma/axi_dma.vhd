@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tulip_axi_dma is
+entity axi_dma is
   generic
   (
     G_DMA_DATA_WIDTH  : integer range 8 to 128  := 128; -- do not change (todo: make flexible)
@@ -108,7 +108,7 @@ entity tulip_axi_dma is
   );
 end entity;
 
-architecture rtl of tulip_axi_dma is
+architecture rtl of axi_dma is
 
   type wr_sm_t is (init, begin_transaction, execute_transaction);
   signal wr_sm : wr_sm_t;
@@ -255,7 +255,7 @@ begin
     end if;
   end process;
 
-  u_single_burst : entity work.tulip_axi_dma_single_burst
+  u_single_burst : entity work.axi_dma_single_burst
     generic map
     (
       G_DMA_DATA_WIDTH => G_DMA_DATA_WIDTH,
