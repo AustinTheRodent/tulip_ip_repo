@@ -172,11 +172,13 @@ architecture rtl of tulip_axi_dma is
   signal tx_counter : unsigned(31 downto 0);
   signal rx_counter : unsigned(31 downto 0);
 
+  signal s_axis_tvalid_gate : std_logic;
   signal s_axis_tready_gate : std_logic;
 
 begin
 
   s_axis_tready <= s_axis_tready_gate when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
+  s_axis_tvalid_gate  <= s_axis_tvalid when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
 
   p_rx_counter : process(m_axi_aclk)
   begin
@@ -205,7 +207,7 @@ begin
       enable                => registers.CONTROL.SW_RESETN(0),
 
       din                   => s_axis_tdata,
-      din_valid             => s_axis_tvalid,
+      din_valid             => s_axis_tvalid_gate,
       din_ready             => s_axis_tready_gate,
       din_last              => s_axis_tlast,
 
