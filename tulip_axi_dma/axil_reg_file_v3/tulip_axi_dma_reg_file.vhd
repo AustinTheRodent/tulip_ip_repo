@@ -12,6 +12,7 @@ package tulip_axi_dma_reg_file_pkg is
   end record;
 
   type DMA_TX_STATUS_RESET_subreg_t is record
+    TX_STARTED : std_logic_vector(0 downto 0);
     TX_DONE : std_logic_vector(0 downto 0);
   end record;
 
@@ -28,6 +29,7 @@ package tulip_axi_dma_reg_file_pkg is
   end record;
 
   type DMA_RX_STATUS_RESET_subreg_t is record
+    RX_STARTED : std_logic_vector(0 downto 0);
     RX_DONE : std_logic_vector(0 downto 0);
   end record;
 
@@ -106,8 +108,14 @@ entity tulip_axi_dma_reg_file is
     s_axi_aclk    : in  std_logic;
     s_axi_aresetn : in  std_logic;
 
+    s_DMA_TX_STATUS_TX_STARTED : in std_logic_vector(0 downto 0);
+    s_DMA_TX_STATUS_TX_STARTED_v : in std_logic;
+
     s_DMA_TX_STATUS_TX_DONE : in std_logic_vector(0 downto 0);
     s_DMA_TX_STATUS_TX_DONE_v : in std_logic;
+
+    s_DMA_RX_STATUS_RX_STARTED : in std_logic_vector(0 downto 0);
+    s_DMA_RX_STATUS_RX_STARTED_v : in std_logic;
 
     s_DMA_RX_STATUS_RX_DONE : in std_logic_vector(0 downto 0);
     s_DMA_RX_STATUS_RX_DONE_v : in std_logic;
@@ -170,10 +178,12 @@ architecture rtl of tulip_axi_dma_reg_file is
 begin
 
   registers.CONTROL.SW_RESETN <= registers.CONTROL_REG(0 downto 0);
+  registers.DMA_TX_STATUS_RESET.TX_STARTED <= registers.DMA_TX_STATUS_RESET_REG(1 downto 1);
   registers.DMA_TX_STATUS_RESET.TX_DONE <= registers.DMA_TX_STATUS_RESET_REG(0 downto 0);
   registers.DMA_TX_ADDR_MSBS.TX_ADDR_MSBS <= registers.DMA_TX_ADDR_MSBS_REG(31 downto 0);
   registers.DMA_TX_ADDR.TX_ADDR_LSBS <= registers.DMA_TX_ADDR_REG(31 downto 0);
   registers.DMA_TX_TRANSACT_LEN_BYTES.TX_TRANSACT_LEN_BYTES <= registers.DMA_TX_TRANSACT_LEN_BYTES_REG(31 downto 0);
+  registers.DMA_RX_STATUS_RESET.RX_STARTED <= registers.DMA_RX_STATUS_RESET_REG(1 downto 1);
   registers.DMA_RX_STATUS_RESET.RX_DONE <= registers.DMA_RX_STATUS_RESET_REG(0 downto 0);
   registers.DMA_RX_ADDR_MSBS.RX_ADDR_MSBS <= registers.DMA_RX_ADDR_MSBS_REG(31 downto 0);
   registers.DMA_RX_ADDR.RX_ADDR_LSBS <= registers.DMA_RX_ADDR_REG(31 downto 0);
@@ -195,8 +205,14 @@ begin
         registers.DMA_TX_STATUS_REG <= x"00000000";
         registers.DMA_RX_STATUS_REG <= x"00000000";
       else
+        if s_DMA_TX_STATUS_TX_STARTED_v = '1' then 
+          registers.DMA_TX_STATUS_REG(1 downto 1) <= s_DMA_TX_STATUS_TX_STARTED;
+        end if;
         if s_DMA_TX_STATUS_TX_DONE_v = '1' then 
           registers.DMA_TX_STATUS_REG(0 downto 0) <= s_DMA_TX_STATUS_TX_DONE;
+        end if;
+        if s_DMA_RX_STATUS_RX_STARTED_v = '1' then 
+          registers.DMA_RX_STATUS_REG(1 downto 1) <= s_DMA_RX_STATUS_RX_STARTED;
         end if;
         if s_DMA_RX_STATUS_RX_DONE_v = '1' then 
           registers.DMA_RX_STATUS_REG(0 downto 0) <= s_DMA_RX_STATUS_RX_DONE;

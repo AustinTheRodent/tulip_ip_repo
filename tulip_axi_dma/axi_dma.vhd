@@ -17,10 +17,12 @@ entity axi_dma is
     trigger_wr_sm : in  std_logic;
     wr_len        : in  std_logic_vector(31 downto 0); -- Bytes
     wr_base_addr  : in  std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+    wr_done_pulse : out std_logic;
 
     trigger_rd_sm : in  std_logic;
     rd_len        : in  std_logic_vector(31 downto 0); -- Bytes
     rd_base_addr  : in  std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+    rd_done_pulse : out std_logic;
 
     -------------------------------------------------------------------------------
 
@@ -133,7 +135,16 @@ architecture rtl of axi_dma is
   signal core_m_axi_rready  : std_logic;
   signal core_m_axi_rlast   : std_logic;
 
+  signal core_m_axis_tvalid : std_logic;
+  signal core_m_axis_tready : std_logic;
+  signal core_m_axis_tlast  : std_logic;
+
+
 begin
+
+  m_axis_tvalid       <= core_m_axis_tvalid;
+  core_m_axis_tready  <= m_axis_tready;
+  m_axis_tlast        <= core_m_axis_tlast when current_rd_len = 0 else '0';
 
   core_m_axi_bvalid <= m_axi_bvalid;
   m_axi_bready      <= core_m_axi_bready;
@@ -147,10 +158,12 @@ begin
     if rising_edge(m_axi_aclk) then
       if m_axi_aresetn = '0' or reset = '1' then
         core_wr_start_burst <= '0';
+        wr_done_pulse       <= '0';
         wr_sm               <= init;
       else
         case wr_sm is
           when init =>
+            wr_done_pulse <= '0';
             if trigger_wr_sm = '1' then
               current_wr_len    <= unsigned(wr_len);
               wr_sm             <= begin_transaction;
@@ -172,6 +185,7 @@ begin
           when execute_transaction =>
             if core_m_axi_bvalid = '1' and core_m_axi_bready = '1' then
               if current_wr_len = 0 then
+                wr_done_pulse <= '1';
                 wr_sm         <= init;
               else
 
@@ -204,10 +218,12 @@ begin
     if rising_edge(m_axi_aclk) then
       if m_axi_aresetn = '0' or reset = '1' then
         core_rd_start_burst <= '0';
+        rd_done_pulse       <= '0';
         rd_sm               <= init;
       else
         case rd_sm is
           when init =>
+            rd_done_pulse <= '0';
             if trigger_rd_sm = '1' then
               current_rd_len    <= unsigned(rd_len);
               rd_sm             <= begin_transaction;
@@ -227,8 +243,9 @@ begin
             rd_sm               <= execute_transaction;
 
           when execute_transaction =>
-            if core_m_axi_rvalid = '1' and core_m_axi_rready = '1' and core_m_axi_rlast = '1' then
+            if core_m_axis_tvalid = '1' and core_m_axis_tready = '1' and core_m_axis_tlast = '1' then
               if current_rd_len = 0 then
+                rd_done_pulse <= '1';
                 rd_sm         <= init;
               else
 
@@ -263,7 +280,7 @@ begin
     )
     port map
     (
-      clk           => clk,
+      clk           => m_axi_aclk,
       reset         => reset,
 
       trigger_wr_sm => core_wr_start_burst,
@@ -309,8 +326,8 @@ begin
 
       -------------------------------------------------------------------------------
 
-      s_axis_aclk     => s_axis_aclk,
-      s_axis_aresetn  => s_axis_aresetn,
+      s_axis_aclk     => m_axi_aclk,
+      s_axis_aresetn  => m_axi_aresetn,
       s_axis_tdata    => s_axis_tdata,
       s_axis_tvalid   => s_axis_tvalid,
       s_axis_tready   => s_axis_tready,
@@ -318,12 +335,12 @@ begin
 
       -------------------------------------------------------------------------------
 
-      m_axis_aclk     => m_axis_aclk,
-      m_axis_aresetn  => m_axis_aresetn,
+      m_axis_aclk     => m_axi_aclk,
+      m_axis_aresetn  => m_axi_aresetn,
       m_axis_tdata    => m_axis_tdata,
-      m_axis_tvalid   => m_axis_tvalid,
-      m_axis_tready   => m_axis_tready,
-      m_axis_tlast    => m_axis_tlast
+      m_axis_tvalid   => core_m_axis_tvalid,
+      m_axis_tready   => core_m_axis_tready,
+      m_axis_tlast    => core_m_axis_tlast
 
     );
 
