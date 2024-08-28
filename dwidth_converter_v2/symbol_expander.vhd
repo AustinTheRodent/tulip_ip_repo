@@ -122,17 +122,20 @@ begin
 
                   if G_FILL_LSBS_FIRST = true then
                     registered_output(G_DIN_WIDTH-1 downto 0) <= din;
-                    registered_output(G_DIN_WIDTH*G_DOUT_OVER_DIN_WIDTH-1 downto G_DIN_WIDTH*(G_DOUT_OVER_DIN_WIDTH-1)) <= (others => '0');
+                    registered_output(registered_output'left downto G_DIN_WIDTH) <= (others => '0');
                   else
                     registered_output(G_DIN_WIDTH*G_DOUT_OVER_DIN_WIDTH-1 downto G_DIN_WIDTH*(G_DOUT_OVER_DIN_WIDTH-1)) <= din;
-                    registered_output(G_DIN_WIDTH-1 downto 0) <= (others => '0');
+                    registered_output(G_DIN_WIDTH*(G_DOUT_OVER_DIN_WIDTH-1)-1 downto 0) <= (others => '0');
                   end if;
 
                   symbol_counter <= 1;
                 else
                   registered_output <= (others => '0');
                 end if;
-                state <= construct_sym;
+
+                if din_last = '0' then
+                  state <= construct_sym;
+                end if;
               end if;
 
             when others =>

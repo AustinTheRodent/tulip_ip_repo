@@ -174,11 +174,14 @@ architecture rtl of tulip_axi_dma is
 
   signal s_axis_tvalid_gate : std_logic;
   signal s_axis_tready_gate : std_logic;
+  signal s_axis_tlast_gate  : std_logic;
 
 begin
 
   s_axis_tready <= s_axis_tready_gate when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
   s_axis_tvalid_gate  <= s_axis_tvalid when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
+
+  s_axis_tlast_gate <= s_axis_tvalid_gate when rx_counter + C_SAXIS_DWIDTH_BYTES >= unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
 
   p_rx_counter : process(m_axi_aclk)
   begin
@@ -186,8 +189,10 @@ begin
       if m_axi_aresetn = '0' or registers.CONTROL.SW_RESETN(0) = '0' or registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse = '1' then
         rx_counter  <= (others => '0');
       else
-        if rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) then
-          rx_counter <= rx_counter + C_SAXIS_DWIDTH_BYTES;
+        if s_axis_tvalid_gate = '1' and s_axis_tready_gate = '1' then
+          if rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) then
+            rx_counter <= rx_counter + C_SAXIS_DWIDTH_BYTES;
+          end if;
         end if;
       end if;
     end if;
@@ -209,7 +214,7 @@ begin
       din                   => s_axis_tdata,
       din_valid             => s_axis_tvalid_gate,
       din_ready             => s_axis_tready_gate,
-      din_last              => s_axis_tlast,
+      din_last              => s_axis_tlast_gate,
 
       dout                  => s_axis_core_tdata,
       dout_valid            => s_axis_core_tvalid,
@@ -217,7 +222,7 @@ begin
       dout_last             => s_axis_core_tlast
     );
 
-  keep_val0 <= resize(unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG(clog2(C_DMA_DWIDTH_BYTES)-1 downto 0)), keep_val0'length);
+  keep_val0 <= resize(unsigned(registers.DMA_TX_TRANSACT_LEN_BYTES_REG(clog2(C_DMA_DWIDTH_BYTES)-1 downto 0)), keep_val0'length);
   keep_val1 <= shift_right(keep_val0, clog2(C_MAXIS_DWIDTH_BYTES));
 
   keep_val <=
@@ -257,7 +262,7 @@ begin
         tx_done_status <= '0';
         tx_started_status <= '0';
       else
-        if wr_done_pulse = '1' then
+        if rd_done_pulse = '1' then
           tx_done_status <= '1';
         elsif registers.DMA_TX_STATUS_RESET_REG_wr_pulse = '1' then
           if registers.DMA_TX_STATUS_RESET.TX_DONE(0) = '1' then
@@ -283,7 +288,7 @@ begin
         rx_done_status <= '0';
         rx_started_status <= '0';
       else
-        if rd_done_pulse = '1' then
+        if wr_done_pulse = '1' then
           rx_done_status <= '1';
         elsif registers.DMA_RX_STATUS_RESET_REG_wr_pulse = '1' then
           if registers.DMA_RX_STATUS_RESET.RX_DONE(0) = '1' then
@@ -314,14 +319,14 @@ begin
       clk           => m_axi_aclk,
       reset         => not registers.CONTROL.SW_RESETN(0),
 
-      trigger_wr_sm => registers.DMA_TX_TRANSACT_LEN_BYTES_REG_wr_pulse,
-      wr_len        => registers.DMA_TX_TRANSACT_LEN_BYTES_REG,
-      wr_base_addr  => std_logic_vector(resize(unsigned(registers.DMA_TX_ADDR_MSBS_REG & registers.DMA_TX_ADDR_REG), G_PS_ADDR_WIDTH)),
+      trigger_wr_sm => registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse,
+      wr_len        => registers.DMA_RX_TRANSACT_LEN_BYTES_REG,
+      wr_base_addr  => std_logic_vector(resize(unsigned(registers.DMA_RX_ADDR_MSBS_REG & registers.DMA_RX_ADDR_REG), G_PS_ADDR_WIDTH)),
       wr_done_pulse => wr_done_pulse,
 
-      trigger_rd_sm => registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse,
-      rd_len        => registers.DMA_RX_TRANSACT_LEN_BYTES_REG,
-      rd_base_addr  => std_logic_vector(resize(unsigned(registers.DMA_RX_ADDR_MSBS_REG & registers.DMA_RX_ADDR_REG), G_PS_ADDR_WIDTH)),
+      trigger_rd_sm => registers.DMA_TX_TRANSACT_LEN_BYTES_REG_wr_pulse,
+      rd_len        => registers.DMA_TX_TRANSACT_LEN_BYTES_REG,
+      rd_base_addr  => std_logic_vector(resize(unsigned(registers.DMA_TX_ADDR_MSBS_REG & registers.DMA_TX_ADDR_REG), G_PS_ADDR_WIDTH)),
       rd_done_pulse => rd_done_pulse,
 
       m_axi_aclk    => m_axi_aclk,
