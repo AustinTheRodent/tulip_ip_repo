@@ -45,6 +45,14 @@ package tulip_axi_dma_reg_file_pkg is
     RX_TRANSACT_LEN_BYTES : std_logic_vector(31 downto 0);
   end record;
 
+  type DMA_FLUSH_BUS_subreg_t is record
+    TRIGGER_FLUSH : std_logic_vector(0 downto 0);
+  end record;
+
+  type DMA_FLUSH_STATUS_CLEAR_subreg_t is record
+    FLUSH_FINISHED : std_logic_vector(0 downto 0);
+  end record;
+
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -58,6 +66,9 @@ package tulip_axi_dma_reg_file_pkg is
     DMA_RX_ADDR_MSBS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     DMA_RX_ADDR_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     DMA_RX_TRANSACT_LEN_BYTES_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    DMA_FLUSH_BUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    DMA_FLUSH_STATUS_CLEAR_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    DMA_FLUSH_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
     DMA_TX_STATUS_RESET : DMA_TX_STATUS_RESET_subreg_t;
     DMA_TX_ADDR_MSBS : DMA_TX_ADDR_MSBS_subreg_t;
@@ -67,6 +78,8 @@ package tulip_axi_dma_reg_file_pkg is
     DMA_RX_ADDR_MSBS : DMA_RX_ADDR_MSBS_subreg_t;
     DMA_RX_ADDR : DMA_RX_ADDR_subreg_t;
     DMA_RX_TRANSACT_LEN_BYTES : DMA_RX_TRANSACT_LEN_BYTES_subreg_t;
+    DMA_FLUSH_BUS : DMA_FLUSH_BUS_subreg_t;
+    DMA_FLUSH_STATUS_CLEAR : DMA_FLUSH_STATUS_CLEAR_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
     DMA_TX_STATUS_REG_wr_pulse : std_logic;
     DMA_TX_STATUS_RESET_REG_wr_pulse : std_logic;
@@ -78,6 +91,9 @@ package tulip_axi_dma_reg_file_pkg is
     DMA_RX_ADDR_MSBS_REG_wr_pulse : std_logic;
     DMA_RX_ADDR_REG_wr_pulse : std_logic;
     DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse : std_logic;
+    DMA_FLUSH_BUS_REG_wr_pulse : std_logic;
+    DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse : std_logic;
+    DMA_FLUSH_STATUS_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     DMA_TX_STATUS_REG_rd_pulse : std_logic;
     DMA_TX_STATUS_RESET_REG_rd_pulse : std_logic;
@@ -89,6 +105,9 @@ package tulip_axi_dma_reg_file_pkg is
     DMA_RX_ADDR_MSBS_REG_rd_pulse : std_logic;
     DMA_RX_ADDR_REG_rd_pulse : std_logic;
     DMA_RX_TRANSACT_LEN_BYTES_REG_rd_pulse : std_logic;
+    DMA_FLUSH_BUS_REG_rd_pulse : std_logic;
+    DMA_FLUSH_STATUS_CLEAR_REG_rd_pulse : std_logic;
+    DMA_FLUSH_STATUS_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -119,6 +138,9 @@ entity tulip_axi_dma_reg_file is
 
     s_DMA_RX_STATUS_RX_DONE : in std_logic_vector(0 downto 0);
     s_DMA_RX_STATUS_RX_DONE_v : in std_logic;
+
+    s_DMA_FLUSH_STATUS_FLUSH_FINISHED : in std_logic_vector(0 downto 0);
+    s_DMA_FLUSH_STATUS_FLUSH_FINISHED_v : in std_logic;
 
 
     s_axi_awaddr  : in  std_logic_vector(C_REG_FILE_ADDR_WIDTH-1 downto 0);
@@ -160,6 +182,9 @@ architecture rtl of tulip_axi_dma_reg_file is
   constant DMA_RX_ADDR_MSBS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 268;
   constant DMA_RX_ADDR_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 272;
   constant DMA_RX_TRANSACT_LEN_BYTES_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 276;
+  constant DMA_FLUSH_BUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 512;
+  constant DMA_FLUSH_STATUS_CLEAR_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 516;
+  constant DMA_FLUSH_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 520;
 
   signal registers          : reg_t;
 
@@ -188,6 +213,8 @@ begin
   registers.DMA_RX_ADDR_MSBS.RX_ADDR_MSBS <= registers.DMA_RX_ADDR_MSBS_REG(31 downto 0);
   registers.DMA_RX_ADDR.RX_ADDR_LSBS <= registers.DMA_RX_ADDR_REG(31 downto 0);
   registers.DMA_RX_TRANSACT_LEN_BYTES.RX_TRANSACT_LEN_BYTES <= registers.DMA_RX_TRANSACT_LEN_BYTES_REG(31 downto 0);
+  registers.DMA_FLUSH_BUS.TRIGGER_FLUSH <= registers.DMA_FLUSH_BUS_REG(0 downto 0);
+  registers.DMA_FLUSH_STATUS_CLEAR.FLUSH_FINISHED <= registers.DMA_FLUSH_STATUS_CLEAR_REG(0 downto 0);
 
   registers_out <= registers;
 
@@ -204,6 +231,7 @@ begin
       if s_axi_aresetn = '0' then
         registers.DMA_TX_STATUS_REG <= x"00000000";
         registers.DMA_RX_STATUS_REG <= x"00000000";
+        registers.DMA_FLUSH_STATUS_REG <= x"00000000";
       else
         if s_DMA_TX_STATUS_TX_STARTED_v = '1' then 
           registers.DMA_TX_STATUS_REG(1 downto 1) <= s_DMA_TX_STATUS_TX_STARTED;
@@ -216,6 +244,9 @@ begin
         end if;
         if s_DMA_RX_STATUS_RX_DONE_v = '1' then 
           registers.DMA_RX_STATUS_REG(0 downto 0) <= s_DMA_RX_STATUS_RX_DONE;
+        end if;
+        if s_DMA_FLUSH_STATUS_FLUSH_FINISHED_v = '1' then 
+          registers.DMA_FLUSH_STATUS_REG(0 downto 0) <= s_DMA_FLUSH_STATUS_FLUSH_FINISHED;
         end if;
       end if;
     end if;
@@ -234,6 +265,8 @@ begin
         registers.DMA_RX_ADDR_MSBS_REG <= x"00000000";
         registers.DMA_RX_ADDR_REG <= x"00000000";
         registers.DMA_RX_TRANSACT_LEN_BYTES_REG <= x"00000000";
+        registers.DMA_FLUSH_BUS_REG <= x"00000000";
+        registers.DMA_FLUSH_STATUS_CLEAR_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
         registers.DMA_TX_STATUS_REG_wr_pulse <= '0';
@@ -246,6 +279,9 @@ begin
         registers.DMA_RX_ADDR_MSBS_REG_wr_pulse <= '0';
         registers.DMA_RX_ADDR_REG_wr_pulse <= '0';
         registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse <= '0';
+        registers.DMA_FLUSH_BUS_REG_wr_pulse <= '0';
+        registers.DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse <= '0';
+        registers.DMA_FLUSH_STATUS_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -263,6 +299,9 @@ begin
             registers.DMA_RX_ADDR_MSBS_REG_wr_pulse <= '0';
             registers.DMA_RX_ADDR_REG_wr_pulse <= '0';
             registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_BUS_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -280,6 +319,9 @@ begin
             registers.DMA_RX_ADDR_MSBS_REG_wr_pulse <= '0';
             registers.DMA_RX_ADDR_REG_wr_pulse <= '0';
             registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_BUS_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -318,6 +360,12 @@ begin
                 when std_logic_vector(to_unsigned(DMA_RX_TRANSACT_LEN_BYTES_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.DMA_RX_TRANSACT_LEN_BYTES_REG <= s_axi_wdata;
                   registers.DMA_RX_TRANSACT_LEN_BYTES_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(DMA_FLUSH_BUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.DMA_FLUSH_BUS_REG <= s_axi_wdata;
+                  registers.DMA_FLUSH_BUS_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(DMA_FLUSH_STATUS_CLEAR_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.DMA_FLUSH_STATUS_CLEAR_REG <= s_axi_wdata;
+                  registers.DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -357,6 +405,9 @@ begin
         registers.DMA_RX_ADDR_MSBS_REG_rd_pulse <= '0';
         registers.DMA_RX_ADDR_REG_rd_pulse <= '0';
         registers.DMA_RX_TRANSACT_LEN_BYTES_REG_rd_pulse <= '0';
+        registers.DMA_FLUSH_BUS_REG_rd_pulse <= '0';
+        registers.DMA_FLUSH_STATUS_CLEAR_REG_rd_pulse <= '0';
+        registers.DMA_FLUSH_STATUS_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -374,6 +425,9 @@ begin
             registers.DMA_RX_ADDR_MSBS_REG_rd_pulse <= '0';
             registers.DMA_RX_ADDR_REG_rd_pulse <= '0';
             registers.DMA_RX_TRANSACT_LEN_BYTES_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_BUS_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_CLEAR_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -391,6 +445,9 @@ begin
             registers.DMA_RX_ADDR_MSBS_REG_rd_pulse <= '0';
             registers.DMA_RX_ADDR_REG_rd_pulse <= '0';
             registers.DMA_RX_TRANSACT_LEN_BYTES_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_BUS_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_CLEAR_REG_rd_pulse <= '0';
+            registers.DMA_FLUSH_STATUS_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -422,6 +479,12 @@ begin
                 s_axi_rdata <= registers.DMA_RX_ADDR_REG;
               when std_logic_vector(to_unsigned(DMA_RX_TRANSACT_LEN_BYTES_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.DMA_RX_TRANSACT_LEN_BYTES_REG;
+              when std_logic_vector(to_unsigned(DMA_FLUSH_BUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.DMA_FLUSH_BUS_REG;
+              when std_logic_vector(to_unsigned(DMA_FLUSH_STATUS_CLEAR_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.DMA_FLUSH_STATUS_CLEAR_REG;
+              when std_logic_vector(to_unsigned(DMA_FLUSH_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.DMA_FLUSH_STATUS_REG;
               when others =>
                 null;
             end case;
@@ -450,6 +513,12 @@ begin
                   registers.DMA_RX_ADDR_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(DMA_RX_TRANSACT_LEN_BYTES_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.DMA_RX_TRANSACT_LEN_BYTES_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(DMA_FLUSH_BUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.DMA_FLUSH_BUS_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(DMA_FLUSH_STATUS_CLEAR_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.DMA_FLUSH_STATUS_CLEAR_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(DMA_FLUSH_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.DMA_FLUSH_STATUS_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;

@@ -36,6 +36,20 @@ entity kr260_tulip_top_0_0_1 is
     s_axi_rvalid  : out std_logic;
     s_axi_rready  : in  std_logic;
 
+    s_axis_dma_aclk     : in  std_logic;
+    s_axis_dma_aresetn  : in  std_logic;
+    s_axis_dma_tdata    : in  std_logic_vector(63 downto 0);
+    s_axis_dma_tvalid   : in  std_logic;
+    s_axis_dma_tready   : out std_logic;
+    s_axis_dma_tlast    : in  std_logic;
+
+    m_axis_dma_aclk     : in  std_logic;
+    m_axis_dma_aresetn  : in  std_logic;
+    m_axis_dma_tdata    : out std_logic_vector(63 downto 0);
+    m_axis_dma_tvalid   : out std_logic;
+    m_axis_dma_tready   : in  std_logic;
+    m_axis_dma_tlast    : out std_logic;
+
     wm8960_i2c_sda        : inout std_logic;
     wm8960_i2c_sda_output : out   std_logic;
     wm8960_i2c_sclk       : out   std_logic;
@@ -613,14 +627,20 @@ begin
   i2s_2_ps_fifo_dout_l      <= std_logic_vector(resize(signed(i2s_2_ps_fifo_dout24_l), i2s_2_ps_fifo_dout_l'length));
   i2s_2_ps_fifo_dout_r      <= std_logic_vector(resize(signed(i2s_2_ps_fifo_dout24_r), i2s_2_ps_fifo_dout_r'length));
 
-  i2s_2_ps_fifo_dout_ready  <= registers.I2S_2_PS_FIFO_READ_R_REG_rd_pulse;
+  m_axis_dma_tdata <= i2s_2_ps_fifo_dout_l & i2s_2_ps_fifo_dout_r;
+  m_axis_dma_tvalid <= i2s_2_ps_fifo_dout_valid;
+  i2s_2_ps_fifo_dout_ready  <= registers.I2S_2_PS_FIFO_READ_R_REG_rd_pulse or m_axis_dma_tready;
 
 
   ps_2_i2s_sw_resetn  <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.PS_2_I2S_ENABLE(0));
   ps_2_i2s_fifo_din <=
     std_logic_vector(resize(signed(registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L), C_ADC_RESOLUTION)) &
-    std_logic_vector(resize(signed(registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R), C_ADC_RESOLUTION));
-  ps_2_i2s_fifo_din_valid <= registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse;
+    std_logic_vector(resize(signed(registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R), C_ADC_RESOLUTION)) when registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse = '1' else
+    std_logic_vector(resize(signed(s_axis_dma_tdata(63 downto 32)), C_ADC_RESOLUTION)) &
+    std_logic_vector(resize(signed(s_axis_dma_tdata(31 downto  0)), C_ADC_RESOLUTION));
+
+  ps_2_i2s_fifo_din_valid <= registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse or s_axis_dma_tvalid;
+  s_axis_dma_tready <= ps_2_i2s_fifo_din_ready;
 
   u_ps_2_i2s_fifo : entity work.axis_sync_fifo
     generic map
@@ -657,4 +677,3 @@ begin
   ps_2_i2s_fifo_dout_r <= ps_2_i2s_fifo_dout(C_ADC_RESOLUTION-1 downto 0);
 
 end rtl;
-

@@ -94,7 +94,7 @@ begin
       s_TRANSACTION_COUNT_COUNT               => std_logic_vector(transaction_count),
       s_TRANSACTION_COUNT_COUNT_v             => '1',
 
-      s_TRANSACTION_VALUE_DATA                => fifo_dout,
+      s_TRANSACTION_VALUE_DATA                => fifo_dout(31 downto 0),
       s_TRANSACTION_VALUE_DATA_v              => fifo_dout_valid,
 
       s_GLOBAL_STATUS_TRANSACTION_OVERFLOW    => (others => '0'),
@@ -102,6 +102,12 @@ begin
 
       s_FIFO_STATUS_FIFO_USED                 => std_logic_vector(resize(unsigned(fifo_used), 32)),
       s_FIFO_STATUS_FIFO_USED_v               => '1',
+
+      s_CTRL_STATUS_S_AXIS_TVALID(0)          => s_axis_sniff_tvalid,
+      s_CTRL_STATUS_S_AXIS_TVALID_v           => '1',
+
+      s_CTRL_STATUS_M_AXIS_TREADY(0)          => m_axis_sniff_tready,
+      s_CTRL_STATUS_M_AXIS_TREADY_v           => '1',
 
 
       s_axi_awaddr  => s_axi_awaddr,

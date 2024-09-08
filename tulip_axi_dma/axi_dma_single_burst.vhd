@@ -46,6 +46,8 @@ entity axi_dma_single_burst is
     -- b11 = reserved
     m_axi_awvalid : out std_logic;
     m_axi_awready : in  std_logic;
+    m_axi_awcache : out std_logic_vector(3 downto 0);
+    m_axi_awprot  : out std_logic_vector(2 downto 0);
 
     m_axi_wdata   : out std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_wstrb   : out std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0);
@@ -79,6 +81,8 @@ entity axi_dma_single_burst is
     -- b11 = reserved
     m_axi_arvalid : out std_logic;
     m_axi_arready : in  std_logic;
+    m_axi_arcache : out std_logic_vector(3 downto 0);
+    m_axi_arprot  : out std_logic_vector(2 downto 0);
 
     m_axi_rdata   : in  std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_rresp   : in  std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0); -- 0 = okay
@@ -90,7 +94,7 @@ entity axi_dma_single_burst is
 
     s_axis_aclk     : in  std_logic;
     s_axis_aresetn  : in  std_logic;
-    s_axis_tdata    : in  std_logic_vector(127 downto 0);
+    s_axis_tdata    : in  std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     s_axis_tvalid   : in  std_logic;
     s_axis_tready   : out std_logic;
     s_axis_tlast    : in  std_logic;
@@ -99,7 +103,7 @@ entity axi_dma_single_burst is
 
     m_axis_aclk     : in  std_logic;
     m_axis_aresetn  : in  std_logic;
-    m_axis_tdata    : out std_logic_vector(127 downto 0);
+    m_axis_tdata    : out std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axis_tvalid   : out std_logic;
     m_axis_tready   : in  std_logic;
     m_axis_tlast    : out std_logic
@@ -108,6 +112,18 @@ entity axi_dma_single_burst is
 end entity;
 
 architecture rtl of axi_dma_single_burst is
+
+  function clog2 (x : positive) return natural is
+    variable i : natural;
+  begin
+    i := 0;
+    while (2**i < x) and i < 31 loop
+      i := i + 1;
+    end loop;
+    return i;
+  end function;
+
+  constant C_AXI_AXSIZE : integer := clog2(G_DMA_DATA_WIDTH/8);
 
   signal m_axi_awvalid_int  : std_logic;
   signal m_axi_arvalid_int  : std_logic;
@@ -140,6 +156,17 @@ architecture rtl of axi_dma_single_burst is
   signal m_rd_state : m_rd_state_t;
 
 begin
+
+  m_axi_awburst <= "01";
+  m_axi_awsize  <= std_logic_vector(to_unsigned(C_AXI_AXSIZE, m_axi_awsize'length));
+  m_axi_awcache <= "0000";
+  m_axi_awprot  <= "000";
+
+  m_axi_arburst <= "01";
+  m_axi_arsize  <= std_logic_vector(to_unsigned(C_AXI_AXSIZE, m_axi_awsize'length));
+  m_axi_arcache <= "0000";
+  m_axi_arprot  <= "000";
+
 
   m_axi_arvalid     <= m_axi_arvalid_int;
   m_axi_awvalid     <= m_axi_awvalid_int;
@@ -195,9 +222,6 @@ begin
   m_axi_wstrb <=
     (others => '1') when m_wr_burst_counter < unsigned(m_awlen) else
     wstrb;
-
-  m_axi_awburst <= "01";
-  m_axi_awsize  <= "111";
 
   m_axi_bready_int  <= '1' when m_wr_state = get_bresp else '0';
   m_axi_bready      <= m_axi_bready_int;
@@ -259,9 +283,6 @@ begin
   m_axis_tvalid_int <= m_axi_rvalid       when m_rd_state = rd_data                   else '0';
   m_axi_rready_int  <= m_axis_tready      when m_rd_state = rd_data                   else '0';
   m_axis_tlast      <= m_axis_tvalid_int  when m_rd_burst_counter = unsigned(m_arlen) else '0';
-
-  m_axi_arburst     <= "01";
-  m_axi_arsize      <= "111";
 
   m_axi_arvalid_int <= '1' when m_rd_state = set_addr else '0';
 

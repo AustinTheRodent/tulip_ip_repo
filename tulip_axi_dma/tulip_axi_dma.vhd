@@ -40,6 +40,8 @@ entity tulip_axi_dma is
     -- b11 = reserved
     m_axi_awvalid : out std_logic;
     m_axi_awready : in  std_logic;
+    m_axi_awcache : out std_logic_vector(3 downto 0);
+    m_axi_awprot  : out std_logic_vector(2 downto 0);
 
     m_axi_wdata   : out std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_wstrb   : out std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0);
@@ -73,6 +75,8 @@ entity tulip_axi_dma is
     -- b11 = reserved
     m_axi_arvalid : out std_logic;
     m_axi_arready : in  std_logic;
+    m_axi_arcache : out std_logic_vector(3 downto 0);
+    m_axi_arprot  : out std_logic_vector(2 downto 0);
 
     m_axi_rdata   : in  std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_rresp   : in  std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0); -- 0 = okay
@@ -130,6 +134,55 @@ end entity;
 
 architecture rtl of tulip_axi_dma is
 
+  function clog2 (x : positive) return natural is
+    variable i : natural;
+  begin
+    i := 0;
+    while (2**i < x) and i < 31 loop
+      i := i + 1;
+    end loop;
+    return i;
+  end function;
+
+  constant C_DMA_DWIDTH_BYTES   : integer := (G_DMA_DATA_WIDTH/8);
+  constant C_SAXIS_DWIDTH_BYTES : integer := (G_S_AXIS_DWIDTH/8);
+  constant C_MAXIS_DWIDTH_BYTES : integer := (G_M_AXIS_DWIDTH/8);
+  constant C_MAX_TRANSACT       : integer := C_DMA_DWIDTH_BYTES/C_MAXIS_DWIDTH_BYTES;
+
+
+  signal core_axi_awaddr  : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+  signal core_axi_awsize  : std_logic_vector(2 downto 0);
+  signal core_axi_awlen   : std_logic_vector(7 downto 0); -- Number of beats+1 in burst (max 256 for AXI4)
+  signal core_axi_awburst : std_logic_vector(1 downto 0);
+  signal core_axi_awvalid : std_logic;
+  signal core_axi_awready : std_logic;
+  signal core_axi_awcache : std_logic_vector(3 downto 0);
+  signal core_axi_awprot  : std_logic_vector(2 downto 0);
+  signal core_axi_wdata   : std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
+  signal core_axi_wstrb   : std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0);
+  signal core_axi_wvalid  : std_logic;
+  signal core_axi_wready  : std_logic;
+  signal core_axi_wlast   : std_logic;
+  signal core_axi_bresp   : std_logic_vector(1 downto 0);
+  signal core_axi_bvalid  : std_logic;
+  signal core_axi_bready  : std_logic;
+  signal core_axi_araddr  : std_logic_vector(G_PS_ADDR_WIDTH-1 downto 0);
+  signal core_axi_arsize  : std_logic_vector(2 downto 0);
+  signal core_axi_arlen   : std_logic_vector(7 downto 0); -- Number of beats+1 in burst (max 256 for AXI4)
+  signal core_axi_arburst : std_logic_vector(1 downto 0);
+  signal core_axi_arvalid : std_logic;
+  signal core_axi_arready : std_logic;
+  signal core_axi_arcache : std_logic_vector(3 downto 0);
+  signal core_axi_arprot  : std_logic_vector(2 downto 0);
+  signal core_axi_rdata   : std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
+  signal core_axi_rresp   : std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0); -- 0 = okay
+  signal core_axi_rvalid  : std_logic;
+  signal core_axi_rready  : std_logic;
+  signal core_axi_rlast   : std_logic;
+
+
+  ----------------------------------------------------------------------
+
   signal registers : reg_t;
 
   signal wr_done_pulse : std_logic;
@@ -150,21 +203,6 @@ architecture rtl of tulip_axi_dma is
   signal m_axis_core_tready : std_logic;
   signal m_axis_core_tlast  : std_logic;
 
-  function clog2 (x : positive) return natural is
-    variable i : natural;
-  begin
-    i := 0;
-    while (2**i < x) and i < 31 loop
-      i := i + 1;
-    end loop;
-    return i;
-  end function;
-
-  constant C_DMA_DWIDTH_BYTES   : integer := (G_DMA_DATA_WIDTH/8);
-  constant C_SAXIS_DWIDTH_BYTES : integer := (G_S_AXIS_DWIDTH/8);
-  constant C_MAXIS_DWIDTH_BYTES : integer := (G_M_AXIS_DWIDTH/8);
-  constant C_MAX_TRANSACT       : integer := C_DMA_DWIDTH_BYTES/C_MAXIS_DWIDTH_BYTES;
-
   signal keep_val0 : unsigned(4 downto 0);
   signal keep_val1 : unsigned(4 downto 0);
   signal keep_val  : std_logic_vector(7 downto 0);
@@ -175,13 +213,98 @@ architecture rtl of tulip_axi_dma is
   signal s_axis_tvalid_gate : std_logic;
   signal s_axis_tready_gate : std_logic;
   signal s_axis_tlast_gate  : std_logic;
+  signal m_axis_tready_gate : std_logic;
+
+  signal flushing       : std_logic;
+  signal flush_counter  : unsigned(15 downto 0);
+  signal flush_done     : std_logic;
 
 begin
 
-  s_axis_tready <= s_axis_tready_gate when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
-  s_axis_tvalid_gate  <= s_axis_tvalid when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
+  m_axi_awaddr      <= core_axi_awaddr;
+  m_axi_awsize      <= core_axi_awsize;
+  m_axi_awlen       <= core_axi_awlen;
+  m_axi_awburst     <= core_axi_awburst;
+  m_axi_awcache     <= core_axi_awcache;
+  m_axi_awprot      <= core_axi_awprot;
+  m_axi_awvalid     <= core_axi_awvalid;
+  core_axi_awready  <= m_axi_awready;
 
-  s_axis_tlast_gate <= s_axis_tvalid_gate when rx_counter + C_SAXIS_DWIDTH_BYTES >= unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
+  m_axi_wdata       <= core_axi_wdata;
+  m_axi_wstrb       <= core_axi_wstrb;
+  m_axi_wvalid      <= core_axi_wvalid;--'1' when flushing = '1' else core_axi_wvalid;
+  core_axi_wready   <= m_axi_wready;--'0' when flushing = '1' else m_axi_wready;
+  m_axi_wlast       <= core_axi_wlast;--'1' when flushing = '1' else core_axi_wlast;
+
+  core_axi_bresp    <= m_axi_bresp;
+  core_axi_bvalid   <= m_axi_bvalid;--'0' when flushing = '1' else m_axi_bvalid;
+  m_axi_bready      <= core_axi_bready;--'1' when flushing = '1' else core_axi_bready;
+
+  m_axi_araddr      <= core_axi_araddr;
+  m_axi_arsize      <= core_axi_arsize;
+  m_axi_arlen       <= core_axi_arlen;
+  m_axi_arburst     <= core_axi_arburst;
+  m_axi_arcache     <= core_axi_arcache;
+  m_axi_arprot      <= core_axi_arprot;
+  m_axi_arvalid     <= core_axi_arvalid;
+  core_axi_arready  <= m_axi_arready;
+
+  core_axi_rdata    <= m_axi_rdata;
+  core_axi_rresp    <= m_axi_rresp;
+  core_axi_rvalid   <= m_axi_rvalid;--'0' when flushing = '1' else m_axi_rvalid;
+  m_axi_rready      <= core_axi_rready;--'1' when flushing = '1' else core_axi_rready;
+  core_axi_rlast    <= m_axi_rlast;--'0' when flushing = '1' else m_axi_rlast;
+
+  p_flushing : process(m_axi_aclk)
+  begin
+    if rising_edge(m_axi_aclk) then
+      if m_axi_aresetn = '0' then
+        flushing      <= '0';
+        flush_counter <= (others => '0');
+      else
+        if registers.DMA_FLUSH_BUS_REG_wr_pulse = '1' and registers.DMA_FLUSH_BUS.TRIGGER_FLUSH(0) = '1' then
+          flushing      <= '1';
+          flush_counter <= (others => '0');
+        end if;
+
+        if flushing = '1' then
+          if flush_counter = 65535-1 then
+            flushing      <= '0';
+            flush_counter <= (others => '0');
+          else
+            flush_counter <= flush_counter + 1;
+          end if;
+        end if;
+
+      end if;
+    end if;
+  end process;
+
+  p_flush_status : process(m_axi_aclk)
+  begin
+    if rising_edge(m_axi_aclk) then
+      if m_axi_aresetn = '0' then
+        flush_done <= '0';
+      else
+        if registers.DMA_FLUSH_STATUS_CLEAR_REG_wr_pulse = '1' and registers.DMA_FLUSH_STATUS_CLEAR.FLUSH_FINISHED(0) = '1' then
+          flush_done <= '0';
+        else
+          if flushing = '1' and flush_counter = 1024-1 then
+            flush_done <= '1';
+          end if;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  s_axis_tready       <= s_axis_tready_gate when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
+
+  s_axis_tvalid_gate <=
+    '1' when flushing = '1' else
+    s_axis_tvalid when rx_started_status = '1' and rx_counter < unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else
+    '0';
+
+  s_axis_tlast_gate   <= s_axis_tvalid_gate when rx_counter + C_SAXIS_DWIDTH_BYTES >= unsigned(registers.DMA_RX_TRANSACT_LEN_BYTES_REG) else '0';
 
   p_rx_counter : process(m_axi_aclk)
   begin
@@ -230,6 +353,9 @@ begin
     std_logic_vector(resize(to_unsigned(C_MAX_TRANSACT, keep_val'length), keep_val'length)) when keep_val1 = 0 else
     std_logic_vector(resize(keep_val1, keep_val'length));
 
+  m_axis_tready_gate <=
+    '1' when flushing = '1' else m_axis_tready;
+
   u_dout_converter : entity work.symbol_decomp
     generic map
     (
@@ -251,7 +377,7 @@ begin
 
       dout                  => m_axis_tdata,
       dout_valid            => m_axis_tvalid,
-      dout_ready            => m_axis_tready,
+      dout_ready            => m_axis_tready_gate,
       dout_last             => m_axis_tlast
     );
 
@@ -332,35 +458,39 @@ begin
       m_axi_aclk    => m_axi_aclk,
       m_axi_aresetn => m_axi_aresetn,
 
-      m_axi_awaddr  => m_axi_awaddr,
-      m_axi_awsize  => m_axi_awsize,
-      m_axi_awlen   => m_axi_awlen,
-      m_axi_awburst => m_axi_awburst,
-      m_axi_awvalid => m_axi_awvalid,
-      m_axi_awready => m_axi_awready,
+      m_axi_awaddr  => core_axi_awaddr,
+      m_axi_awsize  => core_axi_awsize,
+      m_axi_awlen   => core_axi_awlen,
+      m_axi_awburst => core_axi_awburst,
+      m_axi_awvalid => core_axi_awvalid,
+      m_axi_awready => core_axi_awready,
+      m_axi_awcache => core_axi_awcache,
+      m_axi_awprot  => core_axi_awprot,
 
-      m_axi_wdata   => m_axi_wdata,
-      m_axi_wstrb   => m_axi_wstrb,
-      m_axi_wvalid  => m_axi_wvalid,
-      m_axi_wready  => m_axi_wready,
-      m_axi_wlast   => m_axi_wlast,
+      m_axi_wdata   => core_axi_wdata,
+      m_axi_wstrb   => core_axi_wstrb,
+      m_axi_wvalid  => core_axi_wvalid,
+      m_axi_wready  => core_axi_wready,
+      m_axi_wlast   => core_axi_wlast,
 
-      m_axi_bresp   => m_axi_bresp,
-      m_axi_bvalid  => m_axi_bvalid,
-      m_axi_bready  => m_axi_bready,
+      m_axi_bresp   => core_axi_bresp,
+      m_axi_bvalid  => core_axi_bvalid,
+      m_axi_bready  => core_axi_bready,
 
-      m_axi_araddr  => m_axi_araddr,
-      m_axi_arsize  => m_axi_arsize,
-      m_axi_arlen   => m_axi_arlen,
-      m_axi_arburst => m_axi_arburst,
-      m_axi_arvalid => m_axi_arvalid,
-      m_axi_arready => m_axi_arready,
+      m_axi_araddr  => core_axi_araddr,
+      m_axi_arsize  => core_axi_arsize,
+      m_axi_arlen   => core_axi_arlen,
+      m_axi_arburst => core_axi_arburst,
+      m_axi_arvalid => core_axi_arvalid,
+      m_axi_arready => core_axi_arready,
+      m_axi_arcache => core_axi_arcache,
+      m_axi_arprot  => core_axi_arprot,
 
-      m_axi_rdata   => m_axi_rdata,
-      m_axi_rresp   => m_axi_rresp,
-      m_axi_rvalid  => m_axi_rvalid,
-      m_axi_rready  => m_axi_rready,
-      m_axi_rlast   => m_axi_rlast,
+      m_axi_rdata   => core_axi_rdata,
+      m_axi_rresp   => core_axi_rresp,
+      m_axi_rvalid  => core_axi_rvalid,
+      m_axi_rready  => core_axi_rready,
+      m_axi_rlast   => core_axi_rlast,
 
       -------------------------------------------------------------------------------
 
@@ -398,6 +528,9 @@ begin
 
       s_DMA_RX_STATUS_RX_DONE(0)  => rx_done_status,
       s_DMA_RX_STATUS_RX_DONE_v   => '1',
+
+      s_DMA_FLUSH_STATUS_FLUSH_FINISHED(0)  => flush_done,
+      s_DMA_FLUSH_STATUS_FLUSH_FINISHED_v   => '1',
 
 
       s_axi_awaddr  => s_axi_awaddr,

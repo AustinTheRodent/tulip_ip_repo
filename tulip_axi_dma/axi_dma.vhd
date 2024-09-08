@@ -49,6 +49,8 @@ entity axi_dma is
     -- b11 = reserved
     m_axi_awvalid : out std_logic;
     m_axi_awready : in  std_logic;
+    m_axi_awcache : out std_logic_vector(3 downto 0);
+    m_axi_awprot  : out std_logic_vector(2 downto 0);
 
     m_axi_wdata   : out std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_wstrb   : out std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0);
@@ -82,6 +84,8 @@ entity axi_dma is
     -- b11 = reserved
     m_axi_arvalid : out std_logic;
     m_axi_arready : in  std_logic;
+    m_axi_arcache : out std_logic_vector(3 downto 0);
+    m_axi_arprot  : out std_logic_vector(2 downto 0);
 
     m_axi_rdata   : in  std_logic_vector(G_DMA_DATA_WIDTH-1 downto 0);
     m_axi_rresp   : in  std_logic_vector(G_DMA_DATA_WIDTH/8-1 downto 0); -- 0 = okay
@@ -159,6 +163,7 @@ begin
       if m_axi_aresetn = '0' or reset = '1' then
         core_wr_start_burst <= '0';
         wr_done_pulse       <= '0';
+        core_wr_burst_len   <= (others => '0');
         wr_sm               <= init;
       else
         case wr_sm is
@@ -219,6 +224,7 @@ begin
       if m_axi_aresetn = '0' or reset = '1' then
         core_rd_start_burst <= '0';
         rd_done_pulse       <= '0';
+        core_rd_burst_len   <= (others => '0');
         rd_sm               <= init;
       else
         case rd_sm is
@@ -302,6 +308,8 @@ begin
       m_axi_awburst => m_axi_awburst,
       m_axi_awvalid => m_axi_awvalid,
       m_axi_awready => m_axi_awready,
+      m_axi_awcache => m_axi_awcache,
+      m_axi_awprot  => m_axi_awprot,
       m_axi_wdata   => m_axi_wdata,
       m_axi_wstrb   => m_axi_wstrb,
       m_axi_wvalid  => m_axi_wvalid,
@@ -317,6 +325,9 @@ begin
       m_axi_arburst => m_axi_arburst,
       m_axi_arvalid => m_axi_arvalid,
       m_axi_arready => m_axi_arready,
+      m_axi_arcache => m_axi_arcache,
+      m_axi_arprot  => m_axi_arprot,
+
 
       m_axi_rdata   => m_axi_rdata,
       m_axi_rresp   => m_axi_rresp,
