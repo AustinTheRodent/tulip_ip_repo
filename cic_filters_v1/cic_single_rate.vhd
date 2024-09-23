@@ -77,7 +77,8 @@ begin
   generic map
   (
     G_INTEGRATOR_DWIDTH => G_DIN_DWIDTH,
-    G_DIN_DWIDTH        => G_DIN_DWIDTH
+    G_DIN_DWIDTH        => G_DIN_DWIDTH,
+    G_DOUT_DWIDTH       => G_DIN_DWIDTH
   )
   port map
   (
