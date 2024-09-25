@@ -60,7 +60,7 @@ architecture rtl of axi_stream_sniffer is
   signal fifo_dout          : std_logic_vector(G_DATA_WIDTH-1 downto 0);
   signal fifo_dout_valid    : std_logic;
   signal fifo_dout_ready    : std_logic;
-  signal fifo_used          : std_logic_vector(G_FIFO_ADDR_WIDTH-1 downto 0);
+  signal fifo_used          : std_logic_vector(G_FIFO_ADDR_WIDTH downto 0);
   signal fifo_overflow      : std_logic;
 
   signal transaction_count  : unsigned(31 downto 0);

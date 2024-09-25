@@ -18,7 +18,7 @@ entity sync_fifo is
     re       : in  std_logic;           -- read enable signal
     full     : out std_logic;           -- full signal
     empty    : out std_logic;
-    count    : out std_logic_vector(G_ADDR_WIDTH-1 downto 0)
+    count    : out std_logic_vector(G_ADDR_WIDTH downto 0)
   );
 end entity;
 
@@ -28,11 +28,11 @@ architecture rtl of sync_fifo is
 
   signal rd_point   : std_logic_vector(G_ADDR_WIDTH-1 downto 0) := (others => '0');  -- read pointer
   signal wr_point   : std_logic_vector(G_ADDR_WIDTH-1 downto 0) := (others => '0');  -- write pointer
-  signal status     : std_logic_vector(G_ADDR_WIDTH-1 downto 0) := (others => '0');  -- status pointer
+  signal status     : std_logic_vector(G_ADDR_WIDTH downto 0)   := (others => '0');  -- status pointer
   signal ram_out    : std_logic_vector(G_DATA_WIDTH-1 downto 0);  -- data out from ram
   signal full_s     : std_logic;
   signal empty_s    : std_logic;
-  
+
 begin
 
   full  <= full_s;
@@ -82,7 +82,7 @@ begin
         if we = '1' and re = '0' and unsigned(status) /= C_DEPTH-1 then
           status <= std_logic_vector(unsigned(status) + 1);
         elsif we = '0' and re = '1' and unsigned(status) /= 0 then
-          status <= std_logic_vector(unsigned(status) - 1);        
+          status <= std_logic_vector(unsigned(status) - 1);
         end if;
       end if;
     end if;

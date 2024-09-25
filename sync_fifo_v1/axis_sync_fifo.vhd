@@ -21,7 +21,7 @@ entity axis_sync_fifo is
     din_ready       : out std_logic;
     din_last        : in  std_logic;
 
-    used            : out std_logic_vector(G_ADDR_WIDTH-1 downto 0);
+    used            : out std_logic_vector(G_ADDR_WIDTH downto 0);
 
     dout            : out std_logic_vector(G_DATA_WIDTH-1 downto 0);
     dout_valid      : out std_logic;
@@ -58,7 +58,7 @@ architecture rtl of axis_sync_fifo is
 
   signal core_full            : std_logic;
   signal core_empty           : std_logic;
-  signal core_count           : std_logic_vector(G_ADDR_WIDTH-1 downto 0);
+  signal core_count           : std_logic_vector(G_ADDR_WIDTH downto 0);
   signal core_din             : std_logic_vector(G_DATA_WIDTH-1 downto 0);
   signal core_dout            : std_logic_vector(G_DATA_WIDTH-1 downto 0);
   signal core_din_accepted    : std_logic;

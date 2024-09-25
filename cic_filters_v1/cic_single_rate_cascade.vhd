@@ -7,7 +7,8 @@ entity cic_single_rate_cascade is
   (
     G_COMB_DEPTH          : integer range 3 to 8192 := 1024;
     G_NUM_STAGES          : integer := 3;
-    G_DIN_DWIDTH          : integer := 24
+    G_SINGLE_STAGE_RS     : integer := 10;
+    G_DWIDTH              : integer := 24
   );
   port
   (
@@ -15,11 +16,11 @@ entity cic_single_rate_cascade is
     reset                 : in  std_logic;
     bypass                : in  std_logic;
 
-    s_cic_cascade_tdata   : in  std_logic_vector(G_DIN_DWIDTH-1 downto 0);
+    s_cic_cascade_tdata   : in  std_logic_vector(G_DWIDTH-1 downto 0);
     s_cic_cascade_tvalid  : in  std_logic;
     s_cic_cascade_tready  : out  std_logic;
 
-    m_cic_cascade_tdata   : out std_logic_vector(G_DIN_DWIDTH-1 downto 0);
+    m_cic_cascade_tdata   : out std_logic_vector(G_DWIDTH-1 downto 0);
     m_cic_cascade_tvalid  : out std_logic;
     m_cic_cascade_tready  : in  std_logic
   );
@@ -27,7 +28,19 @@ end entity;
 
 architecture rtl of cic_single_rate_cascade is
 
-  type cic_data_t is array (0 to G_NUM_STAGES-1) of std_logic_vector(G_DIN_DWIDTH-1 downto 0);
+  function clog2 (x : positive) return natural is
+    variable i : natural;
+  begin
+    i := 0;
+    while (2**i < x) and i < 31 loop
+      i := i + 1;
+    end loop;
+    return i;
+  end function;
+
+  constant C_FULL_BUS_WIDTH : integer := G_DWIDTH + clog2(G_COMB_DEPTH)*G_NUM_STAGES - G_SINGLE_STAGE_RS*G_NUM_STAGES;
+
+  type cic_data_t is array (0 to G_NUM_STAGES-1) of std_logic_vector(C_FULL_BUS_WIDTH-1 downto 0);
 
   signal s_cic_tdata  : cic_data_t;
   signal s_cic_tvalid : std_logic_vector(G_NUM_STAGES-1 downto 0);
@@ -38,11 +51,11 @@ architecture rtl of cic_single_rate_cascade is
 
 begin
 
-  s_cic_tdata(0)                <= s_cic_cascade_tdata;
+  s_cic_tdata(0)                <= std_logic_vector(resize(signed(s_cic_cascade_tdata), C_FULL_BUS_WIDTH));
   s_cic_tvalid(0)               <= s_cic_cascade_tvalid;
   s_cic_cascade_tready          <= s_cic_tready(0);
 
-  m_cic_cascade_tdata           <= m_cic_tdata(G_NUM_STAGES-1);
+  m_cic_cascade_tdata           <= std_logic_vector(resize(signed(m_cic_tdata(G_NUM_STAGES-1)), G_DWIDTH));
   m_cic_cascade_tvalid          <= m_cic_tvalid(G_NUM_STAGES-1);
   m_cic_tready(G_NUM_STAGES-1)  <= m_cic_cascade_tready;
 
@@ -59,8 +72,10 @@ begin
     u_cic_single_rate : entity work.cic_single_rate
     generic map
     (
-      G_COMB_DEPTH  => G_COMB_DEPTH,
-      G_DIN_DWIDTH  => G_DIN_DWIDTH
+      G_COMB_DEPTH      => G_COMB_DEPTH,
+      G_SINGLE_STAGE_RS => G_SINGLE_STAGE_RS,
+      G_DIN_DWIDTH      => C_FULL_BUS_WIDTH,
+      G_DOUT_DWIDTH     => C_FULL_BUS_WIDTH
     )
     port map
     (
