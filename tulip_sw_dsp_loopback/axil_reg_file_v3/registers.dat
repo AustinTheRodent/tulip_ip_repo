@@ -1,0 +1,33 @@
+# RW = read/write
+# RO = read only
+
+#name of the register set, used for H file header guard:
+(SW_DSP_REGISTERS)
+
+[REG_FILE_DATA_WIDTH 32]
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes):
+[REG_FILE_ADDR_WIDTH 12]
+
+#name type address reset_val
+
+CONTROL RW 0x000 0x00000000 {
+  ENGAUGE_LOOPBACK [0:0]
+}
+
+STATUS_RESET RW 0x004 0x00000000 {
+  M_AXIS_OVERFLOW [1:1]
+  S_AXIS_UNDERFLOW [0:0]
+}
+
+STATUS RO 0x008 0x00000000 {
+  M_AXIS_OVERFLOW [1:1]
+  S_AXIS_UNDERFLOW [0:0]
+}
+
+DIN_FIFO_USED RO 0x00C 0x00000000 {
+  FIFO_USED [31:0]
+}
+
+DOUT_FIFO_USED RO 0x010 0x00000000 {
+  FIFO_USED [31:0]
+}

@@ -58,7 +58,19 @@ entity kr260_tulip_top_0_0_1 is
     dac_lrclk             : in  std_logic;
     dac_data              : out std_logic;
     adc_lrclk             : in  std_logic;
-    adc_data              : in  std_logic
+    adc_data              : in  std_logic;
+
+    s_axis_adc_aclk       : in  std_logic;
+    s_axis_adc_aresetn    : in  std_logic;
+    s_axis_adc_tdata      : in  std_logic_vector(63 downto 0);
+    s_axis_adc_tvalid     : in  std_logic;
+    s_axis_adc_tready     : out std_logic;
+    --adc_l                 : in  std_logic_vector(31 downto 0);
+    --adc_r                 : in  std_logic_vector(31 downto 0);
+    --adc_valid             : in  std_logic;
+    --adc_ready             : out std_logic;
+    i2s_adc_error         : in  std_logic;
+    i2s_sw_resetn_out     : out std_logic
 
   );
 end entity;
@@ -101,7 +113,7 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal dac_r                          : std_logic_vector(31 downto 0);
   signal dac_ready                      : std_logic;
 
-  signal i2s_adc_error                  : std_logic_vector(0 downto 0);
+  --signal i2s_adc_error                  : std_logic_vector;
   signal i2s_dac_error                  : std_logic_vector(0 downto 0);
 
   constant C_I2S_FIFO_AWIDTH            : integer := 3;
@@ -111,7 +123,7 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal i2s_fifo_dout                  : std_logic_vector(C_ADC_RESOLUTION*2-1 downto 0);
   signal i2s_fifo_dout_valid            : std_logic;
   signal i2s_fifo_dout_ready            : std_logic;
-  signal i2s_fifo_used                  : std_logic_vector(C_I2S_FIFO_AWIDTH-1 downto 0);
+  signal i2s_fifo_used                  : std_logic_vector(C_I2S_FIFO_AWIDTH downto 0);
   signal i2s_sw_resetn                  : std_logic;
 
   constant C_I2S_2_PS_FIFO_AWIDTH       : integer := 9;
@@ -125,7 +137,7 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal i2s_2_ps_fifo_dout_r           : std_logic_vector(31 downto 0);
   signal i2s_2_ps_fifo_dout_valid       : std_logic;
   signal i2s_2_ps_fifo_dout_ready       : std_logic;
-  signal i2s_2_ps_fifo_used             : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH-1 downto 0);
+  signal i2s_2_ps_fifo_used             : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH downto 0);
   signal i2s_2_ps_sw_resetn             : std_logic;
 
   constant C_PS_2_I2S_FIFO_AWIDTH       : integer := 9;
@@ -137,8 +149,8 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal ps_2_i2s_fifo_dout_r           : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal ps_2_i2s_fifo_dout_valid       : std_logic;
   signal ps_2_i2s_fifo_dout_ready       : std_logic;
-  signal ps_2_i2s_fifo_used             : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH-1 downto 0);
-  signal ps_2_i2s_fifo_avail            : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH-1 downto 0);
+  signal ps_2_i2s_fifo_used             : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH downto 0);
+  signal ps_2_i2s_fifo_avail            : std_logic_vector(C_I2S_2_PS_FIFO_AWIDTH downto 0);
   signal ps_2_i2s_sw_resetn             : std_logic;
 
   signal lut_prog_din_ready             : std_logic_vector(0 downto 0);
@@ -169,11 +181,6 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal chorus_avg_delay_prog_ready     : std_logic_vector(0 downto 0);
   signal chorus_gain_prog_done           : std_logic_vector(0 downto 0);
   signal chorus_gain_prog_ready          : std_logic_vector(0 downto 0);
-
-
-
-
-
 
   signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_din_valid                : std_logic;
@@ -218,7 +225,7 @@ begin
       s_I2C_STATUS_REGISTER_RD_DATA               => wm8960_i2c_register_read_data,
       s_I2C_STATUS_REGISTER_RD_DATA_v             => wm8960_i2c_dout_valid(0),
 
-      s_I2S_STATUS_ADC_ERROR                      => i2s_adc_error,
+      s_I2S_STATUS_ADC_ERROR(0)                   => i2s_adc_error,
       s_I2S_STATUS_ADC_ERROR_v                    => '1',
 
       s_I2S_STATUS_DAC_ERROR                      => i2s_dac_error,
@@ -305,6 +312,7 @@ begin
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY           => chorus_gain_prog_ready,
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY_v         => '1',
 
+
       s_axi_awaddr  => s_axi_awaddr,
       s_axi_awvalid => s_axi_awvalid,
       s_axi_awready => s_axi_awready,
@@ -377,40 +385,46 @@ begin
     );
 
   i2s_sw_resetn <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.I2S_ENABLE(0));
+  i2s_sw_resetn_out <= i2s_sw_resetn;
 
-  u_i2s_to_parallel : entity work.i2s_to_parallel
-    generic map
-    (
-      G_NUM_POSEDGE => 3, -- used for debounce filter
-      G_DWIDTH      => 32,
-      G_LSB_FIRST   => false
-    )
-    port map
-    (
-      clk           => s_axi_aclk,
-      reset         => (not a_axi_aresetn),
-      enable        => i2s_sw_resetn,
+--  u_i2s_to_parallel : entity work.i2s_to_parallel
+--    generic map
+--    (
+--      G_NUM_POSEDGE => 3, -- used for debounce filter
+--      G_DWIDTH      => 32,
+--      G_LSB_FIRST   => false
+--    )
+--    port map
+--    (
+--      clk           => s_axi_aclk,
+--      reset         => (not a_axi_aresetn),
+--      enable        => i2s_sw_resetn,
+--
+--      error         => i2s_adc_error,
+--
+--      bclk          => bclk,
+--      lrclk         => adc_lrclk,
+--      serial_din    => adc_data,
+--
+--      dout_left     => adc_l,
+--      dout_right    => adc_r,
+--      dout_valid    => adc_valid,
+--      dout_ready    => '1'
+--    );
 
-      error         => i2s_adc_error(0),
+  adc_l             <= s_axis_adc_tdata(63 downto 32);
+  adc_r             <= s_axis_adc_tdata(31 downto  0);
+  adc_valid         <= s_axis_adc_tvalid;
+  s_axis_adc_tready <= dsp_l_din_ready;
 
-      bclk          => bclk,
-      lrclk         => adc_lrclk,
-      serial_din    => adc_data,
+--  adc_ls_l            <= std_logic_vector(shift_left(unsigned(adc_l), 1));
+--  adc_ls_r            <= std_logic_vector(shift_left(unsigned(adc_r), 1));
+--
+--  adc32_l             <= std_logic_vector(shift_right(signed(adc_ls_l), 8));
+--  adc32_r             <= std_logic_vector(shift_right(signed(adc_ls_r), 8));
 
-      dout_left     => adc_l,
-      dout_right    => adc_r,
-      dout_valid    => adc_valid,
-      dout_ready    => '1'
-    );
-
-  adc_ls_l            <= std_logic_vector(shift_left(unsigned(adc_l), 1));
-  adc_ls_r            <= std_logic_vector(shift_left(unsigned(adc_r), 1));
-
-  adc32_l             <= std_logic_vector(shift_right(signed(adc_ls_l), 8));
-  adc32_r             <= std_logic_vector(shift_right(signed(adc_ls_r), 8));
-
-  adc24_l             <= adc32_l(adc24_l'range);
-  adc24_r             <= adc32_r(adc24_r'range);
+  adc24_l             <= adc_l(adc24_l'range);
+  adc24_r             <= adc_r(adc24_r'range);
 
   dsp_sw_resetn <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.DSP_ENABLE(0));
 
@@ -637,7 +651,7 @@ begin
     std_logic_vector(resize(signed(registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L), C_ADC_RESOLUTION)) &
     std_logic_vector(resize(signed(registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R), C_ADC_RESOLUTION)) when registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse = '1' else
     std_logic_vector(resize(signed(s_axis_dma_tdata(63 downto 32)), C_ADC_RESOLUTION)) &
-    std_logic_vector(resize(signed(s_axis_dma_tdata(31 downto 0)), C_ADC_RESOLUTION));
+    std_logic_vector(resize(signed(s_axis_dma_tdata(31 downto  0)), C_ADC_RESOLUTION));
 
   ps_2_i2s_fifo_din_valid <= registers.PS_2_I2S_FIFO_WRITE_R_REG_wr_pulse or s_axis_dma_tvalid;
   s_axis_dma_tready <= ps_2_i2s_fifo_din_ready;
@@ -677,4 +691,3 @@ begin
   ps_2_i2s_fifo_dout_r <= ps_2_i2s_fifo_dout(C_ADC_RESOLUTION-1 downto 0);
 
 end rtl;
-

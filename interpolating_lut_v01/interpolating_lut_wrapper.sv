@@ -35,7 +35,7 @@ module interpolating_lut_wrapper
 
   state_t state;
 
-  localparam C_MIDPOINT_BIAS = 2**G_DWIDTH / 2;
+  localparam C_MIDPOINT_BIAS = 2**(G_DWIDTH-1);
 
   logic unsigned [G_DWIDTH-1:0] core_din;
   logic                         core_din_valid;

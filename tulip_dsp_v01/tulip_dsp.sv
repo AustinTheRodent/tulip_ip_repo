@@ -46,7 +46,6 @@ module tulip_dsp
   output logic                              reverb_taps_prog_din_ready,
   output logic                              reverb_taps_prog_done,
 
-
   input  logic [23:0]                       prog_vibrato_gain_din, // fixed point, 2 integer bits
   input  logic                              prog_vibrato_gain_din_valid,
   output logic                              prog_vibrato_gain_din_ready,
@@ -127,34 +126,41 @@ module tulip_dsp
   logic                     upsample_dout_valid;
   logic                     upsample_dout_ready;
 
-  logic [C_ADC_DWIDTH-1:0]  fixed_to_float2_din;
-  logic                     fixed_to_float2_din_valid;
-  logic                     fixed_to_float2_din_ready;
-  float_t                   fixed_to_float2_dout;
-  logic                     fixed_to_float2_dout_valid;
-  logic                     fixed_to_float2_dout_ready;
+//  logic [C_ADC_DWIDTH-1:0]  fixed_to_float2_din;
+//  logic                     fixed_to_float2_din_valid;
+//  logic                     fixed_to_float2_din_ready;
+//  float_t                   fixed_to_float2_dout;
+//  logic                     fixed_to_float2_dout_valid;
+//  logic                     fixed_to_float2_dout_ready;
+//
+//  float_t                   float_to_fixed2_din;
+//  logic                     float_to_fixed2_din_valid;
+//  logic                     float_to_fixed2_din_ready;
+//  logic [C_ADC_DWIDTH-1:0]  float_to_fixed2_dout;
+//  logic                     float_to_fixed2_dout_valid;
+//  logic                     float_to_fixed2_dout_ready;
+//
+//  float_t iir_b_tap_din;
+//  logic   iir_b_tap_din_valid;
+//  logic   iir_b_tap_din_ready;
+//  logic   iir_b_tap_din_done;
+//  float_t iir_a_tap_din;
+//  logic   iir_a_tap_din_valid;
+//  logic   iir_a_tap_din_ready;
+//  logic   iir_a_tap_din_done;
+//  float_t iir_din;
+//  logic   iir_din_valid;
+//  logic   iir_din_ready;
+//  float_t iir_dout;
+//  logic   iir_dout_valid;
+//  logic   iir_dout_ready;
 
-  float_t                   float_to_fixed2_din;
-  logic                     float_to_fixed2_din_valid;
-  logic                     float_to_fixed2_din_ready;
-  logic [C_ADC_DWIDTH-1:0]  float_to_fixed2_dout;
-  logic                     float_to_fixed2_dout_valid;
-  logic                     float_to_fixed2_dout_ready;
-
-  float_t iir_b_tap_din;
-  logic   iir_b_tap_din_valid;
-  logic   iir_b_tap_din_ready;
-  logic   iir_b_tap_din_done;
-  float_t iir_a_tap_din;
-  logic   iir_a_tap_din_valid;
-  logic   iir_a_tap_din_ready;
-  logic   iir_a_tap_din_done;
-  float_t iir_din;
-  logic   iir_din_valid;
-  logic   iir_din_ready;
-  float_t iir_dout;
-  logic   iir_dout_valid;
-  logic   iir_dout_ready;
+  logic [C_ADC_DWIDTH-1:0]  dc_blocker_din;
+  logic                     dc_blocker_din_valid;
+  logic                     dc_blocker_din_ready;
+  float_t                   dc_blocker_dout;
+  logic                     dc_blocker_dout_valid;
+  logic                     dc_blocker_dout_ready;
 
   logic [C_ADC_DWIDTH-1:0]  downsample_din;
   logic                     downsample_din_valid;
@@ -223,7 +229,7 @@ module tulip_dsp
 
   assign upsample_din       = gain0_dout;
   assign upsample_din_valid = gain0_dout_valid;
-  assign gain0_dout_ready   = (bypass_lut_tf == 0) ? upsample_din_ready : float_to_fixed2_dout_ready;
+  assign gain0_dout_ready   = (bypass_lut_tf == 0) ? upsample_din_ready : dc_blocker_dout_ready;
 
   upsample_8x_tiny_fir
   #(
@@ -300,150 +306,174 @@ module tulip_dsp
     .dout_ready (downsample_dout_ready)
   );
 
-  assign fixed_to_float2_din = downsample_dout;
-  assign fixed_to_float2_din_valid = downsample_dout_valid;
-  assign downsample_dout_ready = fixed_to_float2_din_ready;
+//  assign fixed_to_float2_din = downsample_dout;
+//  assign fixed_to_float2_din_valid = downsample_dout_valid;
+//  assign downsample_dout_ready = fixed_to_float2_din_ready;
+//
+//  fixed_to_float
+//  #(
+//    .G_INTEGER_BITS   (C_ADC_DWIDTH),
+//    .G_FRACT_BITS     (0),
+//    .G_SIGNED_INPUT   (1),
+//    .G_BUFFER_INPUT   (1),
+//    .G_BUFFER_OUTPUT  (1)
+//  )
+//  u_fixed_to_float2
+//  (
+//    .clk              (clk),
+//    .reset            (reset),
+//    .enable           (global_sw_resetn),
+//
+//    .din              (fixed_to_float2_din),
+//    .din_valid        (fixed_to_float2_din_valid),
+//    .din_ready        (fixed_to_float2_din_ready),
+//    .din_last         (1'b0),
+//
+//    .dout             (fixed_to_float2_dout),
+//    .dout_valid       (fixed_to_float2_dout_valid),
+//    .dout_ready       (fixed_to_float2_dout_ready),
+//    .dout_last        ()
+//  );
+//
+//  assign iir_din = fixed_to_float2_dout;
+//  assign iir_din_valid = fixed_to_float2_dout_valid;
+//  assign fixed_to_float2_dout_ready = iir_din_ready;
+//
+//  always @ (posedge clk) begin
+//
+//    logic unsigned [7:0] b_taps_prog_counter;
+//    logic unsigned [7:0] a_taps_prog_counter;
+//
+//    static float_t iir_b_tap_din_array [0:2] =
+//    {
+//      32'h3F7F6E94,
+//      32'hBFFF6E94,
+//      32'h3F7F6E94
+//    };
+//
+//    static float_t iir_a_tap_din_array [0:2] =
+//    {
+//      32'h3F800000,
+//      32'hBFFF6E6A,
+//      32'h3F7EDD7A
+//    };
+//
+//    if (reset == 1 || global_sw_resetn == 0) begin
+//      iir_b_tap_din       <= iir_b_tap_din_array[0];
+//      iir_a_tap_din       <= iir_a_tap_din_array[0];
+//      b_taps_prog_counter <= 0;
+//      a_taps_prog_counter <= 0;
+//      iir_b_tap_din_valid <= 0;
+//      iir_a_tap_din_valid <= 0;
+//    end
+//    else begin
+//      iir_b_tap_din_valid <= 1;
+//      iir_a_tap_din_valid <= 1;
+//
+//      if (iir_b_tap_din_valid == 1 && iir_b_tap_din_ready == 1) begin
+//        if (b_taps_prog_counter < 2) begin
+//          iir_b_tap_din       <= iir_b_tap_din_array[b_taps_prog_counter+1];
+//          b_taps_prog_counter <= b_taps_prog_counter + 1;
+//        end
+//      end
+//
+//      if (iir_a_tap_din_valid == 1 && iir_a_tap_din_ready == 1) begin
+//        if (a_taps_prog_counter < 2) begin
+//          iir_a_tap_din       <= iir_a_tap_din_array[a_taps_prog_counter+1];
+//          a_taps_prog_counter <= a_taps_prog_counter + 1;
+//        end
+//      end
+//
+//    end
+//  end
+//
+//
+//  tiny_iir_floating_point
+//  #(
+//    .G_DEGREE(3)
+//  )
+//  u_tiny_iir_floating_point_dc_blocker
+//  (
+//    .clk            (clk),
+//    .reset          (reset),
+//    .enable         (global_sw_resetn),
+//    .bypass         (1'b1),
+//
+//    .b_tap          (iir_b_tap_din),
+//    .b_tap_valid    (iir_b_tap_din_valid),
+//    .b_tap_ready    (iir_b_tap_din_ready),
+//    .b_tap_done     (iir_b_tap_din_done),
+//
+//    .a_tap          (iir_a_tap_din),
+//    .a_tap_valid    (iir_a_tap_din_valid),
+//    .a_tap_ready    (iir_a_tap_din_ready),
+//    .a_tap_done     (iir_a_tap_din_done),
+//
+//    .din            (iir_din),
+//    .din_valid      (iir_din_valid),
+//    .din_ready      (iir_din_ready),
+//
+//    .dout           (iir_dout),
+//    .dout_valid     (iir_dout_valid),
+//    .dout_ready     (iir_dout_ready)
+//  );
+//
+//  assign float_to_fixed2_din = iir_dout;
+//  assign float_to_fixed2_din_valid = iir_dout_valid;
+//  assign iir_dout_ready = float_to_fixed2_din_ready;
+//
+//  float_to_fixed
+//  #(
+//    .G_INTEGER_BITS   (C_ADC_DWIDTH),
+//    .G_FRACT_BITS     (0),
+//    .G_SIGNED_OUTPUT  (1),
+//    .G_BUFFER_INPUT   (1),
+//    .G_BUFFER_OUTPUT  (1)
+//  )
+//  u_float_to_fixed2
+//  (
+//    .clk              (clk),
+//    .reset            (reset),
+//    .enable           (global_sw_resetn),
+//
+//    .din              (float_to_fixed2_din),
+//    .din_valid        (float_to_fixed2_din_valid),
+//    .din_ready        (float_to_fixed2_din_ready),
+//    .din_last         (1'b0),
+//
+//    .dout             (float_to_fixed2_dout),
+//    .dout_valid       (float_to_fixed2_dout_valid),
+//    .dout_ready       (float_to_fixed2_dout_ready),
+//    .dout_last        ()
+//  );
+//
+//  assign user_fir_din = (bypass_lut_tf == 0) ? float_to_fixed2_dout : gain0_dout;
+//  assign user_fir_din_valid = (bypass_lut_tf == 0) ? float_to_fixed2_dout_valid : gain0_dout_valid;
+//  assign float_to_fixed2_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
 
-  fixed_to_float
-  #(
-    .G_INTEGER_BITS   (C_ADC_DWIDTH),
-    .G_FRACT_BITS     (0),
-    .G_SIGNED_INPUT   (1),
-    .G_BUFFER_INPUT   (1),
-    .G_BUFFER_OUTPUT  (1)
-  )
-  u_fixed_to_float2
+  assign dc_blocker_din = downsample_dout;
+  assign dc_blocker_din_valid = downsample_dout_valid;
+  assign downsample_dout_ready = dc_blocker_din_ready;
+
+  dc_blocker_cic
+  u_dc_blocker_cic
   (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (global_sw_resetn),
+    .clk                (clk),
+    .reset              (reset | (~global_sw_resetn) | (~lut_tf_sw_resetn)),
+    .bypass             (bypass_lut_tf),
 
-    .din              (fixed_to_float2_din),
-    .din_valid        (fixed_to_float2_din_valid),
-    .din_ready        (fixed_to_float2_din_ready),
-    .din_last         (1'b0),
+    .s_dc_block_tdata   (dc_blocker_din),
+    .s_dc_block_tvalid  (dc_blocker_din_valid),
+    .s_dc_block_tready  (dc_blocker_din_ready),
 
-    .dout             (fixed_to_float2_dout),
-    .dout_valid       (fixed_to_float2_dout_valid),
-    .dout_ready       (fixed_to_float2_dout_ready),
-    .dout_last        ()
+    .m_dc_block_tdata   (dc_blocker_dout),
+    .m_dc_block_tvalid  (dc_blocker_dout_valid),
+    .m_dc_block_tready  (dc_blocker_dout_ready)
   );
 
-  assign iir_din = fixed_to_float2_dout;
-  assign iir_din_valid = fixed_to_float2_dout_valid;
-  assign fixed_to_float2_dout_ready = iir_din_ready;
-
-  always @ (posedge clk) begin
-
-    logic unsigned [7:0] b_taps_prog_counter;
-    logic unsigned [7:0] a_taps_prog_counter;
-
-    static float_t iir_b_tap_din_array [0:2] =
-    {
-      32'h3F7F6E94,
-      32'hBFFF6E94,
-      32'h3F7F6E94
-    };
-
-    static float_t iir_a_tap_din_array [0:2] =
-    {
-      32'h3F800000,
-      32'hBFFF6E6A,
-      32'h3F7EDD7A
-    };
-
-    if (reset == 1 || global_sw_resetn == 0) begin
-      iir_b_tap_din       <= iir_b_tap_din_array[0];
-      iir_a_tap_din       <= iir_a_tap_din_array[0];
-      b_taps_prog_counter <= 0;
-      a_taps_prog_counter <= 0;
-      iir_b_tap_din_valid <= 0;
-      iir_a_tap_din_valid <= 0;
-    end
-    else begin
-      iir_b_tap_din_valid <= 1;
-      iir_a_tap_din_valid <= 1;
-
-      if (iir_b_tap_din_valid == 1 && iir_b_tap_din_ready == 1) begin
-        if (b_taps_prog_counter < 2) begin
-          iir_b_tap_din       <= iir_b_tap_din_array[b_taps_prog_counter+1];
-          b_taps_prog_counter <= b_taps_prog_counter + 1;
-        end
-      end
-
-      if (iir_a_tap_din_valid == 1 && iir_a_tap_din_ready == 1) begin
-        if (a_taps_prog_counter < 2) begin
-          iir_a_tap_din       <= iir_a_tap_din_array[a_taps_prog_counter+1];
-          a_taps_prog_counter <= a_taps_prog_counter + 1;
-        end
-      end
-
-    end
-  end
-
-
-  tiny_iir_floating_point
-  #(
-    .G_DEGREE(3)
-  )
-  u_tiny_iir_floating_point_dc_blocker
-  (
-    .clk            (clk),
-    .reset          (reset),
-    .enable         (global_sw_resetn),
-    .bypass         (1'b0),
-
-    .b_tap          (iir_b_tap_din),
-    .b_tap_valid    (iir_b_tap_din_valid),
-    .b_tap_ready    (iir_b_tap_din_ready),
-    .b_tap_done     (iir_b_tap_din_done),
-
-    .a_tap          (iir_a_tap_din),
-    .a_tap_valid    (iir_a_tap_din_valid),
-    .a_tap_ready    (iir_a_tap_din_ready),
-    .a_tap_done     (iir_a_tap_din_done),
-
-    .din            (iir_din),
-    .din_valid      (iir_din_valid),
-    .din_ready      (iir_din_ready),
-
-    .dout           (iir_dout),
-    .dout_valid     (iir_dout_valid),
-    .dout_ready     (iir_dout_ready)
-  );
-
-  assign float_to_fixed2_din = iir_dout;
-  assign float_to_fixed2_din_valid = iir_dout_valid;
-  assign iir_dout_ready = float_to_fixed2_din_ready;
-
-  float_to_fixed
-  #(
-    .G_INTEGER_BITS   (C_ADC_DWIDTH),
-    .G_FRACT_BITS     (0),
-    .G_SIGNED_OUTPUT  (1),
-    .G_BUFFER_INPUT   (1),
-    .G_BUFFER_OUTPUT  (1)
-  )
-  u_float_to_fixed2
-  (
-    .clk              (clk),
-    .reset            (reset),
-    .enable           (global_sw_resetn),
-
-    .din              (float_to_fixed2_din),
-    .din_valid        (float_to_fixed2_din_valid),
-    .din_ready        (float_to_fixed2_din_ready),
-    .din_last         (1'b0),
-
-    .dout             (float_to_fixed2_dout),
-    .dout_valid       (float_to_fixed2_dout_valid),
-    .dout_ready       (float_to_fixed2_dout_ready),
-    .dout_last        ()
-  );
-
-  assign user_fir_din = (bypass_lut_tf == 0) ? float_to_fixed2_dout : gain0_dout;
-  assign user_fir_din_valid = (bypass_lut_tf == 0) ? float_to_fixed2_dout_valid : gain0_dout_valid;
-  assign float_to_fixed2_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
+  assign user_fir_din = (bypass_lut_tf == 0) ? dc_blocker_dout : gain0_dout;
+  assign user_fir_din_valid = (bypass_lut_tf == 0) ? dc_blocker_dout_valid : gain0_dout_valid;
+  assign dc_blocker_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
 
   tiny_fir
   #(

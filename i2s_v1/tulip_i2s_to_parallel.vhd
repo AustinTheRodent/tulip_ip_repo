@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity i2s_to_parallel is
+entity tulip_i2s_to_parallel is
   generic
   (
     G_NUM_POSEDGE : integer range 1 to 1023 := 3;
@@ -21,14 +21,27 @@ entity i2s_to_parallel is
     lrclk         : in  std_logic;
     serial_din    : in  std_logic;
 
-    dout_left     : out std_logic_vector(G_DWIDTH-1 downto 0);
-    dout_right    : out std_logic_vector(G_DWIDTH-1 downto 0);
-    dout_valid    : out std_logic;
-    dout_ready    : in  std_logic
+    m_axis_tdata  : out std_logic_vector(2*G_DWIDTH-1 downto 0);
+    m_axis_tvalid : out std_logic;
+    m_axis_tready : in  std_logic
+
+    --dout_left     : out std_logic_vector(G_DWIDTH-1 downto 0);
+    --dout_right    : out std_logic_vector(G_DWIDTH-1 downto 0);
+    --dout_valid    : out std_logic;
+    --dout_ready    : in  std_logic
   );
 end entity;
 
-architecture rtl of i2s_to_parallel is
+architecture rtl of tulip_i2s_to_parallel is
+
+  signal dout_left  : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_right : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_ls_left  : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_ls_right : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_32_left  : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_32_right : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal dout_valid : std_logic;
+  signal dout_ready : std_logic;
 
   type state_t is (init, error_state, wait_for_low_lrclk, wait_for_high_lrclk, wait_for_low_bclk, construct_l, construct_r, output);
   signal state                : state_t;
@@ -42,6 +55,16 @@ architecture rtl of i2s_to_parallel is
   signal symbol_pos_count     : integer range 0 to 32;
 
 begin
+
+  dout_ls_left  <= std_logic_vector(shift_left(unsigned(dout_left), 1));
+  dout_ls_right <= std_logic_vector(shift_left(unsigned(dout_right), 1));
+
+  dout_32_left  <= std_logic_vector(shift_right(signed(dout_ls_left), 8));
+  dout_32_right <= std_logic_vector(shift_right(signed(dout_ls_right), 8));
+
+  m_axis_tdata  <= dout_32_left & dout_32_right;
+  m_axis_tvalid <= dout_valid;
+  dout_ready    <= '1';
 
   gen_lsb_first : if G_LSB_FIRST = true generate
     dout_left   <= dout_left_construct;

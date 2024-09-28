@@ -23,6 +23,7 @@ package axis_sniffer_reg_file_pkg is
     GLOBAL_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     FIFO_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     SCRATCHPAD_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    CTRL_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
     SCRATCHPAD : SCRATCHPAD_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
@@ -31,12 +32,14 @@ package axis_sniffer_reg_file_pkg is
     GLOBAL_STATUS_REG_wr_pulse : std_logic;
     FIFO_STATUS_REG_wr_pulse : std_logic;
     SCRATCHPAD_REG_wr_pulse : std_logic;
+    CTRL_STATUS_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     TRANSACTION_COUNT_REG_rd_pulse : std_logic;
     TRANSACTION_VALUE_REG_rd_pulse : std_logic;
     GLOBAL_STATUS_REG_rd_pulse : std_logic;
     FIFO_STATUS_REG_rd_pulse : std_logic;
     SCRATCHPAD_REG_rd_pulse : std_logic;
+    CTRL_STATUS_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -70,6 +73,12 @@ entity axis_sniffer_reg_file is
 
     s_FIFO_STATUS_FIFO_USED : in std_logic_vector(31 downto 0);
     s_FIFO_STATUS_FIFO_USED_v : in std_logic;
+
+    s_CTRL_STATUS_S_AXIS_TVALID : in std_logic_vector(0 downto 0);
+    s_CTRL_STATUS_S_AXIS_TVALID_v : in std_logic;
+
+    s_CTRL_STATUS_M_AXIS_TREADY : in std_logic_vector(0 downto 0);
+    s_CTRL_STATUS_M_AXIS_TREADY_v : in std_logic;
 
 
     s_axi_awaddr  : in  std_logic_vector(C_REG_FILE_ADDR_WIDTH-1 downto 0);
@@ -106,6 +115,7 @@ architecture rtl of axis_sniffer_reg_file is
   constant GLOBAL_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 12;
   constant FIFO_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 16;
   constant SCRATCHPAD_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 20;
+  constant CTRL_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 24;
 
   signal registers          : reg_t;
 
@@ -143,6 +153,7 @@ begin
         registers.TRANSACTION_VALUE_REG <= x"00000000";
         registers.GLOBAL_STATUS_REG <= x"00000000";
         registers.FIFO_STATUS_REG <= x"00000000";
+        registers.CTRL_STATUS_REG <= x"00000000";
       else
         if s_TRANSACTION_COUNT_COUNT_v = '1' then 
           registers.TRANSACTION_COUNT_REG(31 downto 0) <= s_TRANSACTION_COUNT_COUNT;
@@ -158,6 +169,12 @@ begin
         end if;
         if s_FIFO_STATUS_FIFO_USED_v = '1' then 
           registers.FIFO_STATUS_REG(31 downto 0) <= s_FIFO_STATUS_FIFO_USED;
+        end if;
+        if s_CTRL_STATUS_S_AXIS_TVALID_v = '1' then 
+          registers.CTRL_STATUS_REG(0 downto 0) <= s_CTRL_STATUS_S_AXIS_TVALID;
+        end if;
+        if s_CTRL_STATUS_M_AXIS_TREADY_v = '1' then 
+          registers.CTRL_STATUS_REG(1 downto 1) <= s_CTRL_STATUS_M_AXIS_TREADY;
         end if;
       end if;
     end if;
@@ -176,6 +193,7 @@ begin
         registers.GLOBAL_STATUS_REG_wr_pulse <= '0';
         registers.FIFO_STATUS_REG_wr_pulse <= '0';
         registers.SCRATCHPAD_REG_wr_pulse <= '0';
+        registers.CTRL_STATUS_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -188,6 +206,7 @@ begin
             registers.GLOBAL_STATUS_REG_wr_pulse <= '0';
             registers.FIFO_STATUS_REG_wr_pulse <= '0';
             registers.SCRATCHPAD_REG_wr_pulse <= '0';
+            registers.CTRL_STATUS_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -200,6 +219,7 @@ begin
             registers.GLOBAL_STATUS_REG_wr_pulse <= '0';
             registers.FIFO_STATUS_REG_wr_pulse <= '0';
             registers.SCRATCHPAD_REG_wr_pulse <= '0';
+            registers.CTRL_STATUS_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -251,6 +271,7 @@ begin
         registers.GLOBAL_STATUS_REG_rd_pulse <= '0';
         registers.FIFO_STATUS_REG_rd_pulse <= '0';
         registers.SCRATCHPAD_REG_rd_pulse <= '0';
+        registers.CTRL_STATUS_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -263,6 +284,7 @@ begin
             registers.GLOBAL_STATUS_REG_rd_pulse <= '0';
             registers.FIFO_STATUS_REG_rd_pulse <= '0';
             registers.SCRATCHPAD_REG_rd_pulse <= '0';
+            registers.CTRL_STATUS_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -275,6 +297,7 @@ begin
             registers.GLOBAL_STATUS_REG_rd_pulse <= '0';
             registers.FIFO_STATUS_REG_rd_pulse <= '0';
             registers.SCRATCHPAD_REG_rd_pulse <= '0';
+            registers.CTRL_STATUS_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -296,6 +319,8 @@ begin
                 s_axi_rdata <= registers.FIFO_STATUS_REG;
               when std_logic_vector(to_unsigned(SCRATCHPAD_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.SCRATCHPAD_REG;
+              when std_logic_vector(to_unsigned(CTRL_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.CTRL_STATUS_REG;
               when others =>
                 null;
             end case;
@@ -314,6 +339,8 @@ begin
                   registers.FIFO_STATUS_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(SCRATCHPAD_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.SCRATCHPAD_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(CTRL_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.CTRL_STATUS_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;
