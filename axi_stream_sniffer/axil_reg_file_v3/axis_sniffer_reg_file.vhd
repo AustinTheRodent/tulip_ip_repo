@@ -65,6 +65,9 @@ entity axis_sniffer_reg_file is
     s_TRANSACTION_VALUE_DATA : in std_logic_vector(31 downto 0);
     s_TRANSACTION_VALUE_DATA_v : in std_logic;
 
+    s_GLOBAL_STATUS_FIFO_DOUT_VALID : in std_logic_vector(0 downto 0);
+    s_GLOBAL_STATUS_FIFO_DOUT_VALID_v : in std_logic;
+
     s_GLOBAL_STATUS_TRANSACTION_OVERFLOW : in std_logic_vector(0 downto 0);
     s_GLOBAL_STATUS_TRANSACTION_OVERFLOW_v : in std_logic;
 
@@ -157,6 +160,9 @@ begin
         end if;
         if s_TRANSACTION_VALUE_DATA_v = '1' then 
           registers.TRANSACTION_VALUE_REG(31 downto 0) <= s_TRANSACTION_VALUE_DATA;
+        end if;
+        if s_GLOBAL_STATUS_FIFO_DOUT_VALID_v = '1' then 
+          registers.GLOBAL_STATUS_REG(1 downto 1) <= s_GLOBAL_STATUS_FIFO_DOUT_VALID;
         end if;
         if s_GLOBAL_STATUS_TRANSACTION_OVERFLOW_v = '1' then 
           registers.GLOBAL_STATUS_REG(0 downto 0) <= s_GLOBAL_STATUS_TRANSACTION_OVERFLOW;
