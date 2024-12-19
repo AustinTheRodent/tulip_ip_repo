@@ -40,13 +40,11 @@ entity reprogrammable_iir_filt is
     s_prog_b_tap_tdata    : in  std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
     s_prog_b_tap_tvalid   : in  std_logic;
     s_prog_b_tap_tready   : out std_logic;
-    s_prog_b_tap_tlast    : in  std_logic;
     prog_b_tap_done       : out std_logic;
 
     s_prog_a_tap_tdata    : in  std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
     s_prog_a_tap_tvalid   : in  std_logic;
     s_prog_a_tap_tready   : out std_logic;
-    s_prog_a_tap_tlast    : in  std_logic;
     prog_a_tap_done       : out std_logic;
 
     s_iir_tdata           : in  std_logic_vector(G_DWIDTH-1 downto 0);
