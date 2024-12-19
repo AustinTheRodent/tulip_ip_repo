@@ -281,11 +281,11 @@ begin
 
   s_iir_tdata   <= s_wawa_tdata;
   s_iir_tvalid  <= s_wawa_tvalid when state = SM_RUN_IIR else '0';
-  s_wawa_tready <= s_iir_tready when state = SM_RUN_IIR else '0';
+  s_wawa_tready <= m_wawa_tready when bypass = '1' else s_iir_tready when state = SM_RUN_IIR else '0';
   s_iir_tlast   <= s_iir_tvalid when sample_counter = G_REFRESH_RATE-1 else '0';
 
-  m_wawa_tdata  <= m_iir_tdata;
-  m_wawa_tvalid <= m_iir_tvalid;
+  m_wawa_tdata  <= m_iir_tdata when bypass = '0' else s_wawa_tdata;
+  m_wawa_tvalid <= m_iir_tvalid when bypass = '0' else s_wawa_tvalid;
   m_iir_tready  <= m_wawa_tready;
 
   u_reprogrammable_iir_filt : entity work.reprogrammable_iir_filt
@@ -302,7 +302,7 @@ begin
   (
     clk                   => clk,
     reset                 => reset,
-    bypass                => bypass,
+    bypass                => '0',
 
     s_prog_b_tap_tdata    => s_prog_b_tap_tdata,
     s_prog_b_tap_tvalid   => s_prog_b_tap_tvalid,
