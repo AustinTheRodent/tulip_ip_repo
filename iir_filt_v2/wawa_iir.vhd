@@ -62,8 +62,9 @@ entity wawa_iir is
     G_NUM_B_TAPS          : integer range 2 to 255  := 16;
     G_NUM_A_TAPS          : integer range 2 to 255  := 16;
     G_TAP_INTEGER_BITS    : integer := 2;
-    G_TAP_DWIDTH          : integer := 64;
-    G_DWIDTH              : integer := 64
+    G_TAP_DWIDTH          : integer := 64; -- keep these large
+    G_DWIDTH              : integer := 64; -- keep these large
+    G_REFRESH_RATE        : integer := 4800 -- samples
   );
   port
   (
@@ -72,24 +73,24 @@ entity wawa_iir is
     bypass                : in  std_logic;
 
     s_prog_b_tap_tdata    : in  std_logic_vector(G_TAP_DWIDTH-1 downto 0);
-    s_prog_b_tap_address  : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
-    s_prog_b_tap_index    : in  std_logic_vector(7 downto 0);
+    s_prog_b_tap_address  : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0); -- the address is used to create the wawa array of filters
+    s_prog_b_tap_index    : in  std_logic_vector(7 downto 0); -- the index is used to program a single IIR component
     s_prog_b_tap_tvalid   : in  std_logic;
 
     s_prog_a_tap_tdata    : in  std_logic_vector(G_TAP_DWIDTH-1 downto 0);
-    s_prog_a_tap_address  : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
-    s_prog_a_tap_index    : in  std_logic_vector(7 downto 0);
+    s_prog_a_tap_address  : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0); -- the address is used to create the wawa array of filters
+    s_prog_a_tap_index    : in  std_logic_vector(7 downto 0); -- the index is used to program a single IIR component
     s_prog_a_tap_tvalid   : in  std_logic;
+
+    pedal_input           : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
 
     s_wawa_tdata          : in  std_logic_vector(G_DWIDTH-1 downto 0);
     s_wawa_tvalid         : in  std_logic;
     s_wawa_tready         : out std_logic;
-    s_wawa_tlast          : in  std_logic;
 
     m_wawa_tdata          : out std_logic_vector(G_DWIDTH-1 downto 0);
     m_wawa_tvalid         : out std_logic;
-    m_wawa_tready         : in  std_logic;
-    m_wawa_tlast          : out std_logic
+    m_wawa_tready         : in  std_logic
   );
 end entity;
 
@@ -100,10 +101,115 @@ architecture rtl of wawa_iir is
   signal a_tap_bram_register        : std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
   signal a_tap_bram_register_valid  : std_logic;
 
-  signal b_tap_index_int      : integer range 0 to 255;
-  signal a_tap_index_int      : integer range 0 to 255;
+  signal rd_b_bram_data             : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal rd_b_bram_address          : std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
+  signal rd_b_bram_din_valid        : std_logic;
+  signal rd_b_bram_dout_valid       : std_logic;
+  signal rd_a_bram_data             : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal rd_a_bram_address          : std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
+  signal rd_a_bram_din_valid        : std_logic;
+  signal rd_a_bram_dout_valid       : std_logic;
+
+  signal b_tap_index_int            : integer range 0 to 255;
+  signal a_tap_index_int            : integer range 0 to 255;
+
+  type state_t is (SM_INIT, SM_PROGRAM_BRAM, SM_REFRESH_IIR, SM_RUN_IIR);
+  signal state                      : state_t;
+
+  signal a_bram_done                : std_logic;
+  signal b_bram_done                : std_logic;
+
+  signal pedal_input_store          : std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
+
+  signal s_prog_b_tap_tdata         : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal s_prog_b_tap_tvalid        : std_logic;
+  signal s_prog_b_tap_tready        : std_logic;
+  signal s_prog_b_tap_tlast         : std_logic;
+  signal prog_b_tap_done            : std_logic;
+
+  signal s_prog_a_tap_tdata         : std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal s_prog_a_tap_tvalid        : std_logic;
+  signal s_prog_a_tap_tready        : std_logic;
+  signal s_prog_a_tap_tlast         : std_logic;
+  signal prog_a_tap_done            : std_logic;
+
+  signal s_iir_tdata                : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal s_iir_tvalid               : std_logic;
+  signal s_iir_tready               : std_logic;
+  signal s_iir_tlast                : std_logic;
+
+  signal m_iir_tdata                : std_logic_vector(G_DWIDTH-1 downto 0);
+  signal m_iir_tvalid               : std_logic;
+  signal m_iir_tready               : std_logic;
+  signal m_iir_tlast                : std_logic
+
+  signal sample_counter             : unsigned(31 downto 0);
 
 begin
+
+  p_state_machine : process(clk)
+  begin
+    if rising_edge(clk) then
+      if reset = '1' then
+        a_bram_done         <= '0';
+        b_bram_done         <= '0';
+        rd_b_bram_din_valid <= '0';
+        rd_a_bram_din_valid <= '0';
+        state               <= SM_INIT;
+      else
+        case state is
+          when SM_INIT =>
+            a_bram_done <= '0';
+            b_bram_done <= '0';
+            state       <= SM_PROGRAM_BRAM;
+
+          when SM_PROGRAM_BRAM =>
+            if unsigned(s_prog_b_tap_index) = G_NUM_B_TAPS-1 and
+               unsigned(s_prog_b_tap_address) = (2**G_BRAM_ADDRWIDTH)-1 and
+               s_prog_b_tap_tvalid = '1' then
+              b_bram_done <= '1';
+            end if;
+
+            if unsigned(s_prog_a_tap_index) = G_NUM_A_TAPS-1 and
+               unsigned(s_prog_a_tap_address) = (2**G_BRAM_ADDRWIDTH)-1 and
+               s_prog_a_tap_tvalid = '1' then
+              a_bram_done <= '1';
+            end if;
+
+            if b_bram_done = '1' and a_bram_done = '1' then
+              pedal_input_store   <= pedal_input;
+              rd_b_bram_address   <= pedal_input;
+              rd_a_bram_address   <= pedal_input;
+              state               <= SM_REFRESH_IIR;
+            end if;
+
+          when SM_REFRESH_IIR =>
+            if s_prog_b_tap_tready = '1' and s_prog_a_tap_tready = '1' then
+              rd_b_bram_din_valid <= '1';
+              rd_a_bram_din_valid <= '1';
+            elsif prog_b_tap_done = '1' and prog_a_tap_done = '1' then
+              rd_b_bram_din_valid <= '0';
+              rd_a_bram_din_valid <= '0';
+              sample_counter      <= (others => '0');
+              state               <= SM_RUN_IIR;
+            end if;
+
+          when SM_RUN_IIR =>
+            if s_iir_tvalid = '1' and s_iir_tready = '1' then
+              if sample_counter = G_REFRESH_RATE-1 then
+                state           <= SM_REFRESH_IIR;
+              else
+                sample_counter  <= sample_counter + 1;
+              end if;
+            end if;
+
+          when others =>
+            state <= SM_INIT;
+
+        end case;
+      end if;
+    end if;
+  end process;
 
   b_tap_index_int <= to_integer(unsigned(s_prog_b_tap_index));
 
@@ -141,10 +247,10 @@ begin
     wr_address    => s_prog_b_tap_address,
     wr_valid      => b_tap_bram_register_valid,
 
-    rd_data       => open,
-    rd_address    => (others => '0'),
-    rd_din_valid  => '0',
-    rd_dout_valid => open
+    rd_data       => rd_b_bram_data,
+    rd_address    => rd_b_bram_address,
+    rd_din_valid  => rd_b_bram_din_valid,
+    rd_dout_valid => rd_b_bram_dout_valid
   );
 
   u_a_tap_bram : entity work.wawa_bram
@@ -161,10 +267,63 @@ begin
     wr_address    => s_prog_a_tap_address,
     wr_valid      => a_tap_bram_register_valid,
 
-    rd_data       => open,
-    rd_address    => (others => '0'),
-    rd_din_valid  => '0',
-    rd_dout_valid => open
+    rd_data       => rd_a_bram_data,
+    rd_address    => rd_a_bram_address,
+    rd_din_valid  => rd_a_bram_din_valid,
+    rd_dout_valid => rd_a_bram_dout_valid
   );
+
+  s_prog_b_tap_tdata  <= rd_b_bram_data;
+  s_prog_b_tap_tvalid <= rd_b_bram_dout_valid;
+
+  s_prog_a_tap_tdata  <= rd_a_bram_data;
+  s_prog_a_tap_tvalid <= rd_a_bram_dout_valid;
+
+  s_iir_tdata   <= s_wawa_tdata;
+  s_iir_tvalid  <= s_wawa_tvalid when state = SM_RUN_IIR else '0';
+  s_wawa_tready <= s_iir_tready when state = SM_RUN_IIR else '0';
+  s_iir_tlast   <= s_iir_tvalid when sample_counter = G_REFRESH_RATE-1 else '0';
+
+  m_wawa_tdata  <= m_iir_tdata;
+  m_wawa_tvalid <= m_iir_tvalid;
+  m_iir_tready  <= m_wawa_tready;
+
+  u_reprogrammable_iir_filt : entity work.reprogrammable_iir_filt
+  generic map
+  (
+    G_PACK_TAPS_MSB_FIRST => false,
+    G_NUM_B_TAPS          => G_NUM_B_TAPS,
+    G_NUM_A_TAPS          => G_NUM_A_TAPS,
+    G_TAP_INTEGER_BITS    => G_TAP_INTEGER_BITS,
+    G_TAP_DWIDTH          => G_TAP_DWIDTH,
+    G_DWIDTH              => G_DWIDTH
+  )
+  port map
+  (
+    clk                   => clk,
+    reset                 => reset,
+    bypass                => '0',
+
+    s_prog_b_tap_tdata    => s_prog_b_tap_tdata,
+    s_prog_b_tap_tvalid   => s_prog_b_tap_tvalid,
+    s_prog_b_tap_tready   => s_prog_b_tap_tready,
+    prog_b_tap_done       => prog_b_tap_done,
+
+    s_prog_a_tap_tdata    => s_prog_a_tap_tdata,
+    s_prog_a_tap_tvalid   => s_prog_a_tap_tvalid,
+    s_prog_a_tap_tready   => s_prog_a_tap_tready,
+    prog_a_tap_done       => prog_a_tap_done,
+
+    s_iir_tdata           => s_iir_tdata,
+    s_iir_tvalid          => s_iir_tvalid,
+    s_iir_tready          => s_iir_tready,
+    s_iir_tlast           => s_iir_tlast,
+
+    m_iir_tdata           => m_iir_tdata,
+    m_iir_tvalid          => m_iir_tvalid,
+    m_iir_tready          => m_iir_tready,
+    m_iir_tlast           => m_iir_tlast
+  );
+
 
 end rtl;
