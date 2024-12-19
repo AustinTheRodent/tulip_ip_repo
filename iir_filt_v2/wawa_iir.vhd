@@ -302,7 +302,7 @@ begin
   (
     clk                   => clk,
     reset                 => reset,
-    bypass                => '0',
+    bypass                => bypass,
 
     s_prog_b_tap_tdata    => s_prog_b_tap_tdata,
     s_prog_b_tap_tvalid   => s_prog_b_tap_tvalid,
