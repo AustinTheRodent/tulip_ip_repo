@@ -184,7 +184,7 @@ begin
             end if;
 
           when SM_REFRESH_IIR =>
-            if s_prog_b_tap_tready = '1' and s_prog_a_tap_tready = '1' then
+            if s_prog_core_b_tap_tready = '1' and s_prog_core_a_tap_tready = '1' then
               rd_b_bram_din_valid <= '1';
               rd_a_bram_din_valid <= '1';
             elsif prog_core_b_tap_done = '1' and prog_core_a_tap_done = '1' then
