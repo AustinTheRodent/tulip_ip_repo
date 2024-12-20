@@ -208,6 +208,9 @@ begin
 
           when SM_WAIT_TO_PROGRAM =>
             if prog_core_b_tap_done = '0' and prog_core_a_tap_done = '0' then
+              pedal_input_store   <= pedal_input;
+              rd_b_bram_address   <= pedal_input;
+              rd_a_bram_address   <= pedal_input;
               state <= SM_REFRESH_IIR;
             end if;
 
