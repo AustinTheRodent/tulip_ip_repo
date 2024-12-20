@@ -121,16 +121,10 @@ architecture rtl of wawa_iir is
 
   signal pedal_input_store          : std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
 
-  signal s_prog_b_tap_tdata         : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
-  signal s_prog_b_tap_tvalid        : std_logic;
   signal s_prog_b_tap_tready        : std_logic;
-  signal s_prog_b_tap_tlast         : std_logic;
   signal prog_b_tap_done            : std_logic;
 
-  signal s_prog_a_tap_tdata         : std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
-  signal s_prog_a_tap_tvalid        : std_logic;
   signal s_prog_a_tap_tready        : std_logic;
-  signal s_prog_a_tap_tlast         : std_logic;
   signal prog_a_tap_done            : std_logic;
 
   signal s_iir_tdata                : std_logic_vector(G_DWIDTH-1 downto 0);
