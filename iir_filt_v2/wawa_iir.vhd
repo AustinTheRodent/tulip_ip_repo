@@ -121,11 +121,17 @@ architecture rtl of wawa_iir is
 
   signal pedal_input_store          : std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
 
-  signal s_prog_b_tap_tready        : std_logic;
-  signal prog_b_tap_done            : std_logic;
+  signal s_prog_core_b_tap_tdata         : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal s_prog_core_b_tap_tvalid        : std_logic;
+  signal s_prog_core_b_tap_tready        : std_logic;
+  signal s_prog_core_b_tap_tlast         : std_logic;
+  signal prog_core_b_tap_done            : std_logic;
 
-  signal s_prog_a_tap_tready        : std_logic;
-  signal prog_a_tap_done            : std_logic;
+  signal s_prog_core_a_tap_tdata         : std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
+  signal s_prog_core_a_tap_tvalid        : std_logic;
+  signal s_prog_core_a_tap_tready        : std_logic;
+  signal s_prog_core_a_tap_tlast         : std_logic;
+  signal prog_core_a_tap_done            : std_logic;
 
   signal s_iir_tdata                : std_logic_vector(G_DWIDTH-1 downto 0);
   signal s_iir_tvalid               : std_logic;
@@ -181,7 +187,7 @@ begin
             if s_prog_b_tap_tready = '1' and s_prog_a_tap_tready = '1' then
               rd_b_bram_din_valid <= '1';
               rd_a_bram_din_valid <= '1';
-            elsif prog_b_tap_done = '1' and prog_a_tap_done = '1' then
+            elsif prog_core_b_tap_done = '1' and prog_core_a_tap_done = '1' then
               rd_b_bram_din_valid <= '0';
               rd_a_bram_din_valid <= '0';
               sample_counter      <= (others => '0');
@@ -267,19 +273,19 @@ begin
     rd_dout_valid => rd_a_bram_dout_valid
   );
 
-  s_prog_b_tap_tdata  <= rd_b_bram_data;
-  s_prog_b_tap_tvalid <= rd_b_bram_dout_valid;
+  s_prog_core_b_tap_tdata  <= rd_b_bram_data;
+  s_prog_core_b_tap_tvalid <= rd_b_bram_dout_valid;
 
-  s_prog_a_tap_tdata  <= rd_a_bram_data;
-  s_prog_a_tap_tvalid <= rd_a_bram_dout_valid;
+  s_prog_core_a_tap_tdata  <= rd_a_bram_data;
+  s_prog_core_a_tap_tvalid <= rd_a_bram_dout_valid;
 
   s_iir_tdata   <= s_wawa_tdata;
   s_iir_tvalid  <= s_wawa_tvalid when state = SM_RUN_IIR else '0';
-  s_wawa_tready <= m_wawa_tready when bypass = '1' else s_iir_tready when state = SM_RUN_IIR else '0';
+  s_wawa_tready <= s_iir_tready when state = SM_RUN_IIR else '0';
   s_iir_tlast   <= s_iir_tvalid when sample_counter = G_REFRESH_RATE-1 else '0';
 
-  m_wawa_tdata  <= m_iir_tdata when bypass = '0' else s_wawa_tdata;
-  m_wawa_tvalid <= m_iir_tvalid when bypass = '0' else s_wawa_tvalid;
+  m_wawa_tdata  <= m_iir_tdata;
+  m_wawa_tvalid <= m_iir_tvalid;
   m_iir_tready  <= m_wawa_tready;
 
   u_reprogrammable_iir_filt : entity work.reprogrammable_iir_filt
@@ -298,15 +304,15 @@ begin
     reset                 => reset,
     bypass                => '0',
 
-    s_prog_b_tap_tdata    => s_prog_b_tap_tdata,
-    s_prog_b_tap_tvalid   => s_prog_b_tap_tvalid,
-    s_prog_b_tap_tready   => s_prog_b_tap_tready,
-    prog_b_tap_done       => prog_b_tap_done,
+    s_prog_b_tap_tdata    => s_prog_core_b_tap_tdata,
+    s_prog_b_tap_tvalid   => s_prog_core_b_tap_tvalid,
+    s_prog_b_tap_tready   => s_prog_core_b_tap_tready,
+    prog_b_tap_done       => prog_core_b_tap_done,
 
-    s_prog_a_tap_tdata    => s_prog_a_tap_tdata,
-    s_prog_a_tap_tvalid   => s_prog_a_tap_tvalid,
-    s_prog_a_tap_tready   => s_prog_a_tap_tready,
-    prog_a_tap_done       => prog_a_tap_done,
+    s_prog_a_tap_tdata    => s_prog_core_a_tap_tdata,
+    s_prog_a_tap_tvalid   => s_prog_core_a_tap_tvalid,
+    s_prog_a_tap_tready   => s_prog_core_a_tap_tready,
+    prog_a_tap_done       => prog_core_a_tap_done,
 
     s_iir_tdata           => s_iir_tdata,
     s_iir_tvalid          => s_iir_tvalid,
