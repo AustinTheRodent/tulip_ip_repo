@@ -141,7 +141,7 @@ architecture rtl of wawa_iir is
   signal m_iir_tdata                : std_logic_vector(G_DWIDTH-1 downto 0);
   signal m_iir_tvalid               : std_logic;
   signal m_iir_tready               : std_logic;
-  signal m_iir_tlast                : std_logic
+  signal m_iir_tlast                : std_logic;
 
   signal sample_counter             : unsigned(31 downto 0);
 
