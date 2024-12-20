@@ -105,6 +105,9 @@ architecture rtl of reprogrammable_iir_filt is
 
 begin
 
+  prog_b_tap_done <= b_taps_done;
+  prog_a_tap_done <= a_taps_done;
+
   gen_a_taps_split : for i in 0 to G_NUM_A_TAPS-1 generate
 
     gen_a_lsbs_first : if G_PACK_TAPS_MSB_FIRST = false generate
@@ -143,6 +146,8 @@ begin
   begin
     if rising_edge(clk) then
       if reset = '1' or bypass = '1' then
+        s_prog_b_tap_tready <= '0';
+        s_prog_a_tap_tready <= '0';
         b_taps_done <= '0';
         a_taps_done <= '0';
         state       <= SM_INIT;
@@ -151,6 +156,8 @@ begin
           when SM_INIT =>
             b_prog_counter    <= (others => '0');
             a_prog_counter    <= (others => '0');
+            s_prog_b_tap_tready <= '1';
+            s_prog_a_tap_tready <= '1';
             b_taps_done       <= '0';
             a_taps_done       <= '0';
             state             <= SM_GET_TAPS;
@@ -160,6 +167,7 @@ begin
               for i in 0 to G_NUM_B_TAPS-1 loop
                 b_taps_store(i) <= b_taps(i);
               end loop;
+              s_prog_b_tap_tready <= '0';
               b_taps_done <= '1';
             end if;
 
@@ -167,6 +175,7 @@ begin
               for i in 0 to G_NUM_A_TAPS-1 loop
                 a_taps_store(i) <= a_taps(i);
               end loop;
+              s_prog_a_tap_tready <= '0';
               a_taps_done <= '1';
             end if;
 
@@ -203,6 +212,8 @@ begin
             if m_core_tvalid = '1' and m_core_tready = '1' and m_core_tlast = '1' then
               b_prog_counter    <= (others => '0');
               a_prog_counter    <= (others => '0');
+              s_prog_b_tap_tready <= '1';
+              s_prog_a_tap_tready <= '1';
               b_taps_done       <= '0';
               a_taps_done       <= '0';
               state             <= SM_GET_TAPS;
