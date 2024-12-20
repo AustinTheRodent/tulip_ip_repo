@@ -150,6 +150,8 @@ begin
         s_prog_a_tap_tready <= '0';
         b_taps_done <= '0';
         a_taps_done <= '0';
+        core_prog_b_tap_wr <= '0';
+        core_prog_a_tap_wr <= '0';
         state       <= SM_INIT;
       else
         case state is
