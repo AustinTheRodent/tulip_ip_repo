@@ -96,6 +96,9 @@ end entity;
 
 architecture rtl of wawa_iir is
 
+  signal s_prog_b_tap_address_register  : std_logic_vector(s_prog_b_tap_address'range);
+  signal s_prog_a_tap_address_register  : std_logic_vector(s_prog_a_tap_address'range);
+
   signal b_tap_bram_register        : std_logic_vector(G_NUM_B_TAPS*G_TAP_DWIDTH-1 downto 0);
   signal b_tap_bram_register_valid  : std_logic;
   signal a_tap_bram_register        : std_logic_vector(G_NUM_A_TAPS*G_TAP_DWIDTH-1 downto 0);
@@ -219,6 +222,7 @@ begin
       if unsigned(s_prog_b_tap_index) < G_NUM_B_TAPS and s_prog_b_tap_tvalid = '1' then
         b_tap_bram_register(G_TAP_DWIDTH*(b_tap_index_int+1)-1 downto G_TAP_DWIDTH*b_tap_index_int) <= s_prog_b_tap_tdata;
       end if;
+      s_prog_b_tap_address_register <= s_prog_b_tap_address;
       b_tap_bram_register_valid <= s_prog_b_tap_tvalid;
     end if;
   end process;
@@ -229,6 +233,7 @@ begin
       if unsigned(s_prog_a_tap_index) < G_NUM_A_TAPS and s_prog_a_tap_tvalid = '1' then
         a_tap_bram_register(G_TAP_DWIDTH*(a_tap_index_int+1)-1 downto G_TAP_DWIDTH*a_tap_index_int) <= s_prog_a_tap_tdata;
       end if;
+      s_prog_a_tap_address_register <= s_prog_a_tap_address;
       a_tap_bram_register_valid <= s_prog_a_tap_tvalid;
     end if;
   end process;
@@ -244,7 +249,7 @@ begin
     clk           => clk,
 
     wr_data       => b_tap_bram_register,
-    wr_address    => s_prog_b_tap_address,
+    wr_address    => s_prog_b_tap_address_register,
     wr_valid      => b_tap_bram_register_valid,
 
     rd_data       => rd_b_bram_data,
@@ -264,7 +269,7 @@ begin
     clk           => clk,
 
     wr_data       => a_tap_bram_register,
-    wr_address    => s_prog_a_tap_address,
+    wr_address    => s_prog_a_tap_address_register,
     wr_valid      => a_tap_bram_register_valid,
 
     rd_data       => rd_a_bram_data,
