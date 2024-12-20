@@ -116,7 +116,7 @@ architecture rtl of wawa_iir is
   signal b_tap_index_int            : integer range 0 to 255;
   signal a_tap_index_int            : integer range 0 to 255;
 
-  type state_t is (SM_INIT, SM_PROGRAM_BRAM, SM_REFRESH_IIR, SM_RUN_IIR);
+  type state_t is (SM_INIT, SM_PROGRAM_BRAM, SM_REFRESH_IIR, SM_RUN_IIR, SM_WAIT_TO_PROGRAM);
   signal state                      : state_t;
 
   signal a_bram_done                : std_logic;
@@ -200,10 +200,15 @@ begin
           when SM_RUN_IIR =>
             if s_iir_tvalid = '1' and s_iir_tready = '1' then
               if sample_counter = G_REFRESH_RATE-1 then
-                state           <= SM_REFRESH_IIR;
+                state           <= SM_WAIT_TO_PROGRAM;
               else
                 sample_counter  <= sample_counter + 1;
               end if;
+            end if;
+
+          when SM_WAIT_TO_PROGRAM =>
+            if prog_core_b_tap_done = '0' and prog_core_a_tap_done = '0' then
+              state <= SM_REFRESH_IIR;
             end if;
 
           when others =>
@@ -215,6 +220,7 @@ begin
   end process;
 
   b_tap_index_int <= to_integer(unsigned(s_prog_b_tap_index));
+  a_tap_index_int <= to_integer(unsigned(s_prog_a_tap_index));
 
   p_b_tap_register : process(clk)
   begin
