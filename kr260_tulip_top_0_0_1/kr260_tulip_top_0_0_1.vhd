@@ -54,6 +54,8 @@ entity kr260_tulip_top_0_0_1 is
     wm8960_i2c_sda_output : out   std_logic;
     wm8960_i2c_sclk       : out   std_logic;
 
+    wawa_adc_input        : in  std_logic_vector(7 downto 0);
+
     bclk                  : in  std_logic;
     dac_lrclk             : in  std_logic;
     dac_data              : out std_logic;
@@ -181,6 +183,11 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal chorus_avg_delay_prog_ready     : std_logic_vector(0 downto 0);
   signal chorus_gain_prog_done           : std_logic_vector(0 downto 0);
   signal chorus_gain_prog_ready          : std_logic_vector(0 downto 0);
+
+  signal wawa_prog_b_done                : std_logic_vector(0 downto 0);
+  signal wawa_prog_b_ready               : std_logic_vector(0 downto 0);
+  signal wawa_prog_a_done                : std_logic_vector(0 downto 0);
+  signal wawa_prog_a_ready               : std_logic_vector(0 downto 0);
 
   signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_din_valid                : std_logic;
@@ -312,6 +319,17 @@ begin
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY           => chorus_gain_prog_ready,
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY_v         => '1',
 
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_READY                => wawa_prog_a_ready,
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v              => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE                 => wawa_prog_a_done,
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE_v               => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_READY                => wawa_prog_b_ready,
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_READY_v              => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE                 => wawa_prog_b_done,
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE_v               => '1',
 
       s_axi_awaddr  => s_axi_awaddr,
       s_axi_awvalid => s_axi_awvalid,
@@ -447,11 +465,13 @@ begin
       lut_tf_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
       usr_fir_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
       reverb_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+      wawa_sw_resetn                      => registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA(0),
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
+      bypass_wawa                         => registers.TULIP_DSP_CONTROL.BYPASS_WAWA(0),
       bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
       bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
       bypass_lut_tf                       => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
@@ -480,6 +500,18 @@ begin
       reverb_taps_prog_din_valid          => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
       reverb_taps_prog_din_ready          => reverb_taps_prog_din_ready(0),
       reverb_taps_prog_done               => reverb_taps_prog_done(0),
+
+      prog_wawa_b_tap_tdata               => registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB.DATA,                -- [63:0]
+      prog_wawa_b_tap_tvalid              => registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse,
+      prog_wawa_b_tap_tready              => wawa_prog_b_ready(0),
+      prog_wawa_b_done                    => wawa_prog_b_done(0),
+
+      prog_wawa_a_tap_tdata               => registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB.DATA,                -- [63:0]
+      prog_wawa_a_tap_tvalid              => registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse,
+      prog_wawa_a_tap_tready              => wawa_prog_a_ready(0),
+      prog_wawa_a_done                    => wawa_prog_a_done(0),
+
+      wawa_input                          => wawa_adc_input, -- [7:0]
 
       prog_vibrato_gain_din               => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
       prog_vibrato_gain_din_valid         => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,
