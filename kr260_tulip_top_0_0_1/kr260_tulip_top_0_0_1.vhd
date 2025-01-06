@@ -1,3 +1,26 @@
+--                                                        ┌───────────────────┐
+--                                                        │                   │
+--                                                        │         PS        │
+--                                                        │                   │
+--                                                        └───┬───────────┬───┘
+--                                                            ▲           │
+--                                                            │           ▼
+--                       ┌────────────────┐               ┌───┴──┐     ┌──┴───┐
+--            ┌──────┐   │                │   ┌──────┐    │DMA RX│     │DMA TX│
+--          ┌─┤DMA TX├◄──┤       PS       ├◄──┤DMA RX├◄┐  └───┬──┘     └──┬───┘
+--          │ └──────┘   │                │   └──────┘ │      ▲           │
+--          │            └────────────────┘            │      │           ▼
+--          │   ┌──────────────────────────────────┐   │   ┌──┴─┐       ┌─┴──┐
+--          └──►┼────────┐   ┌─────────────────────┼───┘   │FIFO│       │FIFO│
+--              │        │   │                     │       └──┬─┘       └─┬──┘
+--              │        │   │                     │          ▲           │
+--              │        └──┤│├─────┐              │          │           ▼
+-- ┌────┐       │     /├─────┘      └─────►┤\      │    ┌───┐ │  ┌───┐   ┌┴┐  ┌────┐  ┌───┐
+-- │ADC ├───────┼───►| │                   │ |─────┼───►┤DSP├─┴──┤_/_├──►┤+├─►┤FIFO├─►┤DAC│
+-- └────┘       │     \├──────────────────►┤/      │    └───┘    └───┘   └─┘  └────┘  └───┘
+--              │                                  │
+--              └──────────────────────────────────┘
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -12,7 +35,7 @@ entity kr260_tulip_top_0_0_1 is
   port
   (
     s_axi_aclk    : in  std_logic;
-    a_axi_aresetn : in  std_logic;
+    s_axi_aresetn : in  std_logic;
 
     s_axi_awaddr  : in  std_logic_vector(11 downto 0);
     s_axi_awvalid : in  std_logic;
@@ -53,6 +76,9 @@ entity kr260_tulip_top_0_0_1 is
     wm8960_i2c_sda        : inout std_logic;
     wm8960_i2c_sda_output : out   std_logic;
     wm8960_i2c_sclk       : out   std_logic;
+
+    wawa_adc_input        : in  std_logic_vector(7 downto 0);
+    wawa_adc_test         : out  std_logic_vector(7 downto 0);
 
     bclk                  : in  std_logic;
     dac_lrclk             : in  std_logic;
@@ -182,10 +208,16 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal chorus_gain_prog_done           : std_logic_vector(0 downto 0);
   signal chorus_gain_prog_ready          : std_logic_vector(0 downto 0);
 
+  signal wawa_prog_b_done                : std_logic_vector(0 downto 0);
+  signal wawa_prog_b_ready               : std_logic_vector(0 downto 0);
+  signal wawa_prog_a_done                : std_logic_vector(0 downto 0);
+  signal wawa_prog_a_ready               : std_logic_vector(0 downto 0);
+
   signal dsp_l_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_din_valid                : std_logic;
   signal dsp_l_din_ready                : std_logic;
   signal dsp_l_dout                     : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
+  signal dsp_lm_dout                    : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
   signal dsp_l_dout_valid               : std_logic;
   signal dsp_l_dout_ready               : std_logic;
   signal dsp_r_din                      : std_logic_vector(C_ADC_RESOLUTION-1 downto 0);
@@ -196,13 +228,18 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal dsp_r_dout_ready               : std_logic;
   signal dsp_sw_resetn                  : std_logic;
 
+  signal tick_us                        : std_logic_vector(31 downto 0);
+  signal tick_ms                        : std_logic_vector(31 downto 0);
+
 begin
+
+  wawa_adc_test <= registers.TULIP_DSP_WAWA_LUT_TEST.DATA;
 
   u_reg_file : entity work.axil_reg_file
     port map
     (
       s_axi_aclk    => s_axi_aclk,
-      a_axi_aresetn => a_axi_aresetn,
+      a_axi_aresetn => s_axi_aresetn,
 
       s_VERSION_VERSION                           => (others => '0'),
       s_VERSION_VERSION_v                         => '0',
@@ -312,6 +349,23 @@ begin
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY           => chorus_gain_prog_ready,
       s_TULIP_DSP_STATUS_CHORUS_GAIN_PROG_READY_v         => '1',
 
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_READY                => wawa_prog_a_ready,
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v              => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE                 => wawa_prog_a_done,
+      s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE_v               => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_READY                => wawa_prog_b_ready,
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_READY_v              => '1',
+
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE                 => wawa_prog_b_done,
+      s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE_v               => '1',
+
+      s_COUNTER_US_TICK_US    => tick_us,
+      s_COUNTER_US_TICK_US_v  => '1',
+
+      s_COUNTER_MS_TICK_MS    => tick_ms,
+      s_COUNTER_MS_TICK_MS_v  => '1',
 
       s_axi_awaddr  => s_axi_awaddr,
       s_axi_awvalid => s_axi_awvalid,
@@ -338,6 +392,52 @@ begin
       registers_out => registers
     );
 
+  p_tick_us : process(s_axi_aclk)
+    variable v_counter : unsigned(7 downto 0);
+  begin
+    if rising_edge(s_axi_aclk) then
+      if s_axi_aresetn = '0' then
+        tick_us   <= (others => '0');
+        v_counter := (others => '0');
+      else
+        if registers.COUNTER_RESETS_REG_wr_pulse = '1' and registers.COUNTER_RESETS.RESET_US(0) = '1' then
+          tick_us   <= (others => '0');
+          v_counter := (others => '0');
+        else
+          if v_counter >= to_unsigned(199, v_counter'length) then
+            tick_us   <= std_logic_vector(unsigned(tick_us)+1);
+            v_counter := (others => '0');
+          else
+            v_counter := v_counter + 1;
+          end if;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  p_tick_ms : process(s_axi_aclk)
+    variable v_counter : unsigned(17 downto 0);
+  begin
+    if rising_edge(s_axi_aclk) then
+      if s_axi_aresetn = '0' then
+        tick_ms   <= (others => '0');
+        v_counter := (others => '0');
+      else
+        if registers.COUNTER_RESETS_REG_wr_pulse = '1' and registers.COUNTER_RESETS.RESET_MS(0) = '1' then
+          tick_ms   <= (others => '0');
+          v_counter := (others => '0');
+        else
+          if v_counter >= to_unsigned(199999, v_counter'length) then
+            tick_ms   <= std_logic_vector(unsigned(tick_ms)+1);
+            v_counter := (others => '0');
+          else
+            v_counter := v_counter + 1;
+          end if;
+        end if;
+      end if;
+    end if;
+  end process;
+
   IOBUF_i2c : IOBUF
     generic map
     (
@@ -363,7 +463,7 @@ begin
     port map
     (
       clk                   => s_axi_aclk,
-      reset                 => (not a_axi_aresetn),
+      reset                 => (not s_axi_aresetn),
       enable                => std_logic(registers.CONTROL.SW_RESETN(0)),
 
       din_device_address    => registers.I2C_CONTROL.DEVICE_ADDRESS,
@@ -397,7 +497,7 @@ begin
 --    port map
 --    (
 --      clk           => s_axi_aclk,
---      reset         => (not a_axi_aresetn),
+--      reset         => (not s_axi_aresetn),
 --      enable        => i2s_sw_resetn,
 --
 --      error         => i2s_adc_error,
@@ -441,17 +541,19 @@ begin
     port map
     (
       clk                                 => s_axi_aclk,
-      reset                               => (not a_axi_aresetn),
+      reset                               => (not s_axi_aresetn),
       global_sw_resetn                    => dsp_sw_resetn,
 
       lut_tf_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
       usr_fir_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
       reverb_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+      wawa_sw_resetn                      => registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA(0),
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
+      bypass_wawa                         => registers.TULIP_DSP_CONTROL.BYPASS_WAWA(0),
       bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
       bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
       bypass_lut_tf                       => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
@@ -480,6 +582,18 @@ begin
       reverb_taps_prog_din_valid          => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
       reverb_taps_prog_din_ready          => reverb_taps_prog_din_ready(0),
       reverb_taps_prog_done               => reverb_taps_prog_done(0),
+
+      prog_wawa_b_tap_tdata               => registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB.DATA,                -- [63:0]
+      prog_wawa_b_tap_tvalid              => registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse,
+      prog_wawa_b_tap_tready              => wawa_prog_b_ready(0),
+      prog_wawa_b_done                    => wawa_prog_b_done(0),
+
+      prog_wawa_a_tap_tdata               => registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB.DATA,                -- [63:0]
+      prog_wawa_a_tap_tvalid              => registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse,
+      prog_wawa_a_tap_tready              => wawa_prog_a_ready(0),
+      prog_wawa_a_done                    => wawa_prog_a_done(0),
+
+      wawa_input                          => wawa_adc_input, -- [7:0]
 
       prog_vibrato_gain_din               => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
       prog_vibrato_gain_din_valid         => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,
@@ -530,9 +644,11 @@ begin
       dout_ready                          => dsp_l_dout_ready
     );
 
+  dsp_lm_dout <= (others => '0') when registers.CONTROL.DSP_MUTE(0) = '1' else dsp_l_dout;
+
   i2s_fifo_din <=
-    dsp_l_dout & dsp_l_dout when ps_2_i2s_fifo_dout_valid = '0' else
-    std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(dsp_l_dout)+signed(ps_2_i2s_fifo_dout_r));
+    dsp_lm_dout & dsp_lm_dout when ps_2_i2s_fifo_dout_valid = '0' else
+    std_logic_vector(signed(dsp_lm_dout)+signed(ps_2_i2s_fifo_dout_l)) & std_logic_vector(signed(dsp_lm_dout)+signed(ps_2_i2s_fifo_dout_r));
 
   i2s_fifo_din_valid  <= dsp_l_dout_valid;
   dsp_l_dout_ready    <= i2s_fifo_din_ready;
@@ -549,7 +665,7 @@ begin
     port map
     (
       clk             => s_axi_aclk,
-      reset           => (not a_axi_aresetn),
+      reset           => (not s_axi_aresetn),
       enable          => i2s_sw_resetn,
 
       din             => i2s_fifo_din,
@@ -589,7 +705,7 @@ begin
     port map
     (
       clk           => s_axi_aclk,
-      reset         => (not a_axi_aresetn),
+      reset         => (not s_axi_aresetn),
       enable        => i2s_sw_resetn,
 
       error         => i2s_dac_error(0),
@@ -605,7 +721,7 @@ begin
     );
 
   i2s_2_ps_sw_resetn        <= std_logic(registers.CONTROL.SW_RESETN(0)) and std_logic(registers.CONTROL.I2S_2_PS_ENABLE(0));
-  i2s_2_ps_fifo_din         <= dsp_l_dout & dsp_l_dout;
+  i2s_2_ps_fifo_din         <= dsp_lm_dout & dsp_lm_dout;
   i2s_2_ps_fifo_din_valid   <= dsp_l_dout_valid and dsp_l_dout_ready;
 
   u_i2s_2_ps_fifo : entity work.axis_sync_fifo
@@ -619,7 +735,7 @@ begin
     port map
     (
       clk             => s_axi_aclk,
-      reset           => (not a_axi_aresetn),
+      reset           => (not s_axi_aresetn),
       enable          => i2s_2_ps_sw_resetn,
 
       din             => i2s_2_ps_fifo_din,
@@ -667,7 +783,7 @@ begin
     port map
     (
       clk             => s_axi_aclk,
-      reset           => (not a_axi_aresetn),
+      reset           => (not s_axi_aresetn),
       enable          => ps_2_i2s_sw_resetn,
 
       din             => ps_2_i2s_fifo_din,

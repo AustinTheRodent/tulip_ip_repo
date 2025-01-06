@@ -12,6 +12,7 @@ module tulip_dsp
   input  logic                    lut_tf_sw_resetn,
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
+  input  logic                    wawa_sw_resetn,
   input  logic                    vibrato_sw_resetn,
   input  logic                    chorus_sw_resetn,
 
@@ -19,6 +20,7 @@ module tulip_dsp
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
+  input  logic                    bypass_wawa,
   input  logic                    bypass_vibrato,
   input  logic                    bypass_chorus,
 
@@ -60,6 +62,18 @@ module tulip_dsp
   input  logic                              prog_vibrato_freq_deriv_din_valid,
   output logic                              prog_vibrato_freq_deriv_din_ready,
   output logic                              prog_vibrato_freq_deriv_din_done,
+
+  input  logic [63:0]                       prog_wawa_b_tap_tdata,
+  input  logic                              prog_wawa_b_tap_tvalid,
+  output logic                              prog_wawa_b_tap_tready,
+  output logic                              prog_wawa_b_done,
+
+  input  logic [63:0]                       prog_wawa_a_tap_tdata,
+  input  logic                              prog_wawa_a_tap_tvalid,
+  output logic                              prog_wawa_a_tap_tready,
+  output logic                              prog_wawa_a_done,
+
+  input  logic [7:0]                        wawa_input,
 
   input  logic [31:0]                       prog_vibrato_freq_offset_din,
   input  logic                              prog_vibrato_freq_offset_din_valid,
@@ -176,6 +190,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  user_fir_dout;
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  s_wawa_tdata;
+  logic                     s_wawa_tvalid;
+  logic                     s_wawa_tready;
+  logic [C_ADC_DWIDTH-1:0]  m_wawa_tdata;
+  logic                     m_wawa_tvalid;
+  logic                     m_wawa_tready;
 
   logic [C_ADC_DWIDTH-1:0]  vibrato_din;
   logic                     vibrato_din_valid;
@@ -306,151 +327,6 @@ module tulip_dsp
     .dout_ready (downsample_dout_ready)
   );
 
-//  assign fixed_to_float2_din = downsample_dout;
-//  assign fixed_to_float2_din_valid = downsample_dout_valid;
-//  assign downsample_dout_ready = fixed_to_float2_din_ready;
-//
-//  fixed_to_float
-//  #(
-//    .G_INTEGER_BITS   (C_ADC_DWIDTH),
-//    .G_FRACT_BITS     (0),
-//    .G_SIGNED_INPUT   (1),
-//    .G_BUFFER_INPUT   (1),
-//    .G_BUFFER_OUTPUT  (1)
-//  )
-//  u_fixed_to_float2
-//  (
-//    .clk              (clk),
-//    .reset            (reset),
-//    .enable           (global_sw_resetn),
-//
-//    .din              (fixed_to_float2_din),
-//    .din_valid        (fixed_to_float2_din_valid),
-//    .din_ready        (fixed_to_float2_din_ready),
-//    .din_last         (1'b0),
-//
-//    .dout             (fixed_to_float2_dout),
-//    .dout_valid       (fixed_to_float2_dout_valid),
-//    .dout_ready       (fixed_to_float2_dout_ready),
-//    .dout_last        ()
-//  );
-//
-//  assign iir_din = fixed_to_float2_dout;
-//  assign iir_din_valid = fixed_to_float2_dout_valid;
-//  assign fixed_to_float2_dout_ready = iir_din_ready;
-//
-//  always @ (posedge clk) begin
-//
-//    logic unsigned [7:0] b_taps_prog_counter;
-//    logic unsigned [7:0] a_taps_prog_counter;
-//
-//    static float_t iir_b_tap_din_array [0:2] =
-//    {
-//      32'h3F7F6E94,
-//      32'hBFFF6E94,
-//      32'h3F7F6E94
-//    };
-//
-//    static float_t iir_a_tap_din_array [0:2] =
-//    {
-//      32'h3F800000,
-//      32'hBFFF6E6A,
-//      32'h3F7EDD7A
-//    };
-//
-//    if (reset == 1 || global_sw_resetn == 0) begin
-//      iir_b_tap_din       <= iir_b_tap_din_array[0];
-//      iir_a_tap_din       <= iir_a_tap_din_array[0];
-//      b_taps_prog_counter <= 0;
-//      a_taps_prog_counter <= 0;
-//      iir_b_tap_din_valid <= 0;
-//      iir_a_tap_din_valid <= 0;
-//    end
-//    else begin
-//      iir_b_tap_din_valid <= 1;
-//      iir_a_tap_din_valid <= 1;
-//
-//      if (iir_b_tap_din_valid == 1 && iir_b_tap_din_ready == 1) begin
-//        if (b_taps_prog_counter < 2) begin
-//          iir_b_tap_din       <= iir_b_tap_din_array[b_taps_prog_counter+1];
-//          b_taps_prog_counter <= b_taps_prog_counter + 1;
-//        end
-//      end
-//
-//      if (iir_a_tap_din_valid == 1 && iir_a_tap_din_ready == 1) begin
-//        if (a_taps_prog_counter < 2) begin
-//          iir_a_tap_din       <= iir_a_tap_din_array[a_taps_prog_counter+1];
-//          a_taps_prog_counter <= a_taps_prog_counter + 1;
-//        end
-//      end
-//
-//    end
-//  end
-//
-//
-//  tiny_iir_floating_point
-//  #(
-//    .G_DEGREE(3)
-//  )
-//  u_tiny_iir_floating_point_dc_blocker
-//  (
-//    .clk            (clk),
-//    .reset          (reset),
-//    .enable         (global_sw_resetn),
-//    .bypass         (1'b1),
-//
-//    .b_tap          (iir_b_tap_din),
-//    .b_tap_valid    (iir_b_tap_din_valid),
-//    .b_tap_ready    (iir_b_tap_din_ready),
-//    .b_tap_done     (iir_b_tap_din_done),
-//
-//    .a_tap          (iir_a_tap_din),
-//    .a_tap_valid    (iir_a_tap_din_valid),
-//    .a_tap_ready    (iir_a_tap_din_ready),
-//    .a_tap_done     (iir_a_tap_din_done),
-//
-//    .din            (iir_din),
-//    .din_valid      (iir_din_valid),
-//    .din_ready      (iir_din_ready),
-//
-//    .dout           (iir_dout),
-//    .dout_valid     (iir_dout_valid),
-//    .dout_ready     (iir_dout_ready)
-//  );
-//
-//  assign float_to_fixed2_din = iir_dout;
-//  assign float_to_fixed2_din_valid = iir_dout_valid;
-//  assign iir_dout_ready = float_to_fixed2_din_ready;
-//
-//  float_to_fixed
-//  #(
-//    .G_INTEGER_BITS   (C_ADC_DWIDTH),
-//    .G_FRACT_BITS     (0),
-//    .G_SIGNED_OUTPUT  (1),
-//    .G_BUFFER_INPUT   (1),
-//    .G_BUFFER_OUTPUT  (1)
-//  )
-//  u_float_to_fixed2
-//  (
-//    .clk              (clk),
-//    .reset            (reset),
-//    .enable           (global_sw_resetn),
-//
-//    .din              (float_to_fixed2_din),
-//    .din_valid        (float_to_fixed2_din_valid),
-//    .din_ready        (float_to_fixed2_din_ready),
-//    .din_last         (1'b0),
-//
-//    .dout             (float_to_fixed2_dout),
-//    .dout_valid       (float_to_fixed2_dout_valid),
-//    .dout_ready       (float_to_fixed2_dout_ready),
-//    .dout_last        ()
-//  );
-//
-//  assign user_fir_din = (bypass_lut_tf == 0) ? float_to_fixed2_dout : gain0_dout;
-//  assign user_fir_din_valid = (bypass_lut_tf == 0) ? float_to_fixed2_dout_valid : gain0_dout_valid;
-//  assign float_to_fixed2_dout_ready = (bypass_usr_fir == 0) ? user_fir_din_ready : user_fir_dout_ready;
-
   assign dc_blocker_din = downsample_dout;
   assign dc_blocker_din_valid = downsample_dout_valid;
   assign downsample_dout_ready = dc_blocker_din_ready;
@@ -528,9 +404,53 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign vibrato_din       = gain1_dout;
-  assign vibrato_din_valid = gain1_dout_valid;
-  assign gain1_dout_ready = vibrato_din_ready;
+  assign s_wawa_tdata = gain1_dout;
+  assign s_wawa_tvalid = gain1_dout_valid;
+  assign gain1_dout_ready = s_wawa_tready;
+
+  wawa_iir
+  #(
+    .G_BRAM_ADDRWIDTH     (8),
+    .G_NUM_B_TAPS         (3),
+    .G_NUM_A_TAPS         (3),
+    .G_TAP_INTEGER_BITS   (2),
+    .G_TAP_DWIDTH         (64),
+    .G_DWIDTH             (64),
+    .G_REFRESH_RATE       (4800),
+    .G_ADC_DWIDTH         (C_ADC_DWIDTH)
+  )
+  u_wawa_iir
+  (
+    .clk                  (clk),
+    .reset                (reset | ~global_sw_resetn | ~wawa_sw_resetn),
+    .bypass               (bypass_wawa),
+
+    .s_prog_b_tap_tdata   (prog_wawa_b_tap_tdata),
+    .s_prog_b_tap_tvalid  (prog_wawa_b_tap_tvalid),
+    .s_prog_b_tap_tready  (prog_wawa_b_tap_tready),
+    .prog_b_done          (prog_wawa_b_done),
+
+    .s_prog_a_tap_tdata   (prog_wawa_a_tap_tdata),
+    .s_prog_a_tap_tvalid  (prog_wawa_a_tap_tvalid),
+    .s_prog_a_tap_tready  (prog_wawa_a_tap_tready),
+    .prog_a_done          (prog_wawa_a_done),
+
+    .pedal_input          (wawa_input),
+
+    .s_wawa_tdata         (s_wawa_tdata),
+    .s_wawa_tvalid        (s_wawa_tvalid),
+    .s_wawa_tready        (s_wawa_tready),
+
+    .m_wawa_tdata         (m_wawa_tdata),
+    .m_wawa_tvalid        (m_wawa_tvalid),
+    .m_wawa_tready        (m_wawa_tready)
+  );
+
+
+  assign vibrato_din        = m_wawa_tdata;
+  assign vibrato_din_valid  = m_wawa_tvalid;
+  assign m_wawa_tready      = vibrato_din_ready;
+
 
   vibrato
   #(

@@ -97,7 +97,7 @@ begin
       s_TRANSACTION_COUNT_COUNT               => std_logic_vector(transaction_count),
       s_TRANSACTION_COUNT_COUNT_v             => '1',
 
-      s_TRANSACTION_VALUE_DATA                => fifo_dout,
+      s_TRANSACTION_VALUE_DATA                => fifo_dout(31 downto 0),
       s_TRANSACTION_VALUE_DATA_v              => fifo_dout_valid,
 
       s_GLOBAL_STATUS_TRANSACTION_OVERFLOW    => (others => '0'),

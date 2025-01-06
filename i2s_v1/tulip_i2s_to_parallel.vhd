@@ -12,7 +12,7 @@ entity tulip_i2s_to_parallel is
   port
   (
     clk           : in  std_logic;
-    reset         : in  std_logic;
+    resetn        : in  std_logic;
     enable        : in  std_logic;
 
     error         : out std_logic;
@@ -84,7 +84,7 @@ begin
     variable v_posedge_count : integer range 0 to 1023;
   begin
     if rising_edge(clk) then
-      if reset = '1' or enable = '0' then
+      if resetn = '0' or enable = '0' then
         dout_valid_int        <= '0';
         error                 <= '0';
         dout_left_construct   <= (others => '0');

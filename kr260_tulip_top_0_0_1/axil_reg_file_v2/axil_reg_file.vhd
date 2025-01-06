@@ -8,11 +8,17 @@ package axil_reg_file_pkg is
   constant C_REG_FILE_ADDR_WIDTH : integer := 12;
 
   type CONTROL_subreg_t is record
+    DSP_MUTE : std_logic_vector(0 downto 0);
     DSP_ENABLE : std_logic_vector(0 downto 0);
     PS_2_I2S_ENABLE : std_logic_vector(0 downto 0);
     I2S_2_PS_ENABLE : std_logic_vector(0 downto 0);
     I2S_ENABLE : std_logic_vector(0 downto 0);
     SW_RESETN : std_logic_vector(0 downto 0);
+  end record;
+
+  type COUNTER_RESETS_subreg_t is record
+    RESET_US : std_logic_vector(0 downto 0);
+    RESET_MS : std_logic_vector(0 downto 0);
   end record;
 
   type I2C_CONTROL_subreg_t is record
@@ -31,6 +37,8 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    SW_RESETN_WAWA : std_logic_vector(0 downto 0);
+    BYPASS_WAWA : std_logic_vector(0 downto 0);
     SW_RESETN_CHORUS : std_logic_vector(0 downto 0);
     BYPASS_CHORUS : std_logic_vector(0 downto 0);
     SW_RESETN_VIBRATO : std_logic_vector(0 downto 0);
@@ -108,10 +116,33 @@ package axil_reg_file_pkg is
     LFO_FREQ : std_logic_vector(31 downto 0);
   end record;
 
+  type TULIP_DSP_WAWA_B_TAP_DATA_MSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_WAWA_B_TAP_DATA_LSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_WAWA_A_TAP_DATA_MSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_WAWA_A_TAP_DATA_LSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_WAWA_LUT_TEST_subreg_t is record
+    DATA : std_logic_vector(7 downto 0);
+  end record;
+
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     VERSION_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    COUNTER_RESETS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    COUNTER_US_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    COUNTER_MS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     I2C_CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     I2C_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     I2S_STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -139,7 +170,13 @@ package axil_reg_file_pkg is
     TULIP_DSP_CHORUS_AVG_DELAY_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_CHORUS_LFO_DEPTH_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_CHORUS_LFO_FREQ_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_WAWA_LUT_TEST_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
+    COUNTER_RESETS : COUNTER_RESETS_subreg_t;
     I2C_CONTROL : I2C_CONTROL_subreg_t;
     PS_2_I2S_FIFO_WRITE_L : PS_2_I2S_FIFO_WRITE_L_subreg_t;
     PS_2_I2S_FIFO_WRITE_R : PS_2_I2S_FIFO_WRITE_R_subreg_t;
@@ -159,8 +196,16 @@ package axil_reg_file_pkg is
     TULIP_DSP_CHORUS_AVG_DELAY : TULIP_DSP_CHORUS_AVG_DELAY_subreg_t;
     TULIP_DSP_CHORUS_LFO_DEPTH : TULIP_DSP_CHORUS_LFO_DEPTH_subreg_t;
     TULIP_DSP_CHORUS_LFO_FREQ : TULIP_DSP_CHORUS_LFO_FREQ_subreg_t;
+    TULIP_DSP_WAWA_B_TAP_DATA_MSB : TULIP_DSP_WAWA_B_TAP_DATA_MSB_subreg_t;
+    TULIP_DSP_WAWA_B_TAP_DATA_LSB : TULIP_DSP_WAWA_B_TAP_DATA_LSB_subreg_t;
+    TULIP_DSP_WAWA_A_TAP_DATA_MSB : TULIP_DSP_WAWA_A_TAP_DATA_MSB_subreg_t;
+    TULIP_DSP_WAWA_A_TAP_DATA_LSB : TULIP_DSP_WAWA_A_TAP_DATA_LSB_subreg_t;
+    TULIP_DSP_WAWA_LUT_TEST : TULIP_DSP_WAWA_LUT_TEST_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
     VERSION_REG_wr_pulse : std_logic;
+    COUNTER_RESETS_REG_wr_pulse : std_logic;
+    COUNTER_US_REG_wr_pulse : std_logic;
+    COUNTER_MS_REG_wr_pulse : std_logic;
     I2C_CONTROL_REG_wr_pulse : std_logic;
     I2C_STATUS_REG_wr_pulse : std_logic;
     I2S_STATUS_REG_wr_pulse : std_logic;
@@ -188,8 +233,16 @@ package axil_reg_file_pkg is
     TULIP_DSP_CHORUS_AVG_DELAY_REG_wr_pulse : std_logic;
     TULIP_DSP_CHORUS_LFO_DEPTH_REG_wr_pulse : std_logic;
     TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse : std_logic;
+    TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_WAWA_LUT_TEST_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     VERSION_REG_rd_pulse : std_logic;
+    COUNTER_RESETS_REG_rd_pulse : std_logic;
+    COUNTER_US_REG_rd_pulse : std_logic;
+    COUNTER_MS_REG_rd_pulse : std_logic;
     I2C_CONTROL_REG_rd_pulse : std_logic;
     I2C_STATUS_REG_rd_pulse : std_logic;
     I2S_STATUS_REG_rd_pulse : std_logic;
@@ -217,6 +270,11 @@ package axil_reg_file_pkg is
     TULIP_DSP_CHORUS_AVG_DELAY_REG_rd_pulse : std_logic;
     TULIP_DSP_CHORUS_LFO_DEPTH_REG_rd_pulse : std_logic;
     TULIP_DSP_CHORUS_LFO_FREQ_REG_rd_pulse : std_logic;
+    TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_WAWA_LUT_TEST_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -238,6 +296,12 @@ entity axil_reg_file is
 
     s_VERSION_VERSION : in std_logic_vector(31 downto 0);
     s_VERSION_VERSION_v : in std_logic;
+
+    s_COUNTER_US_TICK_US : in std_logic_vector(31 downto 0);
+    s_COUNTER_US_TICK_US_v : in std_logic;
+
+    s_COUNTER_MS_TICK_MS : in std_logic_vector(31 downto 0);
+    s_COUNTER_MS_TICK_MS_v : in std_logic;
 
     s_I2C_STATUS_DIN_READY : in std_logic_vector(0 downto 0);
     s_I2C_STATUS_DIN_READY_v : in std_logic;
@@ -277,6 +341,18 @@ entity axil_reg_file is
 
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE : in std_logic_vector(15 downto 0);
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_WAWA_PROG_A_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_WAWA_PROG_B_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_WAWA_PROG_B_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE_v : in std_logic;
 
     s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE : in std_logic_vector(0 downto 0);
     s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE_v : in std_logic;
@@ -375,6 +451,9 @@ architecture rtl of axil_reg_file is
 
   constant CONTROL_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 0;
   constant VERSION_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 4;
+  constant COUNTER_RESETS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 1024;
+  constant COUNTER_US_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 1028;
+  constant COUNTER_MS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 1032;
   constant I2C_CONTROL_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 8;
   constant I2C_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 12;
   constant I2S_STATUS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 16;
@@ -402,6 +481,11 @@ architecture rtl of axil_reg_file is
   constant TULIP_DSP_CHORUS_AVG_DELAY_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 104;
   constant TULIP_DSP_CHORUS_LFO_DEPTH_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 108;
   constant TULIP_DSP_CHORUS_LFO_FREQ_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 112;
+  constant TULIP_DSP_WAWA_B_TAP_DATA_MSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 116;
+  constant TULIP_DSP_WAWA_B_TAP_DATA_LSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 120;
+  constant TULIP_DSP_WAWA_A_TAP_DATA_MSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 124;
+  constant TULIP_DSP_WAWA_A_TAP_DATA_LSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 128;
+  constant TULIP_DSP_WAWA_LUT_TEST_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 132;
 
   signal registers          : reg_t;
 
@@ -419,17 +503,22 @@ architecture rtl of axil_reg_file is
 
 begin
 
+  registers.CONTROL.DSP_MUTE <= registers.CONTROL_REG(5 downto 5);
   registers.CONTROL.DSP_ENABLE <= registers.CONTROL_REG(4 downto 4);
   registers.CONTROL.PS_2_I2S_ENABLE <= registers.CONTROL_REG(3 downto 3);
   registers.CONTROL.I2S_2_PS_ENABLE <= registers.CONTROL_REG(2 downto 2);
   registers.CONTROL.I2S_ENABLE <= registers.CONTROL_REG(1 downto 1);
   registers.CONTROL.SW_RESETN <= registers.CONTROL_REG(0 downto 0);
+  registers.COUNTER_RESETS.RESET_US <= registers.COUNTER_RESETS_REG(0 downto 0);
+  registers.COUNTER_RESETS.RESET_MS <= registers.COUNTER_RESETS_REG(1 downto 1);
   registers.I2C_CONTROL.I2C_IS_READ <= registers.I2C_CONTROL_REG(23 downto 23);
   registers.I2C_CONTROL.DEVICE_ADDRESS <= registers.I2C_CONTROL_REG(22 downto 16);
   registers.I2C_CONTROL.REGISTER_ADDRESS <= registers.I2C_CONTROL_REG(15 downto 9);
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA <= registers.TULIP_DSP_CONTROL_REG(13 downto 13);
+  registers.TULIP_DSP_CONTROL.BYPASS_WAWA <= registers.TULIP_DSP_CONTROL_REG(12 downto 12);
   registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS <= registers.TULIP_DSP_CONTROL_REG(10 downto 10);
   registers.TULIP_DSP_CONTROL.BYPASS_CHORUS <= registers.TULIP_DSP_CONTROL_REG(11 downto 11);
   registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO <= registers.TULIP_DSP_CONTROL_REG(8 downto 8);
@@ -460,6 +549,11 @@ begin
   registers.TULIP_DSP_CHORUS_AVG_DELAY.AVG_DELAY <= registers.TULIP_DSP_CHORUS_AVG_DELAY_REG(11 downto 0);
   registers.TULIP_DSP_CHORUS_LFO_DEPTH.LFO_DEPTH <= registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG(11 downto 0);
   registers.TULIP_DSP_CHORUS_LFO_FREQ.LFO_FREQ <= registers.TULIP_DSP_CHORUS_LFO_FREQ_REG(31 downto 0);
+  registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB.DATA <= registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG(31 downto 0);
+  registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB.DATA <= registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG(31 downto 0);
+  registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB.DATA <= registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG(31 downto 0);
+  registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB.DATA <= registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG(31 downto 0);
+  registers.TULIP_DSP_WAWA_LUT_TEST.DATA <= registers.TULIP_DSP_WAWA_LUT_TEST_REG(7 downto 0);
 
   registers_out <= registers;
 
@@ -474,7 +568,9 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"00000048";
+        registers.VERSION_REG <= x"00000051";
+        registers.COUNTER_US_REG <= x"00000000";
+        registers.COUNTER_MS_REG <= x"00000000";
         registers.I2C_STATUS_REG <= x"00000000";
         registers.I2S_STATUS_REG <= x"00000000";
         registers.I2S_FIFO_REG <= x"00000000";
@@ -486,6 +582,12 @@ begin
       else
         if s_VERSION_VERSION_v = '1' then 
           registers.VERSION_REG(31 downto 0) <= s_VERSION_VERSION;
+        end if;
+        if s_COUNTER_US_TICK_US_v = '1' then 
+          registers.COUNTER_US_REG(31 downto 0) <= s_COUNTER_US_TICK_US;
+        end if;
+        if s_COUNTER_MS_TICK_MS_v = '1' then 
+          registers.COUNTER_MS_REG(31 downto 0) <= s_COUNTER_MS_TICK_MS;
         end if;
         if s_I2C_STATUS_DIN_READY_v = '1' then 
           registers.I2C_STATUS_REG(13 downto 13) <= s_I2C_STATUS_DIN_READY;
@@ -525,6 +627,18 @@ begin
         end if;
         if s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v = '1' then 
           registers.PS_2_I2S_FIFO_COUNT_REG(15 downto 0) <= s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE;
+        end if;
+        if s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(25 downto 25) <= s_TULIP_DSP_STATUS_WAWA_PROG_A_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(24 downto 24) <= s_TULIP_DSP_STATUS_WAWA_PROG_A_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_WAWA_PROG_B_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(23 downto 23) <= s_TULIP_DSP_STATUS_WAWA_PROG_B_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(22 downto 22) <= s_TULIP_DSP_STATUS_WAWA_PROG_B_DONE;
         end if;
         if s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE_v = '1' then 
           registers.TULIP_DSP_STATUS_REG(21 downto 21) <= s_TULIP_DSP_STATUS_CHORUS_LFO_FREQ_PROG_DONE;
@@ -601,6 +715,7 @@ begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
         registers.CONTROL_REG <= x"00000000";
+        registers.COUNTER_RESETS_REG <= x"00000000";
         registers.I2C_CONTROL_REG <= x"00000000";
         registers.PS_2_I2S_FIFO_WRITE_L_REG <= x"00000000";
         registers.PS_2_I2S_FIFO_WRITE_R_REG <= x"00000000";
@@ -620,9 +735,17 @@ begin
         registers.TULIP_DSP_CHORUS_AVG_DELAY_REG <= x"00000000";
         registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG <= x"00000000";
         registers.TULIP_DSP_CHORUS_LFO_FREQ_REG <= x"00000000";
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG <= x"00000000";
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG <= x"00000000";
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG <= x"00000000";
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG <= x"00000000";
+        registers.TULIP_DSP_WAWA_LUT_TEST_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
         registers.VERSION_REG_wr_pulse <= '0';
+        registers.COUNTER_RESETS_REG_wr_pulse <= '0';
+        registers.COUNTER_US_REG_wr_pulse <= '0';
+        registers.COUNTER_MS_REG_wr_pulse <= '0';
         registers.I2C_CONTROL_REG_wr_pulse <= '0';
         registers.I2C_STATUS_REG_wr_pulse <= '0';
         registers.I2S_STATUS_REG_wr_pulse <= '0';
@@ -650,6 +773,11 @@ begin
         registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_wr_pulse <= '0';
         registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_wr_pulse <= '0';
         registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_WAWA_LUT_TEST_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -658,6 +786,9 @@ begin
           when init =>
             registers.CONTROL_REG_wr_pulse <= '0';
             registers.VERSION_REG_wr_pulse <= '0';
+            registers.COUNTER_RESETS_REG_wr_pulse <= '0';
+            registers.COUNTER_US_REG_wr_pulse <= '0';
+            registers.COUNTER_MS_REG_wr_pulse <= '0';
             registers.I2C_CONTROL_REG_wr_pulse <= '0';
             registers.I2C_STATUS_REG_wr_pulse <= '0';
             registers.I2S_STATUS_REG_wr_pulse <= '0';
@@ -685,6 +816,11 @@ begin
             registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_LUT_TEST_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -693,6 +829,9 @@ begin
           when get_addr =>
             registers.CONTROL_REG_wr_pulse <= '0';
             registers.VERSION_REG_wr_pulse <= '0';
+            registers.COUNTER_RESETS_REG_wr_pulse <= '0';
+            registers.COUNTER_US_REG_wr_pulse <= '0';
+            registers.COUNTER_MS_REG_wr_pulse <= '0';
             registers.I2C_CONTROL_REG_wr_pulse <= '0';
             registers.I2C_STATUS_REG_wr_pulse <= '0';
             registers.I2S_STATUS_REG_wr_pulse <= '0';
@@ -720,6 +859,11 @@ begin
             registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_wr_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_WAWA_LUT_TEST_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -734,6 +878,9 @@ begin
                 when std_logic_vector(to_unsigned(CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.CONTROL_REG <= s_axi_wdata;
                   registers.CONTROL_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(COUNTER_RESETS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.COUNTER_RESETS_REG <= s_axi_wdata;
+                  registers.COUNTER_RESETS_REG_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.I2C_CONTROL_REG <= s_axi_wdata;
                   registers.I2C_CONTROL_REG_wr_pulse <= '1';
@@ -791,6 +938,21 @@ begin
                 when std_logic_vector(to_unsigned(TULIP_DSP_CHORUS_LFO_FREQ_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_CHORUS_LFO_FREQ_REG <= s_axi_wdata;
                   registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_LUT_TEST_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_LUT_TEST_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_WAWA_LUT_TEST_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -821,6 +983,9 @@ begin
         s_axi_rdata       <= (others => '0');
         registers.CONTROL_REG_rd_pulse <= '0';
         registers.VERSION_REG_rd_pulse <= '0';
+        registers.COUNTER_RESETS_REG_rd_pulse <= '0';
+        registers.COUNTER_US_REG_rd_pulse <= '0';
+        registers.COUNTER_MS_REG_rd_pulse <= '0';
         registers.I2C_CONTROL_REG_rd_pulse <= '0';
         registers.I2C_STATUS_REG_rd_pulse <= '0';
         registers.I2S_STATUS_REG_rd_pulse <= '0';
@@ -848,6 +1013,11 @@ begin
         registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_rd_pulse <= '0';
         registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_rd_pulse <= '0';
         registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_WAWA_LUT_TEST_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -856,6 +1026,9 @@ begin
           when init =>
             registers.CONTROL_REG_rd_pulse <= '0';
             registers.VERSION_REG_rd_pulse <= '0';
+            registers.COUNTER_RESETS_REG_rd_pulse <= '0';
+            registers.COUNTER_US_REG_rd_pulse <= '0';
+            registers.COUNTER_MS_REG_rd_pulse <= '0';
             registers.I2C_CONTROL_REG_rd_pulse <= '0';
             registers.I2C_STATUS_REG_rd_pulse <= '0';
             registers.I2S_STATUS_REG_rd_pulse <= '0';
@@ -883,6 +1056,11 @@ begin
             registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_LUT_TEST_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -891,6 +1069,9 @@ begin
           when get_addr =>
             registers.CONTROL_REG_rd_pulse <= '0';
             registers.VERSION_REG_rd_pulse <= '0';
+            registers.COUNTER_RESETS_REG_rd_pulse <= '0';
+            registers.COUNTER_US_REG_rd_pulse <= '0';
+            registers.COUNTER_MS_REG_rd_pulse <= '0';
             registers.I2C_CONTROL_REG_rd_pulse <= '0';
             registers.I2C_STATUS_REG_rd_pulse <= '0';
             registers.I2S_STATUS_REG_rd_pulse <= '0';
@@ -918,6 +1099,11 @@ begin
             registers.TULIP_DSP_CHORUS_AVG_DELAY_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_rd_pulse <= '0';
             registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_WAWA_LUT_TEST_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -931,6 +1117,12 @@ begin
                 s_axi_rdata <= registers.CONTROL_REG;
               when std_logic_vector(to_unsigned(VERSION_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.VERSION_REG;
+              when std_logic_vector(to_unsigned(COUNTER_RESETS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.COUNTER_RESETS_REG;
+              when std_logic_vector(to_unsigned(COUNTER_US_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.COUNTER_US_REG;
+              when std_logic_vector(to_unsigned(COUNTER_MS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.COUNTER_MS_REG;
               when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.I2C_CONTROL_REG;
               when std_logic_vector(to_unsigned(I2C_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
@@ -985,6 +1177,16 @@ begin
                 s_axi_rdata <= registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_CHORUS_LFO_FREQ_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_CHORUS_LFO_FREQ_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_LUT_TEST_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_WAWA_LUT_TEST_REG;
               when others =>
                 null;
             end case;
@@ -995,6 +1197,12 @@ begin
                   registers.CONTROL_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(VERSION_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.VERSION_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(COUNTER_RESETS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.COUNTER_RESETS_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(COUNTER_US_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.COUNTER_US_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(COUNTER_MS_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.COUNTER_MS_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(I2C_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.I2C_CONTROL_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(I2C_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
@@ -1049,6 +1257,16 @@ begin
                   registers.TULIP_DSP_CHORUS_LFO_DEPTH_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_CHORUS_LFO_FREQ_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_MSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_A_TAP_DATA_LSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_WAWA_LUT_TEST_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_WAWA_LUT_TEST_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;
