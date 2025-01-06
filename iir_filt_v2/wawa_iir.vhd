@@ -64,7 +64,8 @@ entity wawa_iir is
     G_TAP_INTEGER_BITS    : integer := 2;
     G_TAP_DWIDTH          : integer := 64; -- keep these large
     G_DWIDTH              : integer := 64; -- keep these large
-    G_REFRESH_RATE        : integer := 4800 -- samples
+    G_REFRESH_RATE        : integer := 4800; -- samples
+    G_ADC_DWIDTH          : integer := 24
   );
   port
   (
@@ -84,11 +85,13 @@ entity wawa_iir is
 
     pedal_input           : in  std_logic_vector(G_BRAM_ADDRWIDTH-1 downto 0);
 
-    s_wawa_tdata          : in  std_logic_vector(G_DWIDTH-1 downto 0);
+    --s_wawa_tdata          : in  std_logic_vector(G_DWIDTH-1 downto 0);
+    s_wawa_tdata          : in  std_logic_vector(G_ADC_DWIDTH-1 downto 0);
     s_wawa_tvalid         : in  std_logic;
     s_wawa_tready         : out std_logic;
 
-    m_wawa_tdata          : out std_logic_vector(G_DWIDTH-1 downto 0);
+    --m_wawa_tdata          : out std_logic_vector(G_DWIDTH-1 downto 0);
+    m_wawa_tdata          : out std_logic_vector(G_ADC_DWIDTH-1 downto 0);
     m_wawa_tvalid         : out std_logic;
     m_wawa_tready         : in  std_logic
   );
@@ -150,6 +153,8 @@ architecture rtl of wawa_iir is
   signal m_iir_tlast                : std_logic;
 
   signal sample_counter             : unsigned(31 downto 0);
+
+  signal m_wawa_tdata_long          : std_logic_vector(G_DWIDTH-1 downto 0);
 
 begin
 
@@ -327,12 +332,15 @@ begin
   s_prog_core_a_tap_tdata  <= rd_a_bram_data;
   s_prog_core_a_tap_tvalid <= rd_a_bram_dout_valid;
 
-  s_iir_tdata   <= s_wawa_tdata;
+  --s_iir_tdata   <= std_logic_vector(resize(shift_left(signed(s_wawa_tdata), G_DWIDTH - G_ADC_DWIDTH - G_TAP_INTEGER_BITS), G_DWIDTH));
+  s_iir_tdata   <= std_logic_vector(shift_left(resize(signed(s_wawa_tdata), G_DWIDTH), G_DWIDTH - G_ADC_DWIDTH - G_TAP_INTEGER_BITS));
   s_iir_tvalid  <= s_wawa_tvalid when state = SM_RUN_IIR else '0';
   s_wawa_tready <= m_wawa_tready when bypass = '1' else s_iir_tready when state = SM_RUN_IIR else '0';
   s_iir_tlast   <= s_iir_tvalid when sample_counter = G_REFRESH_RATE-1 else '0';
 
-  m_wawa_tdata  <= s_wawa_tdata when bypass = '1' else m_iir_tdata;
+  --m_wawa_tdata  <= s_wawa_tdata when bypass = '1' else m_iir_tdata;
+  m_wawa_tdata_long  <= s_iir_tdata when bypass = '1' else m_iir_tdata;
+  m_wawa_tdata  <= std_logic_vector(resize(shift_right(signed(m_wawa_tdata_long), G_DWIDTH - G_ADC_DWIDTH - G_TAP_INTEGER_BITS), G_ADC_DWIDTH));
   m_wawa_tvalid <= s_wawa_tvalid when bypass = '1' else m_iir_tvalid;
   m_iir_tready  <= m_wawa_tready;
 

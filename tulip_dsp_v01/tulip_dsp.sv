@@ -191,10 +191,10 @@ module tulip_dsp
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
 
-  logic [63:0]              s_wawa_tdata;
+  logic [C_ADC_DWIDTH-1:0]  s_wawa_tdata;
   logic                     s_wawa_tvalid;
   logic                     s_wawa_tready;
-  logic [63:0]              m_wawa_tdata;
+  logic [C_ADC_DWIDTH-1:0]  m_wawa_tdata;
   logic                     m_wawa_tvalid;
   logic                     m_wawa_tready;
 
@@ -404,19 +404,20 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign s_wawa_tdata[61-:C_ADC_DWIDTH] = gain1_dout;
+  assign s_wawa_tdata = gain1_dout;
   assign s_wawa_tvalid = gain1_dout_valid;
   assign gain1_dout_ready = s_wawa_tready;
 
   wawa_iir
   #(
     .G_BRAM_ADDRWIDTH     (8),
-    .G_NUM_B_TAPS         (8),
-    .G_NUM_A_TAPS         (8),
+    .G_NUM_B_TAPS         (3),
+    .G_NUM_A_TAPS         (3),
     .G_TAP_INTEGER_BITS   (2),
     .G_TAP_DWIDTH         (64),
     .G_DWIDTH             (64),
-    .G_REFRESH_RATE       (4800)
+    .G_REFRESH_RATE       (4800),
+    .G_ADC_DWIDTH         (C_ADC_DWIDTH)
   )
   u_wawa_iir
   (
@@ -446,7 +447,7 @@ module tulip_dsp
   );
 
 
-  assign vibrato_din        = m_wawa_tdata[61-:C_ADC_DWIDTH];
+  assign vibrato_din        = m_wawa_tdata;
   assign vibrato_din_valid  = m_wawa_tvalid;
   assign m_wawa_tready      = vibrato_din_ready;
 
