@@ -12,6 +12,7 @@ module tulip_dsp
   input  logic                    lut_tf_sw_resetn,
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
+  input  logic                    tremelo_sw_resetn,
   input  logic                    wawa_sw_resetn,
   input  logic                    vibrato_sw_resetn,
   input  logic                    chorus_sw_resetn,
@@ -20,6 +21,7 @@ module tulip_dsp
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
+  input  logic                    bypass_tremelo,
   input  logic                    bypass_wawa,
   input  logic                    bypass_vibrato,
   input  logic                    bypass_chorus,
@@ -62,6 +64,9 @@ module tulip_dsp
   input  logic                              prog_vibrato_freq_deriv_din_valid,
   output logic                              prog_vibrato_freq_deriv_din_ready,
   output logic                              prog_vibrato_freq_deriv_din_done,
+
+  input  logic [C_ADC_DWIDTH-1:0]           tremelo_rate,
+  input  logic [C_ADC_DWIDTH-1:0]           tremelo_depth,
 
   input  logic [63:0]                       prog_wawa_b_tap_tdata,
   input  logic                              prog_wawa_b_tap_tvalid,
@@ -190,6 +195,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  user_fir_dout;
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  s_tremelo_tdata;
+  logic                     s_tremelo_tvalid;
+  logic                     s_tremelo_tready;
+  logic [C_ADC_DWIDTH-1:0]  m_tremelo_tdata;
+  logic                     m_tremelo_tvalid;
+  logic                     m_tremelo_tready;
 
   logic [C_ADC_DWIDTH-1:0]  s_wawa_tdata;
   logic                     s_wawa_tvalid;
@@ -404,9 +416,40 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign s_wawa_tdata = gain1_dout;
-  assign s_wawa_tvalid = gain1_dout_valid;
-  assign gain1_dout_ready = s_wawa_tready;
+  //assign s_wawa_tdata = gain1_dout;
+  //assign s_wawa_tvalid = gain1_dout_valid;
+  //assign gain1_dout_ready = s_wawa_tready;
+
+
+  assign s_tremelo_tdata = gain1_dout;
+  assign s_tremelo_tvalid = gain1_dout_valid;
+  assign gain1_dout_ready = s_tremelo_tready;
+
+  tremelo
+  #(
+    .G_DWIDTH          (C_ADC_DWIDTH)
+  )
+  u_tremelo
+  (
+    .clk               (clk),
+    .reset             (reset | ~global_sw_resetn | ~tremelo_sw_resetn),
+    .bypass            (bypass_tremelo),
+
+    .tremelo_rate      (tremelo_rate),
+    .tremelo_depth     (tremelo_depth),
+
+    .s_tremelo_tdata   (s_tremelo_tdata),
+    .s_tremelo_tvalid  (s_tremelo_tvalid),
+    .s_tremelo_tready  (s_tremelo_tready),
+
+    .m_tremelo_tdata   (m_tremelo_tdata),
+    .m_tremelo_tvalid  (m_tremelo_tvalid),
+    .m_tremelo_tready  (m_tremelo_tready)
+  );
+
+  assign s_wawa_tdata  = m_tremelo_tdata;
+  assign s_wawa_tvalid = m_tremelo_tvalid;
+  assign m_tremelo_tready = s_wawa_tready;
 
   wawa_iir
   #(
@@ -416,7 +459,7 @@ module tulip_dsp
     .G_TAP_INTEGER_BITS   (2),
     .G_TAP_DWIDTH         (64),
     .G_DWIDTH             (64),
-    .G_REFRESH_RATE       (4800),
+    .G_REFRESH_RATE       (48),
     .G_ADC_DWIDTH         (C_ADC_DWIDTH)
   )
   u_wawa_iir

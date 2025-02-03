@@ -547,12 +547,14 @@ begin
       lut_tf_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
       usr_fir_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
       reverb_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+      tremelo_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_TREMELO(0),
       wawa_sw_resetn                      => registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA(0),
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
+      bypass_tremelo                      => registers.TULIP_DSP_CONTROL.BYPASS_TREMELO(0),
       bypass_wawa                         => registers.TULIP_DSP_CONTROL.BYPASS_WAWA(0),
       bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
       bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
@@ -582,6 +584,9 @@ begin
       reverb_taps_prog_din_valid          => registers.TULIP_DSP_REVERB_PROG_REG_wr_pulse,
       reverb_taps_prog_din_ready          => reverb_taps_prog_din_ready(0),
       reverb_taps_prog_done               => reverb_taps_prog_done(0),
+
+      tremelo_rate                        => registers.TULIP_DSP_TREMELO_RATE.RATE,
+      tremelo_depth                       => registers.TULIP_DSP_TREMELO_DEPTH.DEPTH,
 
       prog_wawa_b_tap_tdata               => registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB.DATA,                -- [63:0]
       prog_wawa_b_tap_tvalid              => registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse,
