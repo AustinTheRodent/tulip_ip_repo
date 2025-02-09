@@ -133,6 +133,13 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
             wr_line = add_spaces(wr_line, num_spaces)
             wr_line += "  registers.%s_REG_wr_pulse <= '1';\n" % registers[i][0]
             reg_file_obj.write(wr_line)
+          elif registers[i][1] == "RO":
+            wr_line = ""
+            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % registers[i][0]
+            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line += "  registers.%s_REG_wr_pulse <= '1';\n" % registers[i][0]
+            reg_file_obj.write(wr_line)
       elif type == "araddr case":
         for i in range(len(registers)):
           wr_line = ""

@@ -1,4 +1,4 @@
-module wm8960_i2c_core
+module mcp3221_i2c_core
 #(
   parameter int G_CLK_DIVIDER = 10
 )

@@ -39,6 +39,9 @@ entity mcp3221_i2c is
     mcp3221_i2c_sda   : inout std_logic;
     mcp3221_i2c_sclk  : out   std_logic;
 
+    m_axis_aclk       : in  std_logic;
+    m_axis_aresetn    : in  std_logic;
+
     m_axis_tdata      : out std_logic_vector(15 downto 0);
     m_axis_tvalid     : out std_logic;
     m_axis_tready     : in  std_logic
@@ -60,7 +63,7 @@ architecture rtl of mcp3221_i2c is
   signal core_i2c_sclk            : std_logic;
 
   signal core_dout_register_data  : std_logic_vector(15 downto 0);
-  signal core_dout_acks_received  : std_logic_vector(15 downto 0);
+  signal core_dout_acks_received  : std_logic_vector(2 downto 0);
   signal core_dout_valid          : std_logic;
   signal core_dout_ready          : std_logic;
 
@@ -71,7 +74,7 @@ begin
   p_sample_counter : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if s_axi_aresetn = '0' or registers.CONTROL.SW_RESETN(0) = '0' then
+      if s_axi_aresetn = '0' or registers.MCP3221_CONTROL.SW_RESETN(0) = '0' then
         sample_period_counter <= (others => '0');
       else
         if unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 then
@@ -95,17 +98,20 @@ begin
   u_reg_file : entity work.mcp3221_reg_file
     port map
     (
-      s_axi_aclk            => s_axi_aclk,
-      s_axi_aresetn         => s_axi_aresetn,
+      s_axi_aclk             => s_axi_aclk,
+      s_axi_aresetn          => s_axi_aresetn,
 
-      s_DATA_DATA           => core_dout_register_data,
-      s_DATA_DATA_v         => core_dout_valid,
+      s_DATA_DATA            => core_dout_register_data,
+      s_DATA_DATA_v          => core_dout_valid,
 
-      s_STATUS_DOUT_VALID   => core_dout_valid,
-      s_STATUS_DOUT_VALID_v => '1',
+      s_STATUS_DOUT_VALID(0) => core_dout_valid,
+      s_STATUS_DOUT_VALID_v  => '1',
 
-      s_STATUS_DIN_READY    => core_din_ready,
-      s_STATUS_DIN_READY_v  => '1',
+      s_STATUS_DIN_READY(0)  => core_din_ready,
+      s_STATUS_DIN_READY_v   => '1',
+
+      s_STATUS_ACKS         => core_dout_acks_received,
+      s_STATUS_ACKS_v       => core_dout_valid,
 
 
       s_axi_awaddr  => s_axi_awaddr,
@@ -149,7 +155,8 @@ begin
       T           => (not core_sda_is_output) -- 3-state enable input, high=input, low=output
     );
 
-  mcp3221_i2c_sda_output <= i2c_sda_output;
+  core_din_device_address <= registers.MCP3221_CONTROL.DEVICE_ADDRESS;
+  mcp3221_i2c_sclk        <= core_i2c_sclk;
 
   u_mcp3221_i2c_core : entity work.mcp3221_i2c_core
     generic map
@@ -159,7 +166,7 @@ begin
     port map
     (
       clk                   => s_axi_aclk,
-      reset                 => (not s_axi_aresetn) or (not registers.CONTROL.SW_RESETN(0)),
+      reset                 => (not s_axi_aresetn) or (not registers.MCP3221_CONTROL.SW_RESETN(0)),
 
       din_device_address    => core_din_device_address,
       din_valid             => core_din_valid,

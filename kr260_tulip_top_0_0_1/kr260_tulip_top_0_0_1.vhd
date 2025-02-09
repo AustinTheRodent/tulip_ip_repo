@@ -77,7 +77,11 @@ entity kr260_tulip_top_0_0_1 is
     wm8960_i2c_sda_output : out   std_logic;
     wm8960_i2c_sclk       : out   std_logic;
 
-    wawa_adc_input        : in  std_logic_vector(7 downto 0);
+    s_wawa_adc_aclk       : in  std_logic;
+    s_wawa_adc_tdata      : in  std_logic_vector(15 downto 0);
+    s_wawa_adc_tvalid     : in  std_logic;
+    s_wawa_adc_tready     : out std_logic;
+
     wawa_adc_test         : out  std_logic_vector(7 downto 0);
 
     bclk                  : in  std_logic;
@@ -231,7 +235,20 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal tick_us                        : std_logic_vector(31 downto 0);
   signal tick_ms                        : std_logic_vector(31 downto 0);
 
+  signal s_wawa_adc_tdata_store         : std_logic_vector(15 downto 0);
+
 begin
+
+  p_wawa_adc : process(s_axi_aclk)
+  begin
+    if rising_edge(s_axi_aclk) then
+      if s_wawa_adc_tvalid = '1' then
+        s_wawa_adc_tdata_store <= s_wawa_adc_tdata;
+      end if;
+    end if;
+  end process;
+
+  s_wawa_adc_tready <= '1';
 
   wawa_adc_test <= registers.TULIP_DSP_WAWA_LUT_TEST.DATA;
 
@@ -598,7 +615,7 @@ begin
       prog_wawa_a_tap_tready              => wawa_prog_a_ready(0),
       prog_wawa_a_done                    => wawa_prog_a_done(0),
 
-      wawa_input                          => wawa_adc_input, -- [7:0]
+      wawa_input                          => s_wawa_adc_tdata_store(7 downto 0), -- [7:0]
 
       prog_vibrato_gain_din               => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
       prog_vibrato_gain_din_valid         => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,
