@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-package axil_reg_file_pkg is
+#package name, 0 spaces#
 
 #constant data width, 2 spaces#
 #constant address width, 2 spaces#
@@ -25,13 +25,13 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
-use work.axil_reg_file_pkg.all;
+#use package, 0 spaces#
 
-entity axil_reg_file is
+#entity name, 0 spaces#
   port
   (
     s_axi_aclk    : in  std_logic;
-    a_axi_aresetn : in  std_logic;
+    s_axi_aresetn : in  std_logic;
 
 #read only regs port, 4 spaces#
 
@@ -61,7 +61,7 @@ entity axil_reg_file is
   );
 end entity;
 
-architecture rtl of axil_reg_file is
+#architecture name, 0 spaces#
 
 #register addresses, 2 spaces#
 
@@ -95,7 +95,7 @@ begin
   p_read_only_regs : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if a_axi_aresetn = '0' then
+      if s_axi_aresetn = '0' then
 #reset read only regs, 8 spaces#
       else
 #read only regs, 8 spaces#
@@ -106,7 +106,7 @@ begin
   p_wr_state_machine : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if a_axi_aresetn = '0' then
+      if s_axi_aresetn = '0' then
 #reset regs, 8 spaces#
         awaddr            <= (others => '0');
 #wr pulse eq zero, 8 spaces#
@@ -161,7 +161,7 @@ begin
   p_rd_state_machine : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if a_axi_aresetn = '0' then
+      if s_axi_aresetn = '0' then
         araddr            <= (others => '0');
         s_axi_rdata       <= (others => '0');
 #rd pulse eq zero, 8 spaces#

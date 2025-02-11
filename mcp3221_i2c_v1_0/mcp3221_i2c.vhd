@@ -161,7 +161,7 @@ begin
   u_mcp3221_i2c_core : entity work.mcp3221_i2c_core
     generic map
     (
-      G_CLK_DIVIDER         => 4000
+      G_CLK_DIVIDER         => 2000
     )
     port map
     (
@@ -183,25 +183,19 @@ begin
       dout_ready            => core_dout_ready
     );
 
+  m_axis_tdata <= core_dout_register_data;
+
   m_axis_tvalid <=
     '0' when unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 else
     core_dout_valid;
 
   core_din_valid <=
-    registers.DATA_REG_wr_pulse when unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 else
+    registers.DATA_wr_pulse when unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 else
     sample_period_valid;
 
   core_dout_ready <=
-    registers.DATA_REG_rd_pulse when unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 else
+    registers.DATA_rd_pulse when unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 else
     m_axis_tready;
 
 end rtl;
-
-
-
-
-
-
-
-
 

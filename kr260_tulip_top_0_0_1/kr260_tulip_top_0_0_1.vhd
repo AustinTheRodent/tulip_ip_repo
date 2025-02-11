@@ -243,7 +243,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if s_wawa_adc_tvalid = '1' then
-        s_wawa_adc_tdata_store <= s_wawa_adc_tdata;
+        s_wawa_adc_tdata_store <= std_logic_vector(shift_right(unsigned(s_wawa_adc_tdata), 4));
       end if;
     end if;
   end process;

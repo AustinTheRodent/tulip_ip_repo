@@ -21,9 +21,6 @@ module mcp3221_i2c_core
   input  logic        dout_ready
 );
 
-  //logic sda_is_output;
-  //logic i2c_sda_output;
-
   logic [7:0] transaction_stage;
 
   typedef enum
@@ -36,6 +33,7 @@ module mcp3221_i2c_core
     SM_get_register_data_N,
     SM_delay,
     SM_get_ack,
+    SM_send_ack,
     SM_end_transaction,
     SM_output
   } state_t;
@@ -89,9 +87,6 @@ module mcp3221_i2c_core
         SM_get_input : begin
           if ( din_valid == 1 && din_ready == 1 ) begin
             device_address_store    <= din_device_address;
-            //rd_wr_store             <= din_rd_wr;
-            //register_address_store  <= din_register_address;
-            //register_data_store     <= din_register_data;
             transaction_stage       <= 0;
             sda_is_output           <= 1;
             i2c_sda_output          <= 1;
@@ -205,8 +200,7 @@ module mcp3221_i2c_core
           end
           else if ( transaction_stage == 1 ) begin
             sda_is_output     <= 1;
-            //i2c_sda_output    <= rd_wr_store;
-            i2c_sda_output    <= 0;
+            i2c_sda_output    <= 1;
             transaction_stage <= 2;
             clk_delay_amount  <= G_CLK_DIVIDER/2;
             state             <= SM_delay;
@@ -257,14 +251,61 @@ module mcp3221_i2c_core
           else begin
             i2c_sclk          <= 0;
             transaction_stage <= 0;
-            if ( byte_counter == C_REG_DATA_WIDTH-1 ) begin
+            if ( byte_counter == 8-1 ) begin
               byte_counter  <= 0;
-              state         <= SM_get_ack;
+              state         <= SM_send_ack;
             end
             else begin
               byte_counter  <= byte_counter + 1;
             end
-            data_counter  <= byte_counter + 1;
+            data_counter  <= data_counter + 1;
+          end
+        end
+
+        SM_send_ack : begin
+          if ( transaction_stage == 0 ) begin
+            transaction_stage <= 1;
+            clk_delay_amount  <= G_CLK_DIVIDER/2;
+            state             <= SM_delay;
+            next_state        <= SM_send_ack;
+          end
+          else if ( transaction_stage == 1 ) begin
+            sda_is_output     <= 1;
+            if (ack_counter == 2) begin
+              i2c_sda_output  <= 1;
+            end
+            else begin
+              i2c_sda_output  <= 0;
+            end
+            transaction_stage <= 2;
+            clk_delay_amount  <= G_CLK_DIVIDER/2;
+            state             <= SM_delay;
+            next_state        <= SM_send_ack;
+          end
+          else if ( transaction_stage == 2 ) begin
+            i2c_sclk          <= 1;
+            transaction_stage <= 3;
+            clk_delay_amount  <= G_CLK_DIVIDER;
+            state             <= SM_delay;
+            next_state        <= SM_send_ack;
+          end
+          else begin
+            i2c_sclk          <= 0;
+            transaction_stage <= 0;
+
+            if ( ack_counter == 0 ) begin
+              ack_counter <= 1;
+              state       <= SM_get_register_data_N;
+            end
+            else if ( ack_counter == 1 ) begin
+              ack_counter <= 2;
+              state       <= SM_get_register_data_N;
+            end
+            else begin
+              ack_counter <= 0;
+              state       <= SM_end_transaction;
+            end
+
           end
         end
 

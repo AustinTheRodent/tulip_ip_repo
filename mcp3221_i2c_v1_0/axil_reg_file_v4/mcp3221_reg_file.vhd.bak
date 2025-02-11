@@ -24,14 +24,14 @@ package mcp3221_reg_file_pkg is
     STATUS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     MCP3221_CONTROL : MCP3221_CONTROL_subreg_t;
     SAMPLE_RATE_DIVIDER : SAMPLE_RATE_DIVIDER_subreg_t;
-    MCP3221_CONTROL_wr_pulse : std_logic;
-    SAMPLE_RATE_DIVIDER_wr_pulse : std_logic;
-    DATA_wr_pulse : std_logic;
-    STATUS_wr_pulse : std_logic;
-    MCP3221_CONTROL_rd_pulse : std_logic;
-    SAMPLE_RATE_DIVIDER_rd_pulse : std_logic;
-    DATA_rd_pulse : std_logic;
-    STATUS_rd_pulse : std_logic;
+    MCP3221_CONTROL_REG_wr_pulse : std_logic;
+    SAMPLE_RATE_DIVIDER_REG_wr_pulse : std_logic;
+    DATA_REG_wr_pulse : std_logic;
+    STATUS_REG_wr_pulse : std_logic;
+    MCP3221_CONTROL_REG_rd_pulse : std_logic;
+    SAMPLE_RATE_DIVIDER_REG_rd_pulse : std_logic;
+    DATA_REG_rd_pulse : std_logic;
+    STATUS_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -156,30 +156,30 @@ begin
         registers.MCP3221_CONTROL_REG <= x"00000000";
         registers.SAMPLE_RATE_DIVIDER_REG <= x"00000000";
         awaddr            <= (others => '0');
-        registers.MCP3221_CONTROL_wr_pulse <= '0';
-        registers.SAMPLE_RATE_DIVIDER_wr_pulse <= '0';
-        registers.DATA_wr_pulse <= '0';
-        registers.STATUS_wr_pulse <= '0';
+        registers.MCP3221_CONTROL_REG_wr_pulse <= '0';
+        registers.SAMPLE_RATE_DIVIDER_REG_wr_pulse <= '0';
+        registers.DATA_REG_wr_pulse <= '0';
+        registers.STATUS_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
       else
         case wr_state is
           when init =>
-            registers.MCP3221_CONTROL_wr_pulse <= '0';
-            registers.SAMPLE_RATE_DIVIDER_wr_pulse <= '0';
-            registers.DATA_wr_pulse <= '0';
-            registers.STATUS_wr_pulse <= '0';
+            registers.MCP3221_CONTROL_REG_wr_pulse <= '0';
+            registers.SAMPLE_RATE_DIVIDER_REG_wr_pulse <= '0';
+            registers.DATA_REG_wr_pulse <= '0';
+            registers.STATUS_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
             wr_state          <= get_addr;
 
           when get_addr =>
-            registers.MCP3221_CONTROL_wr_pulse <= '0';
-            registers.SAMPLE_RATE_DIVIDER_wr_pulse <= '0';
-            registers.DATA_wr_pulse <= '0';
-            registers.STATUS_wr_pulse <= '0';
+            registers.MCP3221_CONTROL_REG_wr_pulse <= '0';
+            registers.SAMPLE_RATE_DIVIDER_REG_wr_pulse <= '0';
+            registers.DATA_REG_wr_pulse <= '0';
+            registers.STATUS_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -193,14 +193,14 @@ begin
               case awaddr is
                 when std_logic_vector(to_unsigned(MCP3221_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.MCP3221_CONTROL_REG <= s_axi_wdata;
-                  registers.MCP3221_CONTROL_wr_pulse <= '1';
+                  registers.MCP3221_CONTROL_REG_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(SAMPLE_RATE_DIVIDER_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.SAMPLE_RATE_DIVIDER_REG <= s_axi_wdata;
-                  registers.SAMPLE_RATE_DIVIDER_wr_pulse <= '1';
+                  registers.SAMPLE_RATE_DIVIDER_REG_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(DATA_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.DATA_wr_pulse <= '1';
+                  registers.DATA_REG_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.STATUS_wr_pulse <= '1';
+                  registers.STATUS_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -229,30 +229,30 @@ begin
       if s_axi_aresetn = '0' then
         araddr            <= (others => '0');
         s_axi_rdata       <= (others => '0');
-        registers.MCP3221_CONTROL_rd_pulse <= '0';
-        registers.SAMPLE_RATE_DIVIDER_rd_pulse <= '0';
-        registers.DATA_rd_pulse <= '0';
-        registers.STATUS_rd_pulse <= '0';
+        registers.MCP3221_CONTROL_REG_rd_pulse <= '0';
+        registers.SAMPLE_RATE_DIVIDER_REG_rd_pulse <= '0';
+        registers.DATA_REG_rd_pulse <= '0';
+        registers.STATUS_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
       else
         case rd_state is
           when init =>
-            registers.MCP3221_CONTROL_rd_pulse <= '0';
-            registers.SAMPLE_RATE_DIVIDER_rd_pulse <= '0';
-            registers.DATA_rd_pulse <= '0';
-            registers.STATUS_rd_pulse <= '0';
+            registers.MCP3221_CONTROL_REG_rd_pulse <= '0';
+            registers.SAMPLE_RATE_DIVIDER_REG_rd_pulse <= '0';
+            registers.DATA_REG_rd_pulse <= '0';
+            registers.STATUS_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
             rd_state          <= get_addr;
 
           when get_addr =>
-            registers.MCP3221_CONTROL_rd_pulse <= '0';
-            registers.SAMPLE_RATE_DIVIDER_rd_pulse <= '0';
-            registers.DATA_rd_pulse <= '0';
-            registers.STATUS_rd_pulse <= '0';
+            registers.MCP3221_CONTROL_REG_rd_pulse <= '0';
+            registers.SAMPLE_RATE_DIVIDER_REG_rd_pulse <= '0';
+            registers.DATA_REG_rd_pulse <= '0';
+            registers.STATUS_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -277,13 +277,13 @@ begin
             if s_axi_rvalid_int = '1' and s_axi_rready = '1' then
               case araddr is
                 when std_logic_vector(to_unsigned(MCP3221_CONTROL_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.MCP3221_CONTROL_rd_pulse <= '1';
+                  registers.MCP3221_CONTROL_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(SAMPLE_RATE_DIVIDER_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.SAMPLE_RATE_DIVIDER_rd_pulse <= '1';
+                  registers.SAMPLE_RATE_DIVIDER_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(DATA_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.DATA_rd_pulse <= '1';
+                  registers.DATA_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.STATUS_rd_pulse <= '1';
+                  registers.STATUS_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;
