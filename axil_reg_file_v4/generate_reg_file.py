@@ -41,118 +41,126 @@ def add_spaces(input_string, num_spaces):
     ret_string += " "
   return ret_string
 
+def add_spaces2(input_string, template_string):
+  num_spaces = template_string.find("#")
+  ret_string = input_string
+  for i in range(num_spaces):
+    ret_string += " "
+  return ret_string
+
 def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registers, package_name):
   for line in template_file_obj:
-    if line[0] != "#":
+    #if line[0] != "#":
+    if line.find("#") == -1:
       reg_file_obj.write(line)
     else:
-      type = line[1:line.find(",")]
-      num_spaces = int(line[line.find(",")+1:line.find("spaces")])
+      line = strip_newline(line)
+      type = line[line.find("#")+1:]
       if type == "package name":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "package %s_pkg is\n" % package_name
         reg_file_obj.write(wr_line)
       if type == "use package":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "use work.%s_pkg.all;\n" % package_name
         reg_file_obj.write(wr_line)
       if type == "entity name":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "entity %s is\n" % package_name
         reg_file_obj.write(wr_line)
       if type == "architecture name":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "architecture rtl of %s is\n" % package_name
         reg_file_obj.write(wr_line)
       elif type == "constant data width":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "constant C_REG_FILE_DATA_WIDTH : integer := %s;\n" % constants["REG_FILE_DATA_WIDTH"]
         reg_file_obj.write(wr_line)
       elif type == "constant address width":
         wr_line = ""
-        wr_line = add_spaces(wr_line, num_spaces)
+        wr_line = add_spaces2(wr_line, line)
         wr_line += "constant C_REG_FILE_ADDR_WIDTH : integer := %s;\n" % constants["REG_FILE_ADDR_WIDTH"]
         reg_file_obj.write(wr_line)
       elif type == "register names":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "%s_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);\n" % i
           reg_file_obj.write(wr_line)
       elif type == "register wr pulses":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "%s_wr_pulse : std_logic;\n" % i
           reg_file_obj.write(wr_line)
       elif type == "register rd pulses":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "%s_rd_pulse : std_logic;\n" % i
           reg_file_obj.write(wr_line)
       elif type == "register addresses":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "constant %s_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := %i;\n" % (i, registers[i]["address"])
           reg_file_obj.write(wr_line)
       elif type == "wr pulse eq zero":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "registers.%s_wr_pulse <= '0';\n" % i
           reg_file_obj.write(wr_line)
       elif type == "rd pulse eq zero":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "registers.%s_rd_pulse <= '0';\n" % i
           reg_file_obj.write(wr_line)
       elif type == "rd pulse eq one":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "  registers.%s_rd_pulse <= '1';\n" % i
           reg_file_obj.write(wr_line)
       elif type == "awaddr case":
         for i in registers:
           if registers[i]["type"] == "RW":
             wr_line = ""
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "  registers.%s_REG <= s_axi_wdata;\n" % i
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "  registers.%s_wr_pulse <= '1';\n" % i
             reg_file_obj.write(wr_line)
           elif registers[i]["type"] == "RO":
             wr_line = ""
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "  registers.%s_wr_pulse <= '1';\n" % i
             reg_file_obj.write(wr_line)
       elif type == "araddr case":
         for i in registers:
           wr_line = ""
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
-          wr_line = add_spaces(wr_line, num_spaces)
+          wr_line = add_spaces2(wr_line, line)
           wr_line += "  s_axi_rdata <= registers.%s_REG;\n" % i
           reg_file_obj.write(wr_line)
       elif type == "reset regs":
         for i in registers:
           if registers[i]["type"] == "RW":
             wr_line = ""
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             if int(constants["REG_FILE_DATA_WIDTH"]) == 32:
               wr_line += "registers.%s_REG <= x\"%08X\";\n" % (i, registers[i]["reset_val"])
             if int(constants["REG_FILE_DATA_WIDTH"]) == 24:
@@ -166,7 +174,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
         for i in registers:
           if registers[i]["type"] == "RO":
             wr_line = ""
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             if int(constants["REG_FILE_DATA_WIDTH"]) == 32:
               wr_line += "registers.%s_REG <= x\"%08X\";\n" % (i, registers[i]["reset_val"])
             if int(constants["REG_FILE_DATA_WIDTH"]) == 24:
@@ -181,64 +189,60 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
           if registers[i]["type"] == "RO":
             for j in sub_registers[i]:
               wr_line = ""
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               wr_line += "if s_%s_%s_v = '1' then \n" % \
                 (i, j)
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               if sub_registers[i][j]["length"] == 1:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
                   (i, sub_registers[i][j]["range"][0], i, j)
               else:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
                   (i, sub_registers[i][j]["range"], i, j)
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               wr_line += "end if;\n"
               reg_file_obj.write(wr_line)
-
       elif type == "read only regs port":
         for i in registers:
           if registers[i]["type"] == "RO":
             for j in sub_registers[i]:
               wr_line = ""
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               if sub_registers[i][j]["length"] == 1:
                 wr_line += "s_%s_%s : in std_logic;\n" % \
                   (i, j)
               else:
                 wr_line += "s_%s_%s : in std_logic_vector(%s);\n" % \
                   (i, j, sub_registers[i][j]["min_range"])
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               wr_line += "s_%s_%s_v : in std_logic;\n\n" % \
                 (i, j)
               reg_file_obj.write(wr_line)
-
       elif type == "subreg type":
         for i in registers:
           if registers[i]["type"] == "RW":
             wr_line = "  type %s_subreg_t is record\n" % i
             for j in sub_registers[i]:
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               if sub_registers[i][j]["length"] == 1:
                 wr_line += "%s : std_logic;\n" % j
               else:
                 wr_line += "%s : std_logic_vector(%s);\n" % (j, sub_registers[i][j]["min_range"])
             wr_line += "  end record;\n\n"
             reg_file_obj.write(wr_line)
-
       elif type == "subreg declare":
         for i in registers:
           if registers[i]["type"] == "RW":
             wr_line = ""
-            wr_line = add_spaces(wr_line, num_spaces)
+            wr_line = add_spaces2(wr_line, line)
             wr_line += "%s : %s_subreg_t;\n" % (i, i)
             reg_file_obj.write(wr_line)
-
       elif type == "subreg assign":
         for i in registers:
           if registers[i]["type"] == "RW":
             for j in sub_registers[i]:
               wr_line = ""
-              wr_line = add_spaces(wr_line, num_spaces)
+              wr_line = add_spaces2(wr_line, line)
               if sub_registers[i][j]["length"] == 1:
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
                   (i, j, i, sub_registers[i][j]["range"][0])
