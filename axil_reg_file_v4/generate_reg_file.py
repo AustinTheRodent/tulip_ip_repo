@@ -185,8 +185,17 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
               wr_line += "if s_%s_%s_v = '1' then \n" % \
                 (i, j)
               wr_line = add_spaces(wr_line, num_spaces)
-              wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
-                (i, sub_registers[i][j]["range"], i, j)
+
+
+              if sub_registers[i][j]["length"] == 1:
+                wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
+                  (i, sub_registers[i][j]["range"][0], i, j)
+              else:
+                wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
+                  (i, sub_registers[i][j]["range"], i, j)
+
+
+
               wr_line = add_spaces(wr_line, num_spaces)
               wr_line += "end if;\n"
               reg_file_obj.write(wr_line)
@@ -197,8 +206,15 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
             for j in sub_registers[i]:
               wr_line = ""
               wr_line = add_spaces(wr_line, num_spaces)
-              wr_line += "s_%s_%s : in std_logic_vector(%s);\n" % \
-                (i, j, sub_registers[i][j]["min_range"])
+
+
+              if sub_registers[i][j]["length"] == 1:
+                wr_line += "s_%s_%s : in std_logic;\n" % \
+                  (i, j)
+              else:
+                wr_line += "s_%s_%s : in std_logic_vector(%s);\n" % \
+                  (i, j, sub_registers[i][j]["min_range"])
+
               wr_line = add_spaces(wr_line, num_spaces)
               wr_line += "s_%s_%s_v : in std_logic;\n\n" % \
                 (i, j)
@@ -210,7 +226,10 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
             wr_line = "  type %s_subreg_t is record\n" % i
             for j in sub_registers[i]:
               wr_line = add_spaces(wr_line, num_spaces)
-              wr_line += "%s : std_logic_vector(%s);\n" % (j, sub_registers[i][j]["min_range"])
+              if sub_registers[i][j]["length"] == 1:
+                wr_line += "%s : std_logic;\n" % j
+              else:
+                wr_line += "%s : std_logic_vector(%s);\n" % (j, sub_registers[i][j]["min_range"])
             wr_line += "  end record;\n\n"
             reg_file_obj.write(wr_line)
 
@@ -228,8 +247,13 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
             for j in sub_registers[i]:
               wr_line = ""
               wr_line = add_spaces(wr_line, num_spaces)
-              wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
-                (i, j, i, sub_registers[i][j]["range"])
+              if sub_registers[i][j]["length"] == 1:
+                wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
+                  (i, j, i, sub_registers[i][j]["range"][0])
+              else:
+                wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
+                  (i, j, i, sub_registers[i][j]["range"])
+
               reg_file_obj.write(wr_line)
 
 def get_constants(data_file_name):
@@ -278,6 +302,7 @@ def get_registers(data_file_name):
       sub_registers[current_reg_name][subreg_name] = {}
       sub_registers[current_reg_name][subreg_name]["range"] = range_tmp
       sub_registers[current_reg_name][subreg_name]["min_range"] = "%i downto %i" % (range_max-range_min, 0)
+      sub_registers[current_reg_name][subreg_name]["length"] = range_max-range_min+1
 
     elif line.find("{") != -1:
       subreg_process = True
