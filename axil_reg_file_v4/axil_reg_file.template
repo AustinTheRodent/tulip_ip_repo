@@ -7,7 +7,7 @@ use ieee.numeric_std.all;
   #constant data width
   #constant address width
 
-    #subreg type
+  #subreg type
 
   type reg_t is record
     #register names

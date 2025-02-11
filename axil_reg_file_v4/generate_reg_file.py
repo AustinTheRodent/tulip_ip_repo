@@ -42,6 +42,12 @@ def add_spaces(input_string, template_string):
     ret_string += " "
   return ret_string
 
+def add_spaces2(input_string, num_spaces):
+  ret_string = input_string
+  for i in range(num_spaces):
+    ret_string += " "
+  return ret_string
+
 def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registers, package_name):
   for line in template_file_obj:
     #if line[0] != "#":
@@ -215,9 +221,12 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
       elif type == "subreg type":
         for i in registers:
           if registers[i]["type"] == "RW":
-            wr_line = "  type %s_subreg_t is record\n" % i
+            wr_line = ""
+            wr_line = add_spaces(wr_line, line)
+            wr_line += "type %s_subreg_t is record\n" % i
             for j in sub_registers[i]:
               wr_line = add_spaces(wr_line, line)
+              wr_line = add_spaces2(wr_line, 2)
               if sub_registers[i][j]["length"] == 1:
                 wr_line += "%s : std_logic;\n" % j
               else:
