@@ -9,7 +9,7 @@ package mcp3221_reg_file_pkg is
 
   type MCP3221_CONTROL_subreg_t is record
     DEVICE_ADDRESS : std_logic_vector(6 downto 0);
-    SW_RESETN : std_logic_vector(0 downto 0);
+    SW_RESETN : std_logic;
   end record;
 
   type SAMPLE_RATE_DIVIDER_subreg_t is record
@@ -57,10 +57,10 @@ entity mcp3221_reg_file is
     s_STATUS_ACKS : in std_logic_vector(2 downto 0);
     s_STATUS_ACKS_v : in std_logic;
 
-    s_STATUS_DOUT_VALID : in std_logic_vector(0 downto 0);
+    s_STATUS_DOUT_VALID : in std_logic;
     s_STATUS_DOUT_VALID_v : in std_logic;
 
-    s_STATUS_DIN_READY : in std_logic_vector(0 downto 0);
+    s_STATUS_DIN_READY : in std_logic;
     s_STATUS_DIN_READY_v : in std_logic;
 
 
@@ -114,7 +114,7 @@ architecture rtl of mcp3221_reg_file is
 begin
 
   registers.MCP3221_CONTROL.DEVICE_ADDRESS <= registers.MCP3221_CONTROL_REG(7 downto 1);
-  registers.MCP3221_CONTROL.SW_RESETN <= registers.MCP3221_CONTROL_REG(0 downto 0);
+  registers.MCP3221_CONTROL.SW_RESETN <= registers.MCP3221_CONTROL_REG(0);
   registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER <= registers.SAMPLE_RATE_DIVIDER_REG(31 downto 0);
 
   registers_out <= registers;
@@ -140,10 +140,10 @@ begin
           registers.STATUS_REG(4 downto 2) <= s_STATUS_ACKS;
         end if;
         if s_STATUS_DOUT_VALID_v = '1' then 
-          registers.STATUS_REG(1 downto 1) <= s_STATUS_DOUT_VALID;
+          registers.STATUS_REG(1) <= s_STATUS_DOUT_VALID;
         end if;
         if s_STATUS_DIN_READY_v = '1' then 
-          registers.STATUS_REG(0 downto 0) <= s_STATUS_DIN_READY;
+          registers.STATUS_REG(0) <= s_STATUS_DIN_READY;
         end if;
       end if;
     end if;

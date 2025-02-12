@@ -74,7 +74,7 @@ begin
   p_sample_counter : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if s_axi_aresetn = '0' or registers.MCP3221_CONTROL.SW_RESETN(0) = '0' then
+      if s_axi_aresetn = '0' or registers.MCP3221_CONTROL.SW_RESETN = '0' then
         sample_period_counter <= (others => '0');
       else
         if unsigned(registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER) = 0 then
@@ -104,10 +104,10 @@ begin
       s_DATA_DATA            => core_dout_register_data,
       s_DATA_DATA_v          => core_dout_valid,
 
-      s_STATUS_DOUT_VALID(0) => core_dout_valid,
+      s_STATUS_DOUT_VALID    => core_dout_valid,
       s_STATUS_DOUT_VALID_v  => '1',
 
-      s_STATUS_DIN_READY(0)  => core_din_ready,
+      s_STATUS_DIN_READY     => core_din_ready,
       s_STATUS_DIN_READY_v   => '1',
 
       s_STATUS_ACKS         => core_dout_acks_received,
@@ -166,7 +166,7 @@ begin
     port map
     (
       clk                   => s_axi_aclk,
-      reset                 => (not s_axi_aresetn) or (not registers.MCP3221_CONTROL.SW_RESETN(0)),
+      reset                 => (not s_axi_aresetn) or (not registers.MCP3221_CONTROL.SW_RESETN),
 
       din_device_address    => core_din_device_address,
       din_valid             => core_din_valid,
