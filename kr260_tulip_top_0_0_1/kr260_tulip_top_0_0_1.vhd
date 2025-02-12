@@ -77,8 +77,10 @@ entity kr260_tulip_top_0_0_1 is
     wm8960_i2c_sda_output : out   std_logic;
     wm8960_i2c_sclk       : out   std_logic;
 
-    wawa_adc_input        : in  std_logic_vector(7 downto 0);
-    wawa_adc_test         : out  std_logic_vector(7 downto 0);
+    s_wawa_adc_aclk       : in  std_logic;
+    s_wawa_adc_tdata      : in  std_logic_vector(15 downto 0);
+    s_wawa_adc_tvalid     : in  std_logic;
+    s_wawa_adc_tready     : out std_logic;
 
     bclk                  : in  std_logic;
     dac_lrclk             : in  std_logic;
@@ -231,9 +233,28 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal tick_us                        : std_logic_vector(31 downto 0);
   signal tick_ms                        : std_logic_vector(31 downto 0);
 
+  signal s_wawa_adc_tdata_sub           : unsigned(15 downto 0);
+  signal s_wawa_adc_tdata_mult          : unsigned(31 downto 0);
+  signal s_wawa_adc_tdata_rs            : unsigned(31 downto 0);
+  signal s_wawa_adc_tdata_store         : std_logic_vector(7 downto 0);
+
 begin
 
-  wawa_adc_test <= registers.TULIP_DSP_WAWA_LUT_TEST.DATA;
+  p_wawa_adc : process(s_axi_aclk)
+  begin
+    if rising_edge(s_axi_aclk) then
+      if s_wawa_adc_tvalid = '1' then
+        s_wawa_adc_tdata_sub <= unsigned(s_wawa_adc_tdata)-unsigned(registers.TULIP_DSP_WAWA_ADC_OFFS.MIN_OFFSET);
+      end if;
+
+      s_wawa_adc_tdata_mult   <= s_wawa_adc_tdata_sub * unsigned(registers.TULIP_DSP_WAWA_ADC_OFFS.GAIN);
+      s_wawa_adc_tdata_rs     <= shift_right(s_wawa_adc_tdata_mult, 12);
+      s_wawa_adc_tdata_store  <= std_logic_vector(resize(s_wawa_adc_tdata_rs, 8));
+
+    end if;
+  end process;
+
+  s_wawa_adc_tready <= '1';
 
   u_reg_file : entity work.axil_reg_file
     port map
@@ -547,12 +568,14 @@ begin
       lut_tf_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_LUT_TF(0),
       usr_fir_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_USR_FIR(0),
       reverb_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_REVERB(0),
+      tremelo_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_TREMELO(0),
       wawa_sw_resetn                      => registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA(0),
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
+      bypass_tremelo                      => registers.TULIP_DSP_CONTROL.BYPASS_TREMELO(0),
       bypass_wawa                         => registers.TULIP_DSP_CONTROL.BYPASS_WAWA(0),
       bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
       bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
@@ -583,6 +606,9 @@ begin
       reverb_taps_prog_din_ready          => reverb_taps_prog_din_ready(0),
       reverb_taps_prog_done               => reverb_taps_prog_done(0),
 
+      tremelo_rate                        => registers.TULIP_DSP_TREMELO_RATE.RATE,
+      tremelo_depth                       => registers.TULIP_DSP_TREMELO_DEPTH.DEPTH,
+
       prog_wawa_b_tap_tdata               => registers.TULIP_DSP_WAWA_B_TAP_DATA_MSB.DATA & registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB.DATA,                -- [63:0]
       prog_wawa_b_tap_tvalid              => registers.TULIP_DSP_WAWA_B_TAP_DATA_LSB_REG_wr_pulse,
       prog_wawa_b_tap_tready              => wawa_prog_b_ready(0),
@@ -593,7 +619,7 @@ begin
       prog_wawa_a_tap_tready              => wawa_prog_a_ready(0),
       prog_wawa_a_done                    => wawa_prog_a_done(0),
 
-      wawa_input                          => wawa_adc_input, -- [7:0]
+      wawa_input                          => s_wawa_adc_tdata_store, -- [7:0]
 
       prog_vibrato_gain_din               => registers.TULIP_DSP_VIBRATO_GAIN.GAIN,
       prog_vibrato_gain_din_valid         => registers.TULIP_DSP_VIBRATO_GAIN_REG_wr_pulse,

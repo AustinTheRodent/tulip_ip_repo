@@ -1,0 +1,34 @@
+# RW = read/write
+# RO = read only
+
+(reg_file_name mcp3221_reg_file.vhd)
+(package_name mcp3221_reg_file)
+
+#name of the register set, used for H file header guard:
+(header_name MCP3221_REGISTERS)
+
+(REG_FILE_DATA_WIDTH 32)
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes):
+(REG_FILE_ADDR_WIDTH 12)
+
+#name type address reset_val
+
+MCP3221_CONTROL RW 0x000 0x00000000 {
+  DEVICE_ADDRESS [7:1]
+  SW_RESETN [0:0]
+}
+
+SAMPLE_RATE_DIVIDER RW 0x004 0x00000000 {
+  # number of clock cycles between samples, 0 = not used
+  SAMPLE_RATE_DIVIDER [31:0]
+}
+
+DATA RO 0x008 0x00000000 {
+  DATA [15:0]
+}
+
+STATUS RO 0x00C 0x00000000 {
+  ACKS [4:2]
+  DOUT_VALID [1:1]
+  DIN_READY [0:0]
+}

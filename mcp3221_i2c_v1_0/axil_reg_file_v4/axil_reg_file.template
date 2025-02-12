@@ -2,15 +2,18 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-package axil_reg_file_pkg is
+#package name
 
-#constant data width, 2 spaces#
-#constant address width, 2 spaces#
+  #constant data width
+  #constant address width
+
+  #subreg type
 
   type reg_t is record
-#register names, 4 spaces#
-#register wr pulses, 4 spaces#
-#register rd pulses, 4 spaces#
+    #register names
+    #subreg declare
+    #register wr pulses
+    #register rd pulses
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -22,15 +25,15 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
-use work.axil_reg_file_pkg.all;
+#use package
 
-entity axil_reg_file is
+#entity name
   port
   (
     s_axi_aclk    : in  std_logic;
-    a_axi_aresetn : in  std_logic;
+    s_axi_aresetn : in  std_logic;
 
-#read only regs port, 4 spaces#
+    #read only regs port
 
     s_axi_awaddr  : in  std_logic_vector(C_REG_FILE_ADDR_WIDTH-1 downto 0);
     s_axi_awvalid : in  std_logic;
@@ -58,9 +61,9 @@ entity axil_reg_file is
   );
 end entity;
 
-architecture rtl of axil_reg_file is
+#architecture name
 
-#register addresses, 2 spaces#
+  #register addresses
 
   signal registers          : reg_t;
 
@@ -78,6 +81,8 @@ architecture rtl of axil_reg_file is
 
 begin
 
+  #subreg assign
+
   registers_out <= registers;
 
   s_axi_rresp   <= (others => '0');
@@ -90,31 +95,35 @@ begin
   p_read_only_regs : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-#read only regs, 6 spaces#
+      if s_axi_aresetn = '0' then
+        #reset read only regs
+      else
+        #read only regs
+      end if;
     end if;
   end process;
 
   p_wr_state_machine : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if a_axi_aresetn = '0' then
-#reset regs, 8 spaces#
+      if s_axi_aresetn = '0' then
+        #reset regs
         awaddr            <= (others => '0');
-#wr pulse eq zero, 8 spaces#
+        #wr pulse eq zero
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
       else
         case wr_state is
           when init =>
-#wr pulse eq zero, 12 spaces#
+            #wr pulse eq zero
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
             wr_state          <= get_addr;
 
           when get_addr =>
-#wr pulse eq zero, 12 spaces#
+            #wr pulse eq zero
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -126,7 +135,7 @@ begin
 
             if s_axi_wvalid = '1' and s_axi_wready_int = '1' then
               case awaddr is
-#awaddr case, 16 spaces#
+                #awaddr case
                 when others =>
                   null;
               end case;
@@ -152,24 +161,24 @@ begin
   p_rd_state_machine : process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
-      if a_axi_aresetn = '0' then
+      if s_axi_aresetn = '0' then
         araddr            <= (others => '0');
         s_axi_rdata       <= (others => '0');
-#rd pulse eq zero, 8 spaces#
+        #rd pulse eq zero
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
       else
         case rd_state is
           when init =>
-#rd pulse eq zero, 12 spaces#
+            #rd pulse eq zero
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
             rd_state          <= get_addr;
 
           when get_addr =>
-#rd pulse eq zero, 12 spaces#
+            #rd pulse eq zero
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -179,14 +188,14 @@ begin
 
           when rd_data =>
             case araddr is
-#araddr case, 14 spaces#
+              #araddr case
               when others =>
                 null;
             end case;
 
             if s_axi_rvalid_int = '1' and s_axi_rready = '1' then
               case araddr is
-#rd pulse eq one, 16 spaces#
+                #rd pulse eq one
                 when others =>
                   null;
               end case;
