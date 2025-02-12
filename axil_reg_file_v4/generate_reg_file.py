@@ -48,7 +48,7 @@ def add_spaces2(input_string, num_spaces):
     ret_string += " "
   return ret_string
 
-def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registers, package_name):
+def write_all(template_file_obj, reg_file_obj, constants, registers, package_name):
   for line in template_file_obj:
     #if line[0] != "#":
     if line.find("#") == -1:
@@ -187,33 +187,33 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
       elif type == "read only regs":
         for i in registers:
           if registers[i]["type"] == "RO":
-            for j in sub_registers[i]:
+            for j in registers[i]["subreg"]:
               wr_line = ""
               wr_line = add_spaces(wr_line, line)
               wr_line += "if s_%s_%s_v = '1' then \n" % \
                 (i, j)
               wr_line = add_spaces(wr_line, line)
-              if sub_registers[i][j]["length"] == 1:
+              if registers[i]["subreg"][j]["length"] == 1:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
-                  (i, sub_registers[i][j]["range"][0], i, j)
+                  (i, registers[i]["subreg"][j]["range"][0], i, j)
               else:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
-                  (i, sub_registers[i][j]["range"], i, j)
+                  (i, registers[i]["subreg"][j]["range"], i, j)
               wr_line = add_spaces(wr_line, line)
               wr_line += "end if;\n"
               reg_file_obj.write(wr_line)
       elif type == "read only regs port":
         for i in registers:
           if registers[i]["type"] == "RO":
-            for j in sub_registers[i]:
+            for j in registers[i]["subreg"]:
               wr_line = ""
               wr_line = add_spaces(wr_line, line)
-              if sub_registers[i][j]["length"] == 1:
+              if registers[i]["subreg"][j]["length"] == 1:
                 wr_line += "s_%s_%s : in std_logic;\n" % \
                   (i, j)
               else:
                 wr_line += "s_%s_%s : in std_logic_vector(%s);\n" % \
-                  (i, j, sub_registers[i][j]["min_range"])
+                  (i, j, registers[i]["subreg"][j]["min_range"])
               wr_line = add_spaces(wr_line, line)
               wr_line += "s_%s_%s_v : in std_logic;\n\n" % \
                 (i, j)
@@ -224,13 +224,13 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             wr_line += "type %s_subreg_t is record\n" % i
-            for j in sub_registers[i]:
+            for j in registers[i]["subreg"]:
               wr_line = add_spaces(wr_line, line)
               wr_line = add_spaces2(wr_line, 2)
-              if sub_registers[i][j]["length"] == 1:
+              if registers[i]["subreg"][j]["length"] == 1:
                 wr_line += "%s : std_logic;\n" % j
               else:
-                wr_line += "%s : std_logic_vector(%s);\n" % (j, sub_registers[i][j]["min_range"])
+                wr_line += "%s : std_logic_vector(%s);\n" % (j, registers[i]["subreg"][j]["min_range"])
             wr_line += "  end record;\n\n"
             reg_file_obj.write(wr_line)
       elif type == "subreg declare":
@@ -243,15 +243,15 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, sub_registe
       elif type == "subreg assign":
         for i in registers:
           if registers[i]["type"] == "RW":
-            for j in sub_registers[i]:
+            for j in registers[i]["subreg"]:
               wr_line = ""
               wr_line = add_spaces(wr_line, line)
-              if sub_registers[i][j]["length"] == 1:
+              if registers[i]["subreg"][j]["length"] == 1:
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
-                  (i, j, i, sub_registers[i][j]["range"][0])
+                  (i, j, i, registers[i]["subreg"][j]["range"][0])
               else:
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
-                  (i, j, i, sub_registers[i][j]["range"])
+                  (i, j, i, registers[i]["subreg"][j]["range"])
 
               reg_file_obj.write(wr_line)
 
@@ -278,7 +278,6 @@ def get_constants(data_file_name):
 
 def get_registers(data_file_name):
   registers = {}
-  sub_registers = {}
   subreg_process = False
   current_reg_name = ""
   for line in open(data_file_name, "r"):
@@ -298,10 +297,11 @@ def get_registers(data_file_name):
       range_tmp = range_tmp.replace(":", " downto ")
       range_max = int(range_tmp.split()[0])
       range_min = int(range_tmp.split()[2])
-      sub_registers[current_reg_name][subreg_name] = {}
-      sub_registers[current_reg_name][subreg_name]["range"] = range_tmp
-      sub_registers[current_reg_name][subreg_name]["min_range"] = "%i downto %i" % (range_max-range_min, 0)
-      sub_registers[current_reg_name][subreg_name]["length"] = range_max-range_min+1
+      registers[current_reg_name]["subreg"][subreg_name] = {}
+      registers[current_reg_name]["subreg"][subreg_name]["range"] = range_tmp
+      registers[current_reg_name]["subreg"][subreg_name]["min_range"] = "%i downto %i" % (range_max-range_min, 0)
+      registers[current_reg_name]["subreg"][subreg_name]["length"] = range_max-range_min+1
+
 
     elif line.find("{") != -1:
       subreg_process = True
@@ -311,7 +311,6 @@ def get_registers(data_file_name):
       address = reg_args[2]
       reset_val = reg_args[3]
       current_reg_name = name
-      sub_registers[current_reg_name] = {}
       if address[0:2] == "0x":
         address = int(address[2:len(address)], 16)
       else:
@@ -324,10 +323,12 @@ def get_registers(data_file_name):
       registers[name]["type"] = type
       registers[name]["address"] = address
       registers[name]["reset_val"] = reset_val
+      registers[name]["subreg"] = {}
 
-  return [registers, sub_registers]
 
-def write_h_file(data_file_name, header_fname, registers, sub_registers):
+  return registers
+
+def write_h_file(data_file_name, header_fname, registers):
   registers_name = header_fname
 
   f = open(registers_name+".h", "w")
@@ -343,11 +344,11 @@ def write_h_file(data_file_name, header_fname, registers, sub_registers):
 
   for i in registers:
     reg_name = i
-    for j in sub_registers[i]:
+    for j in registers[i]["subreg"]:
       subreg_name = j
-      dt_n = sub_registers[i][j]["range"].find("downto")
-      lshift = int(sub_registers[i][j]["range"][dt_n+6:])
-      mask_len = int(sub_registers[i][j]["range"][0:dt_n]) - int(sub_registers[i][j]["range"][dt_n+6:]) + 1
+      dt_n = registers[i]["subreg"][j]["range"].find("downto")
+      lshift = int(registers[i]["subreg"][j]["range"][dt_n+6:])
+      mask_len = int(registers[i]["subreg"][j]["range"][0:dt_n]) - int(registers[i]["subreg"][j]["range"][dt_n+6:]) + 1
       mask = 0
       for k in range(mask_len):
         mask |= 1 << k
@@ -369,10 +370,8 @@ def main():
   template_file_name  = "axil_reg_file.template"
   data_file_name      = "registers.dat"
 
-  constants                   = get_constants(data_file_name)
-  [registers, sub_registers]  = get_registers(data_file_name)
-
-  print(sub_registers["MCP3221_CONTROL"])
+  constants = get_constants(data_file_name)
+  registers = get_registers(data_file_name)
 
   reg_file_name = constants["reg_file_name"]
   package_name  = constants["package_name"]
@@ -383,11 +382,11 @@ def main():
   print("")
   print("")
 
-  write_h_file(data_file_name, constants["header_name"], registers, sub_registers)
+  write_h_file(data_file_name, constants["header_name"], registers)
 
   template_file_obj = open(template_file_name, "r")
   reg_file_obj = open(reg_file_name, "w")
-  write_all(template_file_obj, reg_file_obj, constants,  registers, sub_registers, package_name)
+  write_all(template_file_obj, reg_file_obj, constants,  registers, package_name)
 
   template_file_obj.close()
   reg_file_obj.close()
