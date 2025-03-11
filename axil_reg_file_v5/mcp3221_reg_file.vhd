@@ -16,6 +16,12 @@ package mcp3221_reg_file_pkg is
     SAMPLE_RATE_DIVIDER : std_logic_vector(31 downto 0);
   end record;
 
+  type AWC_TEST_subreg_t is record
+    ACKS : std_logic_vector(2 downto 0);
+    DOUT_VALID : std_logic;
+    DIN_READY : std_logic;
+  end record;
+
 
   type reg_t is record
     MCP3221_CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -25,6 +31,7 @@ package mcp3221_reg_file_pkg is
     AWC_TEST_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     MCP3221_CONTROL : MCP3221_CONTROL_subreg_t;
     SAMPLE_RATE_DIVIDER : SAMPLE_RATE_DIVIDER_subreg_t;
+    AWC_TEST : AWC_TEST_subreg_t;
     MCP3221_CONTROL_wr_pulse : std_logic;
     SAMPLE_RATE_DIVIDER_wr_pulse : std_logic;
     DATA_wr_pulse : std_logic;
@@ -129,6 +136,9 @@ begin
   registers.MCP3221_CONTROL.DEVICE_ADDRESS <= registers.MCP3221_CONTROL_REG(7 downto 1);
   registers.MCP3221_CONTROL.SW_RESETN <= registers.MCP3221_CONTROL_REG(0);
   registers.SAMPLE_RATE_DIVIDER.SAMPLE_RATE_DIVIDER <= registers.SAMPLE_RATE_DIVIDER_REG(31 downto 0);
+  registers.AWC_TEST.ACKS <= registers.AWC_TEST_REG(4 downto 2);
+  registers.AWC_TEST.DOUT_VALID <= registers.AWC_TEST_REG(1);
+  registers.AWC_TEST.DIN_READY <= registers.AWC_TEST_REG(0);
 
   registers_out <= registers;
 

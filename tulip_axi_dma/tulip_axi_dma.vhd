@@ -10,7 +10,7 @@ entity tulip_axi_dma is
   (
     G_DMA_DATA_WIDTH  : integer range 8 to 128  := 128; -- do not change (todo: make flexible)
     G_PS_ADDR_WIDTH   : integer range 8 to 64   := 40;
-    G_MAX_BURST_LEN   : integer range 1 to 256  := 256; -- beats
+    G_MAX_BURST_LEN   : integer range 1 to 256  := 16; -- beats
 
     G_S_AXIS_DWIDTH   : integer range 8 to 128  := 128;
     G_M_AXIS_DWIDTH   : integer range 8 to 128  := 128
