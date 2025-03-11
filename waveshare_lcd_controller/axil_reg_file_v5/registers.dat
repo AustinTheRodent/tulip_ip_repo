@@ -1,0 +1,76 @@
+# RW = read/write
+# RO = read only
+# AWC = accumulate write clear
+
+(reg_file_name waveshare_lcd_reg_file.vhd)
+(package_name waveshare_lcd_reg_file)
+
+#name of the register set, used for H file header guard:
+(header_name WAVESHARE_LCD_REGISTERS)
+
+(REG_FILE_DATA_WIDTH 32)
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes):
+(REG_FILE_ADDR_WIDTH 12)
+
+#name type address reset_val
+
+WAVESHARE_LCD_CONTROL RW 0x000 0x00000000 {
+  CLK_POL             [5:5]
+  DATA_PHASE          [4:4]
+  MSB_FIRST           [3:3]
+  MANUAL_CS_USR_MODE  [2:2]
+  AXI_LITE_MODE       [1:1]
+  SW_RESETN           [0:0]
+}
+
+PWM_CONTROLLER RW 0x004 0x00000000 {
+  CLOCK_DIVIDER [31:24]
+  ANALOG_VALUE  [16:0]
+}
+
+WAVESHARE_LCD_STATUS RO 0x008 0x00000000 {
+  SPI_S_VALID [2:2]
+  SPI_S_READY [1:1]
+  SPI_M_VALID [0:0]
+}
+
+WAVESHARE_LCD_INTERRUPT_ENABLE RW 0x00C 0x00000000 {
+  SPI_S_LAST  [2:2]
+  SPI_M_VALID [1:1]
+  SPI_M_LAST  [0:0]
+}
+
+WAVESHARE_LCD_INTERRUPT AWC 0x010 0x00000000 {
+  SPI_S_LAST  [2:2]
+  SPI_M_VALID [1:1]
+  SPI_M_LAST  [0:0]
+}
+
+WAVESHARE_LCD_SPI_DATA RW 0x014 0x00000000 {
+  DATA [17:0]
+}
+
+WAVESHARE_SPI_CS_USR RW 0x018 0x000000000 {
+  USR [1:1]
+  CS  [0:0]
+}
+
+WAVESHARE_SPI_TX_DELAY RW 0x01C 0x00000000 {
+  DELAY [31:0]
+}
+
+WAVESHARE_SPI_CLK_DIVIDER RW 0x020 0x00000000 {
+  DELAY [31:0]
+}
+
+WAVESHARE_SPI_CS_FRONT_DELAY RW 0x024 0x00000000 {
+  DELAY [31:0]
+}
+
+WAVESHARE_SPI_CS_BACK_DELAY RW 0x028 0x00000000 {
+  DELAY [31:0]
+}
+
+WAVESHARE_SPI_TX_LEN RW 0x02C 0x00000000 {
+  LEN [7:0]
+}
