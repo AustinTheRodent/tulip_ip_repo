@@ -34,6 +34,7 @@ library work;
     s_axi_aresetn : in  std_logic;
 
     #read only regs port
+    #awc regs port
 
     s_axi_awaddr  : in  std_logic_vector(C_REG_FILE_ADDR_WIDTH-1 downto 0);
     s_axi_awvalid : in  std_logic;
@@ -124,6 +125,7 @@ begin
 
           when get_addr =>
             #wr pulse eq zero
+            #assign awc regs
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';

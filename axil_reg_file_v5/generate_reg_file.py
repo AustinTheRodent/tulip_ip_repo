@@ -1,5 +1,8 @@
 #!/bin/python3
 
+import os
+import sys
+
 def strip_newline(input_string):
   ret_string = input_string
   if ret_string == "":
@@ -408,12 +411,21 @@ def write_h_file(data_file_name, header_fname, registers):
   f.close()
 
 def main():
+
   print("Starting Register File HDL Generator")
   template_file_name  = "axil_reg_file.template"
   data_file_name      = "registers.dat"
 
   constants = get_constants(data_file_name)
   registers = get_registers(data_file_name)
+
+  if len(sys.argv) > 1:
+    for arg in sys.argv:
+      if arg == "clean" or arg == "-clean":
+        print("removing generated files...")
+        os.system("rm %s" % constants["reg_file_name"])
+        os.system("rm %s.h" % constants["header_name"])
+        return 0
 
   reg_file_name = constants["reg_file_name"]
   package_name  = constants["package_name"]

@@ -1,0 +1,66 @@
+# RW = read/write
+# RO = read only
+# AWC = accumulate write clear
+
+(reg_file_name button_iface.vhd)
+(package_name button_iface)
+
+#name of the register set, used for H file header guard:
+(header_name BUTTON_IFACE)
+
+(REG_FILE_DATA_WIDTH 32)
+#4096 bytes is a good address space due to the typical linux page size (4096 bytes):
+(REG_FILE_ADDR_WIDTH 12)
+
+#name type address reset_val
+
+BUTTON_CONTROL RW 0x000 0x00000000 {
+  SW_RESETN [0:0]
+}
+
+BUTTON_INTERRUPT_ENABLE RW 0x004 0x00000000 {
+  BUTTON4_FLAT  [11:11]
+  BUTTON4_PULSE [10:10]
+  BUTTON3_FLAT  [9:9]
+  BUTTON3_PULSE [8:8]
+  BUTTON2_FLAT  [7:7]
+  BUTTON2_PULSE [6:6]
+  BUTTON1_FLAT  [5:5]
+  BUTTON1_PULSE [4:4]
+  BUTTON0_FLAT  [3:3]
+  BUTTON0_PULSE [2:2]
+  ROTARY_B      [1:1]
+  ROTARY_A      [0:0]
+}
+
+BUTTON_INTERRUPT AWC 0x008 0x00000000 {
+  BUTTON4_FLAT  [11:11]
+  BUTTON4_PULSE [10:10]
+  BUTTON3_FLAT  [9:9]
+  BUTTON3_PULSE [8:8]
+  BUTTON2_FLAT  [7:7]
+  BUTTON2_PULSE [6:6]
+  BUTTON1_FLAT  [5:5]
+  BUTTON1_PULSE [4:4]
+  BUTTON0_FLAT  [3:3]
+  BUTTON0_PULSE [2:2]
+  ROTARY_B      [1:1]
+  ROTARY_A      [0:0]
+}
+
+BUTTON_POST_RISING_EDGE_DELAY RW 0x00C 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_POST_FALLING_EDGE_DELAY RW 0x010 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_RISING_EDGE_MIN_COUNT RW 0x014 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_FALLING_EDGE_MIN_COUNT RW 0x018 0x00000000 {
+  VALUE [31:0]
+}
+
