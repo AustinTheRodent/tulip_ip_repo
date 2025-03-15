@@ -205,8 +205,10 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
                 (i, j)
               wr_line = add_spaces(wr_line, line)
               if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
-                  (i, registers[i]["subreg"][j]["range"][0], i, j)
+                  (i, tmp, i, j)
               else:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
                   (i, registers[i]["subreg"][j]["range"], i, j)
@@ -223,8 +225,10 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
                 (i, j)
               wr_line = add_spaces(wr_line, line)
               if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
                 wr_line += "  registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
-                  (i, registers[i]["subreg"][j]["range"][0], i, registers[i]["subreg"][j]["range"][0], i, j)
+                  (i, tmp, i, tmp, i, j)
               else:
                 wr_line += "  registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
                   (i, registers[i]["subreg"][j]["range"], i, registers[i]["subreg"][j]["range"], i, j)
@@ -292,8 +296,10 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
               wr_line = ""
               wr_line = add_spaces(wr_line, line)
               if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
-                  (i, j, i, registers[i]["subreg"][j]["range"][0])
+                  (i, j, i, tmp)
               else:
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
                   (i, j, i, registers[i]["subreg"][j]["range"])

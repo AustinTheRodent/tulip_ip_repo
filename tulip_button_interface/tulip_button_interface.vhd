@@ -62,6 +62,11 @@ architecture rtl of tulip_button_interface is
     SM_E_AB_HIGH
   );
 
+  signal rot_enc_a_meta : std_logic;
+  signal rot_enc_b_meta : std_logic;
+  signal rot_enc_a_s    : std_logic;
+  signal rot_enc_b_s    : std_logic;
+
   signal rotary_encoder_state : rotary_encoder_state_t;
 
   signal rotary_a_pulse           : std_logic;
@@ -71,6 +76,11 @@ architecture rtl of tulip_button_interface is
   signal buttons_debounced_store  : std_logic_vector(buttons'range);
   signal buttons_debounced_pulse  : std_logic_vector(buttons'range);
 
+  signal debug_state              : std_logic_vector(7 downto 0);
+
+  --signal a_turn : std_logic;
+  --signal b_turn : std_logic;
+
 begin
 
   u_reg_file : entity work.button_iface
@@ -78,6 +88,35 @@ begin
   (
     s_axi_aclk    => s_axil_aclk,
     s_axi_aresetn => s_axil_aresetn,
+
+
+    s_BUTTONS_STATUS_A_PULSE    => rotary_a_pulse,
+    s_BUTTONS_STATUS_A_PULSE_v  => '1',
+
+    s_BUTTONS_STATUS_B_PULSE    => rotary_b_pulse,
+    s_BUTTONS_STATUS_B_PULSE_v  => '1',
+
+    s_BUTTONS_STATUS_BUTTON4    => buttons_debounced(4),
+    s_BUTTONS_STATUS_BUTTON4_v  => '1',
+
+    s_BUTTONS_STATUS_BUTTON3    => buttons_debounced(3),
+    s_BUTTONS_STATUS_BUTTON3_v  => '1',
+
+    s_BUTTONS_STATUS_BUTTON2    => buttons_debounced(2),
+    s_BUTTONS_STATUS_BUTTON2_v  => '1',
+
+    s_BUTTONS_STATUS_BUTTON1    => buttons_debounced(1),
+    s_BUTTONS_STATUS_BUTTON1_v  => '1',
+
+    s_BUTTONS_STATUS_BUTTON0    => buttons_debounced(0),
+    s_BUTTONS_STATUS_BUTTON0_v  => '1',
+
+    s_BUTTONS_STATUS_ROTARY_B   => rot_enc_b,
+    s_BUTTONS_STATUS_ROTARY_B_v => '1',
+
+    s_BUTTONS_STATUS_ROTARY_A   => rot_enc_a,
+    s_BUTTONS_STATUS_ROTARY_A_v => '1',
+
 
     s_BUTTON_INTERRUPT_BUTTON4_FLAT     => buttons_debounced(4),
     s_BUTTON_INTERRUPT_BUTTON4_FLAT_v   => registers.BUTTON_INTERRUPT_ENABLE.BUTTON4_FLAT,
@@ -115,6 +154,9 @@ begin
     s_BUTTON_INTERRUPT_ROTARY_A   => rotary_a_pulse,
     s_BUTTON_INTERRUPT_ROTARY_A_v => registers.BUTTON_INTERRUPT_ENABLE.ROTARY_A,
 
+    s_BUTTON_DEBUG_STATE    => debug_state,
+    s_BUTTON_DEBUG_STATE_v  => '1',
+
     s_axi_awaddr  => s_axil_awaddr,
     s_axi_awvalid => s_axil_awvalid,
     s_axi_awready => s_axil_awready,
@@ -140,64 +182,88 @@ begin
     registers_out => registers
   );
 
+  p_stabalize_rotary_encoder : process(s_axil_aclk)
+  begin
+    if rising_edge(s_axil_aclk) then
+      rot_enc_a_meta  <= rot_enc_a;
+      rot_enc_b_meta  <= rot_enc_b;
+
+      rot_enc_a_s <= rot_enc_a_meta;
+      rot_enc_b_s <= rot_enc_b_meta;
+    end if;
+  end process;
+
   p_rotary_encoder_sm : process(s_axil_aclk)
-    variable v_a_turn : std_logic;
-    variable v_b_turn : std_logic;
+    --variable a_turn : std_logic;
+    --variable b_turn : std_logic;
   begin
     if rising_edge(s_axil_aclk) then
       if s_axil_aresetn = '0' or registers.BUTTON_CONTROL.SW_RESETN = '0' then
         rotary_encoder_state  <= SM_E_INIT;
+        debug_state           <= x"00";
         rotary_a_pulse        <= '0';
         rotary_b_pulse        <= '0';
-        v_a_turn              := '0';
-        v_b_turn              := '0';
+        --a_turn              <= '0';
+        --b_turn              <= '0';
       else
         case rotary_encoder_state is
           when SM_E_INIT =>
             rotary_encoder_state  <= SM_E_AB_HIGH;
+            debug_state           <= x"01";
             rotary_a_pulse        <= '0';
             rotary_b_pulse        <= '0';
-            v_a_turn              := '0';
-            v_b_turn              := '0';
+            --a_turn              <= '0';
+            --b_turn              <= '0';
 
           when SM_E_AB_HIGH =>
-            if rot_enc_a = '0' then
+            if rot_enc_a_s = '0' then
               rotary_encoder_state  <= SM_E_A_LOW_B_HIGH;
-              v_a_turn              := '1';
-              v_b_turn              := '0';
-            elsif rot_enc_b = '0' then
+              debug_state           <= x"02";
+              --a_turn              <= '1';
+              --b_turn              <= '0';
+            elsif rot_enc_b_s = '0' then
               rotary_encoder_state  <= SM_E_B_LOW_A_HIGH;
-              v_a_turn              := '0';
-              v_b_turn              := '1';
-            else
-              v_a_turn              := '0';
-              v_b_turn              := '0';
+              debug_state           <= x"03";
+              --a_turn              <= '0';
+              --b_turn              <= '1';
             end if;
             rotary_a_pulse          <= '0';
             rotary_b_pulse          <= '0';
 
           when SM_E_A_LOW_B_HIGH =>
-            if rot_enc_a = '1' then
+            --a_turn <= '1';
+            if rot_enc_a_s = '1' then
               rotary_encoder_state  <= SM_E_AB_HIGH;
-            elsif rot_enc_b = '0' then
+              debug_state           <= x"01";
+            elsif rot_enc_b_s = '0' then
               rotary_encoder_state  <= SM_E_AB_LOW;
+              rotary_a_pulse        <= '1';
+              debug_state           <= x"04";
             end if;
 
           when SM_E_B_LOW_A_HIGH =>
-            if rot_enc_b = '1' then
+            --b_turn <= '1';
+            if rot_enc_b_s = '1' then
               rotary_encoder_state  <= SM_E_AB_HIGH;
-            elsif rot_enc_a = '0' then
+              debug_state           <= x"01";
+            elsif rot_enc_a_s = '0' then
               rotary_encoder_state  <= SM_E_AB_LOW;
+              rotary_b_pulse        <= '1';
+              debug_state           <= x"04";
             end if;
 
           when SM_E_AB_LOW =>
-            if rot_enc_a = '1' and rot_enc_b = '1' then
+            rotary_a_pulse  <= '0';
+            rotary_b_pulse  <= '0';
+
+            if rot_enc_a_s = '1' and rot_enc_b_s = '1' then
               rotary_encoder_state  <= SM_E_AB_HIGH;
-              if v_a_turn = '1' then
-                rotary_a_pulse      <= '1';
-              else
-                rotary_b_pulse      <= '1';
-              end if;
+              debug_state           <= x"01";
+              --if a_turn = '1' then
+              --  rotary_a_pulse      <= '1';
+              --else
+              --  rotary_b_pulse      <= '1';
+              --end if;
             end if;
 
 
