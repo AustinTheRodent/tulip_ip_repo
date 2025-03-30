@@ -12,31 +12,31 @@ package button_iface_pkg is
   end record;
 
   type BUTTON_INTERRUPT_ENABLE_subreg_t is record
-    BUTTON4_FLAT : std_logic;
-    BUTTON4_PULSE : std_logic;
-    BUTTON3_FLAT : std_logic;
-    BUTTON3_PULSE : std_logic;
-    BUTTON2_FLAT : std_logic;
-    BUTTON2_PULSE : std_logic;
-    BUTTON1_FLAT : std_logic;
-    BUTTON1_PULSE : std_logic;
-    BUTTON0_FLAT : std_logic;
-    BUTTON0_PULSE : std_logic;
+    BUTTON4_FE : std_logic;
+    BUTTON3_FE : std_logic;
+    BUTTON2_FE : std_logic;
+    BUTTON1_FE : std_logic;
+    BUTTON0_FE : std_logic;
+    BUTTON4_RE : std_logic;
+    BUTTON3_RE : std_logic;
+    BUTTON2_RE : std_logic;
+    BUTTON1_RE : std_logic;
+    BUTTON0_RE : std_logic;
     ROTARY_B : std_logic;
     ROTARY_A : std_logic;
   end record;
 
   type BUTTON_INTERRUPT_subreg_t is record
-    BUTTON4_FLAT : std_logic;
-    BUTTON4_PULSE : std_logic;
-    BUTTON3_FLAT : std_logic;
-    BUTTON3_PULSE : std_logic;
-    BUTTON2_FLAT : std_logic;
-    BUTTON2_PULSE : std_logic;
-    BUTTON1_FLAT : std_logic;
-    BUTTON1_PULSE : std_logic;
-    BUTTON0_FLAT : std_logic;
-    BUTTON0_PULSE : std_logic;
+    BUTTON4_FE : std_logic;
+    BUTTON3_FE : std_logic;
+    BUTTON2_FE : std_logic;
+    BUTTON1_FE : std_logic;
+    BUTTON0_FE : std_logic;
+    BUTTON4_RE : std_logic;
+    BUTTON3_RE : std_logic;
+    BUTTON2_RE : std_logic;
+    BUTTON1_RE : std_logic;
+    BUTTON0_RE : std_logic;
     ROTARY_B : std_logic;
     ROTARY_A : std_logic;
   end record;
@@ -112,12 +112,6 @@ entity button_iface is
     s_axi_aclk    : in  std_logic;
     s_axi_aresetn : in  std_logic;
 
-    s_BUTTONS_STATUS_A_PULSE : in std_logic;
-    s_BUTTONS_STATUS_A_PULSE_v : in std_logic;
-
-    s_BUTTONS_STATUS_B_PULSE : in std_logic;
-    s_BUTTONS_STATUS_B_PULSE_v : in std_logic;
-
     s_BUTTONS_STATUS_BUTTON4 : in std_logic;
     s_BUTTONS_STATUS_BUTTON4_v : in std_logic;
 
@@ -142,35 +136,35 @@ entity button_iface is
     s_BUTTON_DEBUG_STATE : in std_logic_vector(7 downto 0);
     s_BUTTON_DEBUG_STATE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON4_FLAT : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON4_FLAT_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON4_FE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON4_FE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON4_PULSE : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON4_PULSE_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON3_FE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON3_FE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON3_FLAT : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON3_FLAT_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON2_FE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON2_FE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON3_PULSE : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON3_PULSE_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON1_FE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON1_FE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON2_FLAT : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON2_FLAT_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON0_FE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON0_FE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON2_PULSE : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON2_PULSE_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON4_RE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON4_RE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON1_FLAT : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON1_FLAT_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON3_RE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON3_RE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON1_PULSE : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON1_PULSE_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON2_RE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON2_RE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON0_FLAT : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON0_FLAT_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON1_RE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON1_RE_v : in std_logic;
 
-    s_BUTTON_INTERRUPT_BUTTON0_PULSE : in std_logic;
-    s_BUTTON_INTERRUPT_BUTTON0_PULSE_v : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON0_RE : in std_logic;
+    s_BUTTON_INTERRUPT_BUTTON0_RE_v : in std_logic;
 
     s_BUTTON_INTERRUPT_ROTARY_B : in std_logic;
     s_BUTTON_INTERRUPT_ROTARY_B_v : in std_logic;
@@ -234,34 +228,84 @@ architecture rtl of button_iface is
 begin
 
   registers.BUTTON_CONTROL.SW_RESETN <= registers.BUTTON_CONTROL_REG(0);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON4_FLAT <= registers.BUTTON_INTERRUPT_ENABLE_REG(11);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON4_PULSE <= registers.BUTTON_INTERRUPT_ENABLE_REG(10);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON3_FLAT <= registers.BUTTON_INTERRUPT_ENABLE_REG(9);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON3_PULSE <= registers.BUTTON_INTERRUPT_ENABLE_REG(8);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON2_FLAT <= registers.BUTTON_INTERRUPT_ENABLE_REG(7);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON2_PULSE <= registers.BUTTON_INTERRUPT_ENABLE_REG(6);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON1_FLAT <= registers.BUTTON_INTERRUPT_ENABLE_REG(5);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON1_PULSE <= registers.BUTTON_INTERRUPT_ENABLE_REG(4);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON0_FLAT <= registers.BUTTON_INTERRUPT_ENABLE_REG(3);
-  registers.BUTTON_INTERRUPT_ENABLE.BUTTON0_PULSE <= registers.BUTTON_INTERRUPT_ENABLE_REG(2);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON4_FE <= registers.BUTTON_INTERRUPT_ENABLE_REG(11);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON3_FE <= registers.BUTTON_INTERRUPT_ENABLE_REG(10);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON2_FE <= registers.BUTTON_INTERRUPT_ENABLE_REG(9);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON1_FE <= registers.BUTTON_INTERRUPT_ENABLE_REG(8);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON0_FE <= registers.BUTTON_INTERRUPT_ENABLE_REG(7);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON4_RE <= registers.BUTTON_INTERRUPT_ENABLE_REG(6);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON3_RE <= registers.BUTTON_INTERRUPT_ENABLE_REG(5);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON2_RE <= registers.BUTTON_INTERRUPT_ENABLE_REG(4);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON1_RE <= registers.BUTTON_INTERRUPT_ENABLE_REG(3);
+  registers.BUTTON_INTERRUPT_ENABLE.BUTTON0_RE <= registers.BUTTON_INTERRUPT_ENABLE_REG(2);
   registers.BUTTON_INTERRUPT_ENABLE.ROTARY_B <= registers.BUTTON_INTERRUPT_ENABLE_REG(1);
   registers.BUTTON_INTERRUPT_ENABLE.ROTARY_A <= registers.BUTTON_INTERRUPT_ENABLE_REG(0);
-  registers.BUTTON_INTERRUPT.BUTTON4_FLAT <= registers.BUTTON_INTERRUPT_REG(11);
-  registers.BUTTON_INTERRUPT.BUTTON4_PULSE <= registers.BUTTON_INTERRUPT_REG(10);
-  registers.BUTTON_INTERRUPT.BUTTON3_FLAT <= registers.BUTTON_INTERRUPT_REG(9);
-  registers.BUTTON_INTERRUPT.BUTTON3_PULSE <= registers.BUTTON_INTERRUPT_REG(8);
-  registers.BUTTON_INTERRUPT.BUTTON2_FLAT <= registers.BUTTON_INTERRUPT_REG(7);
-  registers.BUTTON_INTERRUPT.BUTTON2_PULSE <= registers.BUTTON_INTERRUPT_REG(6);
-  registers.BUTTON_INTERRUPT.BUTTON1_FLAT <= registers.BUTTON_INTERRUPT_REG(5);
-  registers.BUTTON_INTERRUPT.BUTTON1_PULSE <= registers.BUTTON_INTERRUPT_REG(4);
-  registers.BUTTON_INTERRUPT.BUTTON0_FLAT <= registers.BUTTON_INTERRUPT_REG(3);
-  registers.BUTTON_INTERRUPT.BUTTON0_PULSE <= registers.BUTTON_INTERRUPT_REG(2);
+  registers.BUTTON_INTERRUPT.BUTTON4_FE <= registers.BUTTON_INTERRUPT_REG(11);
+  registers.BUTTON_INTERRUPT.BUTTON3_FE <= registers.BUTTON_INTERRUPT_REG(10);
+  registers.BUTTON_INTERRUPT.BUTTON2_FE <= registers.BUTTON_INTERRUPT_REG(9);
+  registers.BUTTON_INTERRUPT.BUTTON1_FE <= registers.BUTTON_INTERRUPT_REG(8);
+  registers.BUTTON_INTERRUPT.BUTTON0_FE <= registers.BUTTON_INTERRUPT_REG(7);
+  registers.BUTTON_INTERRUPT.BUTTON4_RE <= registers.BUTTON_INTERRUPT_REG(6);
+  registers.BUTTON_INTERRUPT.BUTTON3_RE <= registers.BUTTON_INTERRUPT_REG(5);
+  registers.BUTTON_INTERRUPT.BUTTON2_RE <= registers.BUTTON_INTERRUPT_REG(4);
+  registers.BUTTON_INTERRUPT.BUTTON1_RE <= registers.BUTTON_INTERRUPT_REG(3);
+  registers.BUTTON_INTERRUPT.BUTTON0_RE <= registers.BUTTON_INTERRUPT_REG(2);
   registers.BUTTON_INTERRUPT.ROTARY_B <= registers.BUTTON_INTERRUPT_REG(1);
   registers.BUTTON_INTERRUPT.ROTARY_A <= registers.BUTTON_INTERRUPT_REG(0);
   registers.BUTTON_POST_RISING_EDGE_DELAY.VALUE <= registers.BUTTON_POST_RISING_EDGE_DELAY_REG(31 downto 0);
   registers.BUTTON_POST_FALLING_EDGE_DELAY.VALUE <= registers.BUTTON_POST_FALLING_EDGE_DELAY_REG(31 downto 0);
   registers.BUTTON_RISING_EDGE_MIN_COUNT.VALUE <= registers.BUTTON_RISING_EDGE_MIN_COUNT_REG(31 downto 0);
   registers.BUTTON_FALLING_EDGE_MIN_COUNT.VALUE <= registers.BUTTON_FALLING_EDGE_MIN_COUNT_REG(31 downto 0);
+
+  process(s_axi_aclk)
+  begin
+    if rising_edge(s_axi_aclk) then
+      if s_axi_aresetn = '0' then
+        registers.BUTTON_INTERRUPT_REG <= x"00000000";
+      else
+        if std_logic_vector(to_unsigned(BUTTON_INTERRUPT_addr, C_REG_FILE_ADDR_WIDTH)) = awaddr and s_axi_wvalid = '1' and s_axi_wready_int = '1' then
+          registers.BUTTON_INTERRUPT_REG <= registers.BUTTON_INTERRUPT_REG and (not s_axi_wdata);
+        else
+          if s_BUTTON_INTERRUPT_BUTTON4_FE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(11) <= registers.BUTTON_INTERRUPT_REG(11) or s_BUTTON_INTERRUPT_BUTTON4_FE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON3_FE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(10) <= registers.BUTTON_INTERRUPT_REG(10) or s_BUTTON_INTERRUPT_BUTTON3_FE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON2_FE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(9) <= registers.BUTTON_INTERRUPT_REG(9) or s_BUTTON_INTERRUPT_BUTTON2_FE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON1_FE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(8) <= registers.BUTTON_INTERRUPT_REG(8) or s_BUTTON_INTERRUPT_BUTTON1_FE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON0_FE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(7) <= registers.BUTTON_INTERRUPT_REG(7) or s_BUTTON_INTERRUPT_BUTTON0_FE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON4_RE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(6) <= registers.BUTTON_INTERRUPT_REG(6) or s_BUTTON_INTERRUPT_BUTTON4_RE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON3_RE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(5) <= registers.BUTTON_INTERRUPT_REG(5) or s_BUTTON_INTERRUPT_BUTTON3_RE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON2_RE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(4) <= registers.BUTTON_INTERRUPT_REG(4) or s_BUTTON_INTERRUPT_BUTTON2_RE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON1_RE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(3) <= registers.BUTTON_INTERRUPT_REG(3) or s_BUTTON_INTERRUPT_BUTTON1_RE;
+          end if;
+          if s_BUTTON_INTERRUPT_BUTTON0_RE_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(2) <= registers.BUTTON_INTERRUPT_REG(2) or s_BUTTON_INTERRUPT_BUTTON0_RE;
+          end if;
+          if s_BUTTON_INTERRUPT_ROTARY_B_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(1) <= registers.BUTTON_INTERRUPT_REG(1) or s_BUTTON_INTERRUPT_ROTARY_B;
+          end if;
+          if s_BUTTON_INTERRUPT_ROTARY_A_v = '1' then
+            registers.BUTTON_INTERRUPT_REG(0) <= registers.BUTTON_INTERRUPT_REG(0) or s_BUTTON_INTERRUPT_ROTARY_A;
+          end if;
+        end if;
+      end if;
+    end if;
+  end process;
 
   registers_out <= registers;
 
@@ -279,12 +323,6 @@ begin
         registers.BUTTONS_STATUS_REG <= x"00000000";
         registers.BUTTON_DEBUG_REG <= x"00000000";
       else
-        if s_BUTTONS_STATUS_A_PULSE_v = '1' then
-          registers.BUTTONS_STATUS_REG(8) <= s_BUTTONS_STATUS_A_PULSE;
-        end if;
-        if s_BUTTONS_STATUS_B_PULSE_v = '1' then
-          registers.BUTTONS_STATUS_REG(7) <= s_BUTTONS_STATUS_B_PULSE;
-        end if;
         if s_BUTTONS_STATUS_BUTTON4_v = '1' then
           registers.BUTTONS_STATUS_REG(6) <= s_BUTTONS_STATUS_BUTTON4;
         end if;
@@ -319,7 +357,6 @@ begin
       if s_axi_aresetn = '0' then
         registers.BUTTON_CONTROL_REG <= x"00000000";
         registers.BUTTON_INTERRUPT_ENABLE_REG <= x"00000000";
-        registers.BUTTON_INTERRUPT_REG <= x"00000000";
         registers.BUTTON_POST_RISING_EDGE_DELAY_REG <= x"00000000";
         registers.BUTTON_POST_FALLING_EDGE_DELAY_REG <= x"00000000";
         registers.BUTTON_RISING_EDGE_MIN_COUNT_REG <= x"00000000";
@@ -364,42 +401,6 @@ begin
             registers.BUTTON_RISING_EDGE_MIN_COUNT_wr_pulse <= '0';
             registers.BUTTON_FALLING_EDGE_MIN_COUNT_wr_pulse <= '0';
             registers.BUTTON_DEBUG_wr_pulse <= '0';
-            if s_BUTTON_INTERRUPT_BUTTON4_FLAT_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(11) <= registers.BUTTON_INTERRUPT_REG(11) or s_BUTTON_INTERRUPT_BUTTON4_FLAT;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON4_PULSE_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(10) <= registers.BUTTON_INTERRUPT_REG(10) or s_BUTTON_INTERRUPT_BUTTON4_PULSE;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON3_FLAT_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(9) <= registers.BUTTON_INTERRUPT_REG(9) or s_BUTTON_INTERRUPT_BUTTON3_FLAT;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON3_PULSE_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(8) <= registers.BUTTON_INTERRUPT_REG(8) or s_BUTTON_INTERRUPT_BUTTON3_PULSE;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON2_FLAT_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(7) <= registers.BUTTON_INTERRUPT_REG(7) or s_BUTTON_INTERRUPT_BUTTON2_FLAT;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON2_PULSE_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(6) <= registers.BUTTON_INTERRUPT_REG(6) or s_BUTTON_INTERRUPT_BUTTON2_PULSE;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON1_FLAT_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(5) <= registers.BUTTON_INTERRUPT_REG(5) or s_BUTTON_INTERRUPT_BUTTON1_FLAT;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON1_PULSE_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(4) <= registers.BUTTON_INTERRUPT_REG(4) or s_BUTTON_INTERRUPT_BUTTON1_PULSE;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON0_FLAT_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(3) <= registers.BUTTON_INTERRUPT_REG(3) or s_BUTTON_INTERRUPT_BUTTON0_FLAT;
-            end if;
-            if s_BUTTON_INTERRUPT_BUTTON0_PULSE_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(2) <= registers.BUTTON_INTERRUPT_REG(2) or s_BUTTON_INTERRUPT_BUTTON0_PULSE;
-            end if;
-            if s_BUTTON_INTERRUPT_ROTARY_B_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(1) <= registers.BUTTON_INTERRUPT_REG(1) or s_BUTTON_INTERRUPT_ROTARY_B;
-            end if;
-            if s_BUTTON_INTERRUPT_ROTARY_A_v = '1' then
-              registers.BUTTON_INTERRUPT_REG(0) <= registers.BUTTON_INTERRUPT_REG(0) or s_BUTTON_INTERRUPT_ROTARY_A;
-            end if;
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -418,7 +419,6 @@ begin
                   registers.BUTTON_INTERRUPT_ENABLE_REG <= s_axi_wdata;
                   registers.BUTTON_INTERRUPT_ENABLE_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(BUTTON_INTERRUPT_addr, C_REG_FILE_ADDR_WIDTH)) =>
-                  registers.BUTTON_INTERRUPT_REG <= registers.BUTTON_INTERRUPT_REG and (not s_axi_wdata);
                   registers.BUTTON_INTERRUPT_wr_pulse <= '1';
                 when std_logic_vector(to_unsigned(BUTTONS_STATUS_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.BUTTONS_STATUS_wr_pulse <= '1';

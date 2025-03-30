@@ -84,6 +84,8 @@ begin
 
   #subreg assign
 
+  #awc process
+
   registers_out <= registers;
 
   s_axi_rresp   <= (others => '0');

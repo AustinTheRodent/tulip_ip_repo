@@ -2,11 +2,11 @@
 # RO = read only
 # AWC = accumulate write clear
 
-(reg_file_name mcp3221_reg_file.vhd)
-(package_name mcp3221_reg_file)
+(reg_file_name button_iface.vhd)
+(package_name button_iface)
 
 #name of the register set, used for H file header guard:
-(header_name MCP3221_REGISTERS)
+(header_name BUTTON_IFACE)
 
 (REG_FILE_DATA_WIDTH 32)
 #4096 bytes is a good address space due to the typical linux page size (4096 bytes):
@@ -14,28 +14,68 @@
 
 #name type address reset_val
 
-MCP3221_CONTROL RW 0x000 0x00000000 {
-  DEVICE_ADDRESS [7:1]
+BUTTON_CONTROL RW 0x000 0x00000000 {
   SW_RESETN [0:0]
 }
 
-SAMPLE_RATE_DIVIDER RW 0x004 0x00000000 {
-  # number of clock cycles between samples, 0 = not used
-  SAMPLE_RATE_DIVIDER [31:0]
+BUTTON_INTERRUPT_ENABLE RW 0x004 0x00000000 {
+  BUTTON4_FLAT  [11:11]
+  BUTTON4_PULSE [10:10]
+  BUTTON3_FLAT  [9:9]
+  BUTTON3_PULSE [8:8]
+  BUTTON2_FLAT  [7:7]
+  BUTTON2_PULSE [6:6]
+  BUTTON1_FLAT  [5:5]
+  BUTTON1_PULSE [4:4]
+  BUTTON0_FLAT  [3:3]
+  BUTTON0_PULSE [2:2]
+  ROTARY_B      [1:1]
+  ROTARY_A      [0:0]
 }
 
-DATA RO 0x008 0x00000000 {
-  DATA [15:0]
+BUTTON_INTERRUPT AWC 0x008 0x00000000 {
+  BUTTON4_FLAT  [11:11]
+  BUTTON4_PULSE [10:10]
+  BUTTON3_FLAT  [9:9]
+  BUTTON3_PULSE [8:8]
+  BUTTON2_FLAT  [7:7]
+  BUTTON2_PULSE [6:6]
+  BUTTON1_FLAT  [5:5]
+  BUTTON1_PULSE [4:4]
+  BUTTON0_FLAT  [3:3]
+  BUTTON0_PULSE [2:2]
+  ROTARY_B      [1:1]
+  ROTARY_A      [0:0]
 }
 
-STATUS RO 0x00C 0x00000000 {
-  ACKS [4:2]
-  DOUT_VALID [1:1]
-  DIN_READY [0:0]
+BUTTONS_STATUS RO 0x100 0x00000000 {
+  A_PULSE   [8:8]
+  B_PULSE   [7:7]
+  BUTTON4   [6:6]
+  BUTTON3   [5:5]
+  BUTTON2   [4:4]
+  BUTTON1   [3:3]
+  BUTTON0   [2:2]
+  ROTARY_B  [1:1]
+  ROTARY_A  [0:0]
 }
 
-AWC_TEST AWC 0x010 0x00000000 {
-  ACKS [4:2]
-  DOUT_VALID [1:1]
-  DIN_READY [0:0]
+BUTTON_POST_RISING_EDGE_DELAY RW 0x00C 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_POST_FALLING_EDGE_DELAY RW 0x010 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_RISING_EDGE_MIN_COUNT RW 0x014 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_FALLING_EDGE_MIN_COUNT RW 0x018 0x00000000 {
+  VALUE [31:0]
+}
+
+BUTTON_DEBUG RO 0x01C 0x00000000 {
+  STATE [7:0]
 }
