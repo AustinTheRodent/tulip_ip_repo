@@ -1,5 +1,8 @@
 #!/bin/python3
 
+import os
+import sys
+
 def strip_newline(input_string):
   ret_string = input_string
   if ret_string == "":
@@ -91,6 +94,39 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           wr_line = add_spaces(wr_line, line)
           wr_line += "%s_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);\n" % i
           reg_file_obj.write(wr_line)
+      elif type == "awc process":
+        for i in registers:
+          if registers[i]["type"] == "AWC":
+            wr_line = ""
+            wr_line += "  process(s_axi_aclk)\n"
+            wr_line += "  begin\n"
+            wr_line += "    if rising_edge(s_axi_aclk) then\n"
+            wr_line += "      if s_axi_aresetn = '0' then\n"
+            wr_line += "        registers.%s_REG <= x\"%08X\";\n" % (i, registers[i]["reset_val"])
+            wr_line += "      else\n"
+            wr_line += "        if std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) = awaddr and s_axi_wvalid = '1' and s_axi_wready_int = '1' then\n" % i
+            wr_line += "          registers.%s_REG <= registers.%s_REG and (not s_axi_wdata);\n" % (i, i)
+            wr_line += "        else\n"
+            for j in registers[i]["subreg"]:
+              wr_line += "          if s_%s_%s_v = '1' then\n" % \
+                (i, j)
+              wr_line = add_spaces(wr_line, line)
+              if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
+                wr_line += "          registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
+                  (i, tmp, i, tmp, i, j)
+              else:
+                wr_line += "          registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
+                  (i, registers[i]["subreg"][j]["range"], i, registers[i]["subreg"][j]["range"], i, j)
+              wr_line += "          end if;\n"
+            wr_line += "        end if;\n"
+            wr_line += "      end if;\n"
+            wr_line += "    end if;\n"
+            wr_line += "  end process;\n"
+            reg_file_obj.write(wr_line)
+
+
       elif type == "register wr pulses":
         for i in registers:
           wr_line = ""
@@ -145,8 +181,6 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
             wr_line = add_spaces(wr_line, line)
             wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
             wr_line = add_spaces(wr_line, line)
-            wr_line += "  registers.%s_REG <= registers.%s_REG and (not s_axi_wdata);\n" % (i, i)
-            wr_line = add_spaces(wr_line, line)
             wr_line += "  registers.%s_wr_pulse <= '1';\n" % i
             reg_file_obj.write(wr_line)
           elif registers[i]["type"] == "RO":
@@ -166,7 +200,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           reg_file_obj.write(wr_line)
       elif type == "reset regs":
         for i in registers:
-          if registers[i]["type"] == "RW" or registers[i]["type"] == "AWC":
+          if registers[i]["type"] == "RW":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             if int(constants["REG_FILE_DATA_WIDTH"]) == 32:
@@ -202,29 +236,13 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
                 (i, j)
               wr_line = add_spaces(wr_line, line)
               if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
-                  (i, registers[i]["subreg"][j]["range"][0], i, j)
+                  (i, tmp, i, j)
               else:
                 wr_line += "  registers.%s_REG(%s) <= s_%s_%s;\n" % \
                   (i, registers[i]["subreg"][j]["range"], i, j)
-              wr_line = add_spaces(wr_line, line)
-              wr_line += "end if;\n"
-              reg_file_obj.write(wr_line)
-      elif type == "assign awc regs":
-        for i in registers:
-          if registers[i]["type"] == "AWC":
-            for j in registers[i]["subreg"]:
-              wr_line = ""
-              wr_line = add_spaces(wr_line, line)
-              wr_line += "if s_%s_%s_v = '1' then\n" % \
-                (i, j)
-              wr_line = add_spaces(wr_line, line)
-              if registers[i]["subreg"][j]["length"] == 1:
-                wr_line += "  registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
-                  (i, registers[i]["subreg"][j]["range"][0], i, registers[i]["subreg"][j]["range"][0], i, j)
-              else:
-                wr_line += "  registers.%s_REG(%s) <= registers.%s_REG(%s) or s_%s_%s;\n" % \
-                  (i, registers[i]["subreg"][j]["range"], i, registers[i]["subreg"][j]["range"], i, j)
               wr_line = add_spaces(wr_line, line)
               wr_line += "end if;\n"
               reg_file_obj.write(wr_line)
@@ -289,8 +307,10 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
               wr_line = ""
               wr_line = add_spaces(wr_line, line)
               if registers[i]["subreg"][j]["length"] == 1:
+                tmp = registers[i]["subreg"][j]["range"]
+                tmp = tmp.split()[0]
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
-                  (i, j, i, registers[i]["subreg"][j]["range"][0])
+                  (i, j, i, tmp)
               else:
                 wr_line += "registers.%s.%s <= registers.%s_REG(%s);\n" % \
                   (i, j, i, registers[i]["subreg"][j]["range"])
@@ -408,12 +428,21 @@ def write_h_file(data_file_name, header_fname, registers):
   f.close()
 
 def main():
+
   print("Starting Register File HDL Generator")
   template_file_name  = "axil_reg_file.template"
   data_file_name      = "registers.dat"
 
   constants = get_constants(data_file_name)
   registers = get_registers(data_file_name)
+
+  if len(sys.argv) > 1:
+    for arg in sys.argv:
+      if arg == "clean" or arg == "-clean":
+        print("removing generated files...")
+        os.system("rm %s" % constants["reg_file_name"])
+        os.system("rm %s.h" % constants["header_name"])
+        return 0
 
   reg_file_name = constants["reg_file_name"]
   package_name  = constants["package_name"]
