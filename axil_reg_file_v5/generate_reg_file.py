@@ -145,6 +145,13 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           wr_line = add_spaces(wr_line, line)
           wr_line += "constant %s_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := %i;\n" % (i, registers[i]["address"])
           reg_file_obj.write(wr_line)
+      elif type == "wr pulse reg eq zero":
+        for i in registers:
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP":
+            wr_line = ""
+            wr_line = add_spaces(wr_line, line)
+            wr_line += "registers.%s_REG <= (others => '0');\n" % i
+            reg_file_obj.write(wr_line)
       elif type == "wr pulse eq zero":
         for i in registers:
           wr_line = ""
@@ -167,7 +174,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           reg_file_obj.write(wr_line)
       elif type == "awaddr case":
         for i in registers:
-          if registers[i]["type"] == "RW":
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             wr_line += "when std_logic_vector(to_unsigned(%s_addr, C_REG_FILE_ADDR_WIDTH)) =>\n" % i
@@ -200,7 +207,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           reg_file_obj.write(wr_line)
       elif type == "reset regs":
         for i in registers:
-          if registers[i]["type"] == "RW":
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             if int(constants["REG_FILE_DATA_WIDTH"]) == 32:
@@ -280,7 +287,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
               reg_file_obj.write(wr_line)
       elif type == "subreg type":
         for i in registers:
-          if registers[i]["type"] == "RW" or registers[i]["type"] == "AWC":
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP" or registers[i]["type"] == "AWC":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             wr_line += "type %s_subreg_t is record\n" % i
@@ -295,14 +302,14 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
             reg_file_obj.write(wr_line)
       elif type == "subreg declare":
         for i in registers:
-          if registers[i]["type"] == "RW" or registers[i]["type"] == "AWC":
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP" or registers[i]["type"] == "AWC":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             wr_line += "%s : %s_subreg_t;\n" % (i, i)
             reg_file_obj.write(wr_line)
       elif type == "subreg assign":
         for i in registers:
-          if registers[i]["type"] == "RW" or registers[i]["type"] == "AWC":
+          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP" or registers[i]["type"] == "AWC":
             for j in registers[i]["subreg"]:
               wr_line = ""
               wr_line = add_spaces(wr_line, line)

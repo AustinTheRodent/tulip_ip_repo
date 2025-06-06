@@ -120,6 +120,7 @@ begin
         case wr_state is
           when init =>
             #wr pulse eq zero
+            #wr pulse reg eq zero
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -127,6 +128,7 @@ begin
 
           when get_addr =>
             #wr pulse eq zero
+            #wr pulse reg eq zero
             #assign awc regs
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
