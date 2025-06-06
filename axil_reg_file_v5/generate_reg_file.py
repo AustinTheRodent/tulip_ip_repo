@@ -147,7 +147,7 @@ def write_all(template_file_obj, reg_file_obj, constants, registers, package_nam
           reg_file_obj.write(wr_line)
       elif type == "wr pulse reg eq zero":
         for i in registers:
-          if registers[i]["type"] == "RW" or registers[i]["type"] == "WP":
+          if registers[i]["type"] == "WP":
             wr_line = ""
             wr_line = add_spaces(wr_line, line)
             wr_line += "registers.%s_REG <= (others => '0');\n" % i
