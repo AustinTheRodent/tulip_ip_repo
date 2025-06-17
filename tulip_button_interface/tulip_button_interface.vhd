@@ -16,6 +16,7 @@ entity tulip_button_interface is
     rot_enc_b         : in  std_logic;
     --rot_enc_push      : in  std_logic;
     buttons           : in  std_logic_vector(4 downto 0);
+    interrupt         : out std_logic;
 
     ------------------------------------------------------------------------------------
     ------------------------------------------------------------------------------------
@@ -85,6 +86,8 @@ architecture rtl of tulip_button_interface is
   --signal b_turn : std_logic;
 
 begin
+
+  interrupt <= '0' when unsigned(registers.BUTTON_INTERRUPT_REG) = 0 else '1';
 
   u_reg_file : entity work.button_iface
   port map
