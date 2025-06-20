@@ -6,13 +6,12 @@ use ieee.numeric_std.all;
 entity eq_iir is
   generic
   (
-    G_NUM_BANDS           : integer range 2 to 128  := 2;
+    G_NUM_BANDS           : integer range 2 to 128  := 10;
     G_NUM_B_TAPS          : integer range 2 to 255  := 3;
     G_NUM_A_TAPS          : integer range 2 to 255  := 3;
     G_TAP_INTEGER_BITS    : integer := 2;
     G_TAP_DWIDTH          : integer := 64; -- keep these large
     G_DWIDTH              : integer := 64; -- keep these large
-    G_REFRESH_RATE        : integer := 4800; -- samples
     G_ADC_DWIDTH          : integer := 24
   );
   port
@@ -53,17 +52,15 @@ architecture rtl of eq_iir is
   signal m_core_tvalid  : std_logic_vector(G_NUM_BANDS-1 downto 0);
   signal m_core_tready  : std_logic_vector(G_NUM_BANDS-1 downto 0);
 
-  type iir_filt_tap_t is array (0 to G_NUM_BANDS-1) of std_logic_vector(G_TAP_DWIDTH-1 downto 0);
-  signal a_tap_tdata    : iir_filt_data_t;
   signal a_tap_tvalid   : std_logic_vector(G_NUM_BANDS-1 downto 0);
-  signal a_tap_tready   : std_logic_vector(G_NUM_BANDS-1 downto 0);
   signal a_tap_done     : std_logic_vector(G_NUM_BANDS-1 downto 0);
-  signal b_tap_tdata    : iir_filt_data_t;
   signal b_tap_tvalid   : std_logic_vector(G_NUM_BANDS-1 downto 0);
-  signal b_tap_tready   : std_logic_vector(G_NUM_BANDS-1 downto 0);
   signal b_tap_done     : std_logic_vector(G_NUM_BANDS-1 downto 0);
 
   signal gate_input     : std_logic;
+
+  signal a_tap_prog_counter : unsigned(7 downto 0);
+  signal b_tap_prog_counter : unsigned(7 downto 0);
 
 begin
 
@@ -73,7 +70,7 @@ begin
 
   gen_interenal_sig_connect : for i in 1 to G_NUM_BANDS-1 generate
     s_core_tdata(i)     <= m_core_tdata(i-1);
-    s_core_tvalid(i)    <= m_core_tready(i-1);
+    s_core_tvalid(i)    <= m_core_tvalid(i-1);
     m_core_tready(i-1)  <= s_core_tready(i);
   end generate;
 
@@ -81,48 +78,85 @@ begin
   m_eq_tvalid                   <= m_core_tvalid(G_NUM_BANDS-1) when bypass = '0' else s_eq_tvalid;
   m_core_tready(G_NUM_BANDS-1)  <= m_eq_tready;
 
+  s_prog_a_tap_tready <= not a_tap_done(G_NUM_BANDS-1);
+  s_prog_b_tap_tready <= not b_tap_done(G_NUM_BANDS-1);
+
   b_state_machine : block
     type state_t is (init, program, run);
     signal state            : state_t;
-    signal eq_prog_counter  : unsigned(7 downto 0);
+    signal a_prog_counter   : unsigned(7 downto 0);
+    signal b_prog_counter   : unsigned(7 downto 0);
+    signal prog_a_done_int  : std_logic;
+    signal prog_b_done_int  : std_logic;
   begin
+
+    prog_a_done_int <= a_tap_done(G_NUM_BANDS-1);
+    prog_b_done_int <= b_tap_done(G_NUM_BANDS-1);
+
+    prog_a_done <= prog_a_done_int;
+    prog_b_done <= prog_b_done_int;
+
+    gen_a_v : for i in 0 to G_NUM_BANDS-1 generate
+      a_tap_tvalid(i) <= s_prog_a_tap_tvalid when to_integer(a_prog_counter) = i else '0';
+    end generate;
+
+    gen_b_v : for i in 0 to G_NUM_BANDS-1 generate
+      b_tap_tvalid(i) <= s_prog_b_tap_tvalid when to_integer(b_prog_counter) = i else '0';
+    end generate;
+
     p_state_machine : process(clk)
     begin
       if rising_edge(clk) then
+
         if reset = '1' then
           state       <= init;
           gate_input  <= '0';
 
-          eq_prog_counter <= (others => '0');
+          a_prog_counter      <= (others => '0');
+          b_prog_counter      <= (others => '0');
+          a_tap_prog_counter  <= (others => '0');
+          b_tap_prog_counter  <= (others => '0');
 
-          a_tap_tvalid        <= (others => '0');
-          b_tap_tvalid        <= (others => '0');
-          s_prog_a_tap_tready <= '0';
-          s_prog_b_tap_tready <= '0';
+          a_tap_done          <= (others => '0');
+          b_tap_done          <= (others => '0');
         else
           case state is
             when init =>
+              state       <= program;
+              a_tap_done  <= (others => '0');
+
+            when program =>
               for i in 0 to G_NUM_BANDS-1 loop
-                if eq_prog_counter = i then
-                  a_tap_tvalid(i)     <= s_prog_a_tap_tvalid;
-                  b_tap_tvalid(i)     <= s_prog_b_tap_tvalid;
-                  s_prog_a_tap_tready <= a_tap_tready(i);
-                  s_prog_b_tap_tready <= b_tap_tready(i);
-                else
-                  a_tap_tvalid(i)     <= '0';
-                  b_tap_tvalid(i)     <= '0';
-                  s_prog_a_tap_tready <= '0';
-                  s_prog_b_tap_tready <= '0';
+                if to_integer(a_prog_counter) = i then
+                  if s_prog_a_tap_tvalid = '1' and a_tap_done(G_NUM_BANDS-1) = '0' then
+                    if a_tap_prog_counter = G_NUM_A_TAPS-1 then
+                      a_tap_prog_counter  <= (others => '0');
+                      a_prog_counter      <= a_prog_counter + 1;
+                      a_tap_done(i)       <= '1';
+                    else
+                      a_tap_prog_counter <= a_tap_prog_counter + 1;
+                    end if;
+                  end if;
                 end if;
               end loop;
 
-              if eq_prog_counter = G_NUM_BANDS-1 and a_tap_done(G_NUM_BANDS-1) = '1' and b_tap_done(G_NUM_BANDS-1) = '1' then
-                prog_a_done <= '1';
-                prog_b_done <= '1';
+              for i in 0 to G_NUM_BANDS-1 loop
+                if to_integer(b_prog_counter) = i then
+                  if s_prog_b_tap_tvalid = '1' and b_tap_done(G_NUM_BANDS-1) = '0' then
+                    if b_tap_prog_counter = G_NUM_B_TAPS-1 then
+                      b_tap_prog_counter  <= (others => '0');
+                      b_prog_counter      <= b_prog_counter + 1;
+                      b_tap_done(i)       <= '1';
+                    else
+                      b_tap_prog_counter <= b_tap_prog_counter + 1;
+                    end if;
+                  end if;
+                end if;
+              end loop;
+
+              if prog_a_done_int = '1' and prog_b_done_int = '1' then
                 gate_input  <= '1';
                 state       <= run;
-              elsif a_tap_done(to_integer(eq_prog_counter)) = '1' and b_tap_done(to_integer(eq_prog_counter)) = '1' then
-                eq_prog_counter <= eq_prog_counter + 1;
               end if;
 
             when others =>
@@ -135,42 +169,42 @@ begin
   end block;
 
   gen_iir_series_bank : for i in 0 to G_NUM_BANDS-1 generate
-    u_reprogrammable_iir_filt : entity work.reprogrammable_iir_filt
+
+    u_iir : entity work.iir_filt
     generic map
     (
-      G_PACK_TAPS_MSB_FIRST => false,
-      G_NUM_B_TAPS          => G_NUM_B_TAPS,
-      G_NUM_A_TAPS          => G_NUM_A_TAPS,
-      G_TAP_INTEGER_BITS    => G_TAP_INTEGER_BITS,
-      G_TAP_DWIDTH          => G_TAP_DWIDTH,
-      G_DWIDTH              => G_DWIDTH
+      G_NUM_B_TAPS        => G_NUM_B_TAPS,
+      G_NUM_A_TAPS        => G_NUM_A_TAPS,
+      G_TAP_INTEGER_BITS  => G_TAP_INTEGER_BITS,
+      G_TAP_DWIDTH        => G_TAP_DWIDTH,
+      G_DWIDTH            => G_DWIDTH
     )
     port map
     (
-      clk                   => clk,
-      reset                 => reset,
-      bypass                => '0',
+      clk               => clk,
+      reset             => reset,
+      bypass            => '0',
 
-      s_prog_b_tap_tdata    => b_tap_tdata(i),
-      s_prog_b_tap_tvalid   => b_tap_tvalid(i),
-      s_prog_b_tap_tready   => b_tap_tready(i),
-      prog_b_tap_done       => b_tap_done(i),
+      a_tap_val         => s_prog_a_tap_tdata,
+      a_tap_addr        => std_logic_vector(a_tap_prog_counter),
+      a_tap_wr          => a_tap_tvalid(i),
 
-      s_prog_a_tap_tdata    => a_tap_tdata(i),
-      s_prog_a_tap_tvalid   => a_tap_tvalid(i),
-      s_prog_a_tap_tready   => a_tap_tready(i),
-      prog_a_tap_done       => a_tap_done(i),
+      b_tap_val         => s_prog_b_tap_tdata,
+      b_tap_addr        => std_logic_vector(b_tap_prog_counter),
+      b_tap_wr          => b_tap_tvalid(i),
 
-      s_iir_tdata           => s_core_tdata(i),
-      s_iir_tvalid          => s_core_tvalid(i),
-      s_iir_tready          => s_core_tready(i),
-      s_iir_tlast           => '0',
+      s_iir_tdata       => s_core_tdata(i),
+      s_iir_tvalid      => s_core_tvalid(i),
+      s_iir_tready      => s_core_tready(i),
+      s_iir_tlast       => '0',
 
-      m_iir_tdata           => m_core_tdata(i),
-      m_iir_tvalid          => m_core_tvalid(i),
-      m_iir_tready          => m_core_tready(i),
-      m_iir_tlast           => open
+      m_iir_tdata       => m_core_tdata(i),
+      m_iir_tdata_full  => open,
+      m_iir_tvalid      => m_core_tvalid(i),
+      m_iir_tready      => m_core_tready(i),
+      m_iir_tlast       => open
     );
+
   end generate;
 
 end rtl;
