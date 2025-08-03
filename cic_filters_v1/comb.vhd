@@ -14,7 +14,6 @@ entity comb is
   (
     clk           : in  std_logic;
     reset         : in  std_logic;
-    bypass        : in  std_logic;
 
     s_comb_tdata  : in  std_logic_vector(G_DIN_DWIDTH-1 downto 0);
     s_comb_tvalid : in  std_logic;

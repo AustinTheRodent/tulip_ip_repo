@@ -1,0 +1,116 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity sqrt is
+  generic
+  (
+    G_INTEGER_BITS  : integer := 8;  -- Integer part of UQ format
+    G_FRACTION_BITS : integer := 8   -- Fractional part of UQ format
+  );
+  port
+  (
+    clk           : in  std_logic;
+    reset         : in  std_logic;
+
+    s_axis_tdata  : in  std_logic_vector((G_INTEGER_BITS + G_FRACTION_BITS - 1) downto 0);
+    s_axis_tvalid : in  std_logic;
+    s_axis_tready : out std_logic;
+
+    m_axis_tdata  : out std_logic_vector((G_INTEGER_BITS + G_FRACTION_BITS - 1) downto 0);
+    m_axis_tvalid : out std_logic;
+    m_axis_tready : in  std_logic
+  );
+end entity;
+
+architecture rtl of sqrt is
+
+  constant C_WIDTH : integer := G_INTEGER_BITS + G_FRACTION_BITS;
+  constant C_A_WIDTH : integer := C_WIDTH*2;
+
+  type state_t is (SM_INIT, SM_GET_INPUT, SM_CALC0, SM_CALC1, SM_SEND_OUTPUT);
+  signal state : state_t;
+
+  signal a : unsigned(C_A_WIDTH-1 downto 0);
+
+  signal s_axis_tready_int : std_logic;
+  signal m_axis_tvalid_int : std_logic;
+
+  signal counter : unsigned(15 downto 0);
+
+  signal remain : unsigned(C_WIDTH-1 downto 0);
+  signal root   : unsigned(C_WIDTH-1 downto 0);
+  signal trial  : unsigned(C_WIDTH-1 downto 0);
+
+begin
+
+  s_axis_tready <= s_axis_tready_int;
+  m_axis_tvalid <= m_axis_tvalid_int;
+
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if reset = '1' then
+        state   <= SM_INIT;
+        counter <= (others => '0');
+
+        s_axis_tready_int <= '0';
+        m_axis_tvalid_int <= '0';
+
+      else
+        case state is
+          when SM_INIT =>
+            state             <= SM_GET_INPUT;
+            s_axis_tready_int <= '1';
+
+          when SM_GET_INPUT =>
+            if s_axis_tvalid = '1' and s_axis_tready_int = '1' then
+              state             <= SM_CALC0;
+              s_axis_tready_int <= '0';
+              a                 <= shift_left(resize(unsigned(s_axis_tdata), C_A_WIDTH), G_FRACTION_BITS);
+              remain            <= (others => '0');
+              root              <= (others => '0');
+              counter           <= (others => '0');
+            end if;
+
+          when SM_CALC0 =>
+            state   <= SM_CALC1;
+            remain  <= remain(remain'left-2 downto 0) & a(a'left downto a'left-1);
+            a       <= shift_left(a, 2);
+            trial   <= root(root'left-1 downto 0) & "1";
+
+          when SM_CALC1 =>
+            if remain >= trial then
+              remain  <= remain - trial;
+              root    <= root(root'left-1 downto 0) & "1";
+            else
+              root    <= root(root'left-1 downto 0) & "0";
+            end if;
+
+            if counter = C_WIDTH-1 then
+              state   <= SM_SEND_OUTPUT;
+              counter <= (others => '0');
+            else
+              state   <= SM_CALC0;
+              counter <= counter + 1;
+            end if;
+
+          when SM_SEND_OUTPUT =>
+            if m_axis_tvalid_int = '1' and m_axis_tready = '1' then
+              state             <= SM_GET_INPUT;
+              s_axis_tready_int <= '1';
+              m_axis_tvalid_int <= '0';
+            else
+              m_axis_tdata      <= std_logic_vector(root);
+              m_axis_tvalid_int <= '1';
+            end if;
+
+          when others =>
+            NULL;
+
+        end case;
+      end if;
+    end if;
+  end process;
+
+end rtl;

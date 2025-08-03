@@ -37,6 +37,12 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    SW_RESETN_GAIN_MIRROR : std_logic_vector(0 downto 0);
+    BYPASS_GAIN_MIRROR : std_logic_vector(0 downto 0);
+    SW_RESETN_DELAY : std_logic_vector(0 downto 0);
+    BYPASS_DELAY : std_logic_vector(0 downto 0);
+    SW_RESETN_EQ : std_logic_vector(0 downto 0);
+    BYPASS_EQ : std_logic_vector(0 downto 0);
     SW_RESETN_TREMELO : std_logic_vector(0 downto 0);
     BYPASS_TREMELO : std_logic_vector(0 downto 0);
     SW_RESETN_WAWA : std_logic_vector(0 downto 0);
@@ -147,6 +153,35 @@ package axil_reg_file_pkg is
     DEPTH : std_logic_vector(23 downto 0);
   end record;
 
+  type TULIP_DSP_EQ_B_TAP_DATA_MSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_EQ_B_TAP_DATA_LSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_EQ_A_TAP_DATA_MSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_EQ_A_TAP_DATA_LSB_subreg_t is record
+    DATA : std_logic_vector(31 downto 0);
+  end record;
+
+  type TULIP_DSP_DELAY_PROG_subreg_t is record
+    DELAY_TAP_VALUE : std_logic_vector(15 downto 0);
+  end record;
+
+  type TULIP_DSP_DELAY_SCALE_subreg_t is record
+    FEEDBACK_RIGHT_SHIFT : std_logic_vector(7 downto 0);
+    FEEDBACK_GAIN : std_logic_vector(15 downto 0);
+  end record;
+
+  type TULIP_DSP_DELAY_FEEDFORWARD_GAIN_subreg_t is record
+    FEEDFORWARD_GAIN : std_logic_vector(15 downto 0);
+  end record;
+
 
   type reg_t is record
     CONTROL_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
@@ -188,6 +223,13 @@ package axil_reg_file_pkg is
     TULIP_DSP_WAWA_ADC_OFFS_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_TREMELO_RATE_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     TULIP_DSP_TREMELO_DEPTH_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_EQ_B_TAP_DATA_MSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_EQ_B_TAP_DATA_LSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_EQ_A_TAP_DATA_MSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_EQ_A_TAP_DATA_LSB_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_DELAY_PROG_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_DELAY_SCALE_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
+    TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG : std_logic_vector(C_REG_FILE_DATA_WIDTH-1 downto 0);
     CONTROL : CONTROL_subreg_t;
     COUNTER_RESETS : COUNTER_RESETS_subreg_t;
     I2C_CONTROL : I2C_CONTROL_subreg_t;
@@ -216,6 +258,13 @@ package axil_reg_file_pkg is
     TULIP_DSP_WAWA_ADC_OFFS : TULIP_DSP_WAWA_ADC_OFFS_subreg_t;
     TULIP_DSP_TREMELO_RATE : TULIP_DSP_TREMELO_RATE_subreg_t;
     TULIP_DSP_TREMELO_DEPTH : TULIP_DSP_TREMELO_DEPTH_subreg_t;
+    TULIP_DSP_EQ_B_TAP_DATA_MSB : TULIP_DSP_EQ_B_TAP_DATA_MSB_subreg_t;
+    TULIP_DSP_EQ_B_TAP_DATA_LSB : TULIP_DSP_EQ_B_TAP_DATA_LSB_subreg_t;
+    TULIP_DSP_EQ_A_TAP_DATA_MSB : TULIP_DSP_EQ_A_TAP_DATA_MSB_subreg_t;
+    TULIP_DSP_EQ_A_TAP_DATA_LSB : TULIP_DSP_EQ_A_TAP_DATA_LSB_subreg_t;
+    TULIP_DSP_DELAY_PROG : TULIP_DSP_DELAY_PROG_subreg_t;
+    TULIP_DSP_DELAY_SCALE : TULIP_DSP_DELAY_SCALE_subreg_t;
+    TULIP_DSP_DELAY_FEEDFORWARD_GAIN : TULIP_DSP_DELAY_FEEDFORWARD_GAIN_subreg_t;
     CONTROL_REG_wr_pulse : std_logic;
     VERSION_REG_wr_pulse : std_logic;
     COUNTER_RESETS_REG_wr_pulse : std_logic;
@@ -255,6 +304,13 @@ package axil_reg_file_pkg is
     TULIP_DSP_WAWA_ADC_OFFS_REG_wr_pulse : std_logic;
     TULIP_DSP_TREMELO_RATE_REG_wr_pulse : std_logic;
     TULIP_DSP_TREMELO_DEPTH_REG_wr_pulse : std_logic;
+    TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_wr_pulse : std_logic;
+    TULIP_DSP_DELAY_PROG_REG_wr_pulse : std_logic;
+    TULIP_DSP_DELAY_SCALE_REG_wr_pulse : std_logic;
+    TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_wr_pulse : std_logic;
     CONTROL_REG_rd_pulse : std_logic;
     VERSION_REG_rd_pulse : std_logic;
     COUNTER_RESETS_REG_rd_pulse : std_logic;
@@ -294,6 +350,13 @@ package axil_reg_file_pkg is
     TULIP_DSP_WAWA_ADC_OFFS_REG_rd_pulse : std_logic;
     TULIP_DSP_TREMELO_RATE_REG_rd_pulse : std_logic;
     TULIP_DSP_TREMELO_DEPTH_REG_rd_pulse : std_logic;
+    TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_rd_pulse : std_logic;
+    TULIP_DSP_DELAY_PROG_REG_rd_pulse : std_logic;
+    TULIP_DSP_DELAY_SCALE_REG_rd_pulse : std_logic;
+    TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_rd_pulse : std_logic;
   end record;
 
   type transaction_state_t is (get_addr, load_reg, write_reg, read_reg);
@@ -360,6 +423,24 @@ entity axil_reg_file is
 
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE : in std_logic_vector(15 downto 0);
     s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_DELAY_PROG_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_DELAY_PROG_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_DELAY_PROG_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_DELAY_PROG_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_EQ_PROG_A_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_EQ_PROG_A_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_EQ_PROG_A_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_EQ_PROG_A_DONE_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_EQ_PROG_B_READY : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_EQ_PROG_B_READY_v : in std_logic;
+
+    s_TULIP_DSP_STATUS_EQ_PROG_B_DONE : in std_logic_vector(0 downto 0);
+    s_TULIP_DSP_STATUS_EQ_PROG_B_DONE_v : in std_logic;
 
     s_TULIP_DSP_STATUS_WAWA_PROG_A_READY : in std_logic_vector(0 downto 0);
     s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v : in std_logic;
@@ -507,6 +588,13 @@ architecture rtl of axil_reg_file is
   constant TULIP_DSP_WAWA_ADC_OFFS_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 132;
   constant TULIP_DSP_TREMELO_RATE_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 136;
   constant TULIP_DSP_TREMELO_DEPTH_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 140;
+  constant TULIP_DSP_EQ_B_TAP_DATA_MSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 144;
+  constant TULIP_DSP_EQ_B_TAP_DATA_LSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 148;
+  constant TULIP_DSP_EQ_A_TAP_DATA_MSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 152;
+  constant TULIP_DSP_EQ_A_TAP_DATA_LSB_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 156;
+  constant TULIP_DSP_DELAY_PROG_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 160;
+  constant TULIP_DSP_DELAY_SCALE_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 164;
+  constant TULIP_DSP_DELAY_FEEDFORWARD_GAIN_addr : integer range 0 to 2**C_REG_FILE_ADDR_WIDTH-1 := 168;
 
   signal registers          : reg_t;
 
@@ -538,6 +626,12 @@ begin
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_GAIN_MIRROR <= registers.TULIP_DSP_CONTROL_REG(21 downto 21);
+  registers.TULIP_DSP_CONTROL.BYPASS_GAIN_MIRROR <= registers.TULIP_DSP_CONTROL_REG(20 downto 20);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_DELAY <= registers.TULIP_DSP_CONTROL_REG(19 downto 19);
+  registers.TULIP_DSP_CONTROL.BYPASS_DELAY <= registers.TULIP_DSP_CONTROL_REG(18 downto 18);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_EQ <= registers.TULIP_DSP_CONTROL_REG(17 downto 17);
+  registers.TULIP_DSP_CONTROL.BYPASS_EQ <= registers.TULIP_DSP_CONTROL_REG(16 downto 16);
   registers.TULIP_DSP_CONTROL.SW_RESETN_TREMELO <= registers.TULIP_DSP_CONTROL_REG(15 downto 15);
   registers.TULIP_DSP_CONTROL.BYPASS_TREMELO <= registers.TULIP_DSP_CONTROL_REG(14 downto 14);
   registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA <= registers.TULIP_DSP_CONTROL_REG(13 downto 13);
@@ -580,6 +674,14 @@ begin
   registers.TULIP_DSP_WAWA_ADC_OFFS.GAIN <= registers.TULIP_DSP_WAWA_ADC_OFFS_REG(15 downto 0);
   registers.TULIP_DSP_TREMELO_RATE.RATE <= registers.TULIP_DSP_TREMELO_RATE_REG(23 downto 0);
   registers.TULIP_DSP_TREMELO_DEPTH.DEPTH <= registers.TULIP_DSP_TREMELO_DEPTH_REG(23 downto 0);
+  registers.TULIP_DSP_EQ_B_TAP_DATA_MSB.DATA <= registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG(31 downto 0);
+  registers.TULIP_DSP_EQ_B_TAP_DATA_LSB.DATA <= registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG(31 downto 0);
+  registers.TULIP_DSP_EQ_A_TAP_DATA_MSB.DATA <= registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG(31 downto 0);
+  registers.TULIP_DSP_EQ_A_TAP_DATA_LSB.DATA <= registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG(31 downto 0);
+  registers.TULIP_DSP_DELAY_PROG.DELAY_TAP_VALUE <= registers.TULIP_DSP_DELAY_PROG_REG(15 downto 0);
+  registers.TULIP_DSP_DELAY_SCALE.FEEDBACK_RIGHT_SHIFT <= registers.TULIP_DSP_DELAY_SCALE_REG(23 downto 16);
+  registers.TULIP_DSP_DELAY_SCALE.FEEDBACK_GAIN <= registers.TULIP_DSP_DELAY_SCALE_REG(15 downto 0);
+  registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN.FEEDFORWARD_GAIN <= registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG(15 downto 0);
 
   registers_out <= registers;
 
@@ -594,7 +696,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"00000056";
+        registers.VERSION_REG <= x"0000005D";
         registers.COUNTER_US_REG <= x"00000000";
         registers.COUNTER_MS_REG <= x"00000000";
         registers.I2C_STATUS_REG <= x"00000000";
@@ -653,6 +755,24 @@ begin
         end if;
         if s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE_v = '1' then 
           registers.PS_2_I2S_FIFO_COUNT_REG(15 downto 0) <= s_PS_2_I2S_FIFO_COUNT_FIFO_AVAILABLE;
+        end if;
+        if s_TULIP_DSP_STATUS_DELAY_PROG_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(31 downto 31) <= s_TULIP_DSP_STATUS_DELAY_PROG_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_DELAY_PROG_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(30 downto 30) <= s_TULIP_DSP_STATUS_DELAY_PROG_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_EQ_PROG_A_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(29 downto 29) <= s_TULIP_DSP_STATUS_EQ_PROG_A_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_EQ_PROG_A_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(28 downto 28) <= s_TULIP_DSP_STATUS_EQ_PROG_A_DONE;
+        end if;
+        if s_TULIP_DSP_STATUS_EQ_PROG_B_READY_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(27 downto 27) <= s_TULIP_DSP_STATUS_EQ_PROG_B_READY;
+        end if;
+        if s_TULIP_DSP_STATUS_EQ_PROG_B_DONE_v = '1' then 
+          registers.TULIP_DSP_STATUS_REG(26 downto 26) <= s_TULIP_DSP_STATUS_EQ_PROG_B_DONE;
         end if;
         if s_TULIP_DSP_STATUS_WAWA_PROG_A_READY_v = '1' then 
           registers.TULIP_DSP_STATUS_REG(25 downto 25) <= s_TULIP_DSP_STATUS_WAWA_PROG_A_READY;
@@ -768,6 +888,13 @@ begin
         registers.TULIP_DSP_WAWA_ADC_OFFS_REG <= x"00000000";
         registers.TULIP_DSP_TREMELO_RATE_REG <= x"00000000";
         registers.TULIP_DSP_TREMELO_DEPTH_REG <= x"00000000";
+        registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG <= x"00000000";
+        registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG <= x"00000000";
+        registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG <= x"00000000";
+        registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG <= x"00000000";
+        registers.TULIP_DSP_DELAY_PROG_REG <= x"00000000";
+        registers.TULIP_DSP_DELAY_SCALE_REG <= x"00000000";
+        registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG <= x"00000000";
         awaddr            <= (others => '0');
         registers.CONTROL_REG_wr_pulse <= '0';
         registers.VERSION_REG_wr_pulse <= '0';
@@ -808,6 +935,13 @@ begin
         registers.TULIP_DSP_WAWA_ADC_OFFS_REG_wr_pulse <= '0';
         registers.TULIP_DSP_TREMELO_RATE_REG_wr_pulse <= '0';
         registers.TULIP_DSP_TREMELO_DEPTH_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_DELAY_PROG_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_DELAY_SCALE_REG_wr_pulse <= '0';
+        registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
         s_axi_awready_int <= '0';
         s_axi_wready_int  <= '0';
         wr_state          <= init;
@@ -853,6 +987,13 @@ begin
             registers.TULIP_DSP_WAWA_ADC_OFFS_REG_wr_pulse <= '0';
             registers.TULIP_DSP_TREMELO_RATE_REG_wr_pulse <= '0';
             registers.TULIP_DSP_TREMELO_DEPTH_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_PROG_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_SCALE_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
             s_axi_awready_int <= '1';
             s_axi_wready_int  <= '0';
             awaddr            <= (others => '0');
@@ -898,6 +1039,13 @@ begin
             registers.TULIP_DSP_WAWA_ADC_OFFS_REG_wr_pulse <= '0';
             registers.TULIP_DSP_TREMELO_RATE_REG_wr_pulse <= '0';
             registers.TULIP_DSP_TREMELO_DEPTH_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_PROG_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_SCALE_REG_wr_pulse <= '0';
+            registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_wr_pulse <= '0';
             if s_axi_awvalid = '1' and s_axi_awready_int = '1' then
               s_axi_awready_int <= '0';
               s_axi_wready_int  <= '1';
@@ -993,6 +1141,27 @@ begin
                 when std_logic_vector(to_unsigned(TULIP_DSP_TREMELO_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_TREMELO_DEPTH_REG <= s_axi_wdata;
                   registers.TULIP_DSP_TREMELO_DEPTH_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_PROG_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_DELAY_PROG_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_SCALE_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_DELAY_SCALE_REG_wr_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG <= s_axi_wdata;
+                  registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_wr_pulse <= '1';
                 when others =>
                   null;
               end case;
@@ -1060,6 +1229,13 @@ begin
         registers.TULIP_DSP_WAWA_ADC_OFFS_REG_rd_pulse <= '0';
         registers.TULIP_DSP_TREMELO_RATE_REG_rd_pulse <= '0';
         registers.TULIP_DSP_TREMELO_DEPTH_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_DELAY_PROG_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_DELAY_SCALE_REG_rd_pulse <= '0';
+        registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
         s_axi_arready_int <= '0';
         s_axi_rvalid_int  <= '0';
         rd_state          <= init;
@@ -1105,6 +1281,13 @@ begin
             registers.TULIP_DSP_WAWA_ADC_OFFS_REG_rd_pulse <= '0';
             registers.TULIP_DSP_TREMELO_RATE_REG_rd_pulse <= '0';
             registers.TULIP_DSP_TREMELO_DEPTH_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_PROG_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_SCALE_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
             s_axi_arready_int <= '1';
             s_axi_rvalid_int  <= '0';
             araddr            <= (others => '0');
@@ -1150,6 +1333,13 @@ begin
             registers.TULIP_DSP_WAWA_ADC_OFFS_REG_rd_pulse <= '0';
             registers.TULIP_DSP_TREMELO_RATE_REG_rd_pulse <= '0';
             registers.TULIP_DSP_TREMELO_DEPTH_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_PROG_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_SCALE_REG_rd_pulse <= '0';
+            registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_rd_pulse <= '0';
             if s_axi_arvalid = '1' and s_axi_arready_int = '1' then
               s_axi_arready_int <= '0';
               s_axi_rvalid_int  <= '0';
@@ -1237,6 +1427,20 @@ begin
                 s_axi_rdata <= registers.TULIP_DSP_TREMELO_RATE_REG;
               when std_logic_vector(to_unsigned(TULIP_DSP_TREMELO_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
                 s_axi_rdata <= registers.TULIP_DSP_TREMELO_DEPTH_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_DELAY_PROG_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_DELAY_SCALE_REG;
+              when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                s_axi_rdata <= registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG;
               when others =>
                 null;
             end case;
@@ -1321,6 +1525,20 @@ begin
                   registers.TULIP_DSP_TREMELO_RATE_REG_rd_pulse <= '1';
                 when std_logic_vector(to_unsigned(TULIP_DSP_TREMELO_DEPTH_addr, C_REG_FILE_ADDR_WIDTH)) =>
                   registers.TULIP_DSP_TREMELO_DEPTH_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_MSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_B_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_B_TAP_DATA_LSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_MSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_MSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_EQ_A_TAP_DATA_LSB_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_EQ_A_TAP_DATA_LSB_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_PROG_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_PROG_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_SCALE_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_SCALE_REG_rd_pulse <= '1';
+                when std_logic_vector(to_unsigned(TULIP_DSP_DELAY_FEEDFORWARD_GAIN_addr, C_REG_FILE_ADDR_WIDTH)) =>
+                  registers.TULIP_DSP_DELAY_FEEDFORWARD_GAIN_REG_rd_pulse <= '1';
                 when others =>
                   null;
               end case;

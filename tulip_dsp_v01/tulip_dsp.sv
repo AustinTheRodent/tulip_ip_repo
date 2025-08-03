@@ -12,8 +12,11 @@ module tulip_dsp
   input  logic                    lut_tf_sw_resetn,
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
+  input  logic                    delay_sw_resetn,
+  input  logic                    gain_mirror_sw_resetn,
   input  logic                    tremelo_sw_resetn,
   input  logic                    wawa_sw_resetn,
+  input  logic                    eq_sw_resetn,
   input  logic                    vibrato_sw_resetn,
   input  logic                    chorus_sw_resetn,
 
@@ -21,8 +24,11 @@ module tulip_dsp
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
   input  logic                    bypass_usr_fir,
   input  logic                    bypass_reverb,
+  input  logic                    bypass_delay,
   input  logic                    bypass_tremelo,
+  input  logic                    bypass_gain_mirror,
   input  logic                    bypass_wawa,
+  input  logic                    bypass_eq,
   input  logic                    bypass_vibrato,
   input  logic                    bypass_chorus,
 
@@ -49,6 +55,15 @@ module tulip_dsp
   input  logic                              reverb_taps_prog_din_valid,
   output logic                              reverb_taps_prog_din_ready,
   output logic                              reverb_taps_prog_done,
+
+  input  logic [7:0]                        delay_feedback_right_shift, // 8.0 unsigned fixed point
+  input  logic [15:0]                       delay_feedback_gain, // 1.15 unsigned fixed point
+  input  logic [15:0]                       delay_feedforward_gain, // 1.15 unsigned fixed point
+
+  input  logic [C_USER_FILT_TAP_DWIDTH-1:0] delay_taps_prog_din,
+  input  logic                              delay_taps_prog_din_valid,
+  output logic                              delay_taps_prog_din_ready,
+  output logic                              delay_taps_prog_done,
 
   input  logic [23:0]                       prog_vibrato_gain_din, // fixed point, 2 integer bits
   input  logic                              prog_vibrato_gain_din_valid,
@@ -79,6 +94,16 @@ module tulip_dsp
   output logic                              prog_wawa_a_done,
 
   input  logic [7:0]                        wawa_input,
+
+  input  logic [63:0]                       prog_eq_b_tap_tdata,
+  input  logic                              prog_eq_b_tap_tvalid,
+  output logic                              prog_eq_b_tap_tready,
+  output logic                              prog_eq_b_done,
+
+  input  logic [63:0]                       prog_eq_a_tap_tdata,
+  input  logic                              prog_eq_a_tap_tvalid,
+  output logic                              prog_eq_a_tap_tready,
+  output logic                              prog_eq_a_done,
 
   input  logic [31:0]                       prog_vibrato_freq_offset_din,
   input  logic                              prog_vibrato_freq_offset_din_valid,
@@ -196,6 +221,13 @@ module tulip_dsp
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
 
+  logic [C_ADC_DWIDTH-1:0]  s_gain_mirror_tdata;
+  logic                     s_gain_mirror_tvalid;
+  logic                     s_gain_mirror_tready;
+  logic [C_ADC_DWIDTH-1:0]  m_gain_mirror_tdata;
+  logic                     m_gain_mirror_tvalid;
+  logic                     m_gain_mirror_tready;
+
   logic [C_ADC_DWIDTH-1:0]  s_tremelo_tdata;
   logic                     s_tremelo_tvalid;
   logic                     s_tremelo_tready;
@@ -209,6 +241,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  m_wawa_tdata;
   logic                     m_wawa_tvalid;
   logic                     m_wawa_tready;
+
+  logic [C_ADC_DWIDTH-1:0]  s_eq_tdata;
+  logic                     s_eq_tvalid;
+  logic                     s_eq_tready;
+  logic [C_ADC_DWIDTH-1:0]  m_eq_tdata;
+  logic                     m_eq_tvalid;
+  logic                     m_eq_tready;
 
   logic [C_ADC_DWIDTH-1:0]  vibrato_din;
   logic                     vibrato_din_valid;
@@ -230,6 +269,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  reverb_dout;
   logic                     reverb_dout_valid;
   logic                     reverb_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  delay_din;
+  logic                     delay_din_valid;
+  logic                     delay_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  delay_dout;
+  logic                     delay_dout_valid;
+  logic                     delay_dout_ready;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -416,14 +462,36 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  //assign s_wawa_tdata = gain1_dout;
-  //assign s_wawa_tvalid = gain1_dout_valid;
-  //assign gain1_dout_ready = s_wawa_tready;
+  assign s_gain_mirror_tdata = gain1_dout;
+  assign s_gain_mirror_tvalid = gain1_dout_valid;
+  assign gain1_dout_ready = s_gain_mirror_tready;
 
+  gain_mirror
+  #(
+    .G_DWIDTH       (C_ADC_DWIDTH)
+  )
+  u_gain_mirror
+  (
+    .clk                        (clk),
+    .reset                      (reset | ~global_sw_resetn | ~gain_mirror_sw_resetn),
+    .bypass                     (bypass_gain_mirror),
 
-  assign s_tremelo_tdata = gain1_dout;
-  assign s_tremelo_tvalid = gain1_dout_valid;
-  assign gain1_dout_ready = s_tremelo_tready;
+    .s_gain_stream_tdata        (din),
+    .s_gain_stream_tvalid       (din_valid),
+    .s_gain_stream_tready       (),
+
+    .s_modulation_stream_tdata  (s_gain_mirror_tdata),
+    .s_modulation_stream_tvalid (s_gain_mirror_tvalid),
+    .s_modulation_stream_tready (s_gain_mirror_tready),
+
+    .m_axis_tdata               (m_gain_mirror_tdata),
+    .m_axis_tvalid              (m_gain_mirror_tvalid),
+    .m_axis_tready              (m_gain_mirror_tready)
+  );
+
+  assign s_tremelo_tdata      = m_gain_mirror_tdata;
+  assign s_tremelo_tvalid     = m_gain_mirror_tvalid;
+  assign m_gain_mirror_tready = s_tremelo_tready;
 
   tremelo
   #(
@@ -489,11 +557,48 @@ module tulip_dsp
     .m_wawa_tready        (m_wawa_tready)
   );
 
+  assign s_eq_tdata  = m_wawa_tdata;
+  assign s_eq_tvalid = m_wawa_tvalid;
+  assign m_wawa_tready = s_eq_tready;
 
-  assign vibrato_din        = m_wawa_tdata;
-  assign vibrato_din_valid  = m_wawa_tvalid;
-  assign m_wawa_tready      = vibrato_din_ready;
+  eq_iir
+  #(
+    .G_NUM_BANDS          (10),
+    .G_NUM_B_TAPS         (3),
+    .G_NUM_A_TAPS         (3),
+    .G_TAP_INTEGER_BITS   (2),
+    .G_TAP_DWIDTH         (64),
+    .G_DWIDTH             (64),
+    .G_ADC_DWIDTH         (C_ADC_DWIDTH)
+  )
+  u_eq_iir
+  (
+    .clk                  (clk),
+    .reset                (reset | ~global_sw_resetn | ~eq_sw_resetn),
+    .bypass               (bypass_eq),
 
+    .s_prog_b_tap_tdata   (prog_eq_b_tap_tdata),
+    .s_prog_b_tap_tvalid  (prog_eq_b_tap_tvalid),
+    .s_prog_b_tap_tready  (prog_eq_b_tap_tready),
+    .prog_b_done          (prog_eq_b_done),
+
+    .s_prog_a_tap_tdata   (prog_eq_a_tap_tdata),
+    .s_prog_a_tap_tvalid  (prog_eq_a_tap_tvalid),
+    .s_prog_a_tap_tready  (prog_eq_a_tap_tready),
+    .prog_a_done          (prog_eq_a_done),
+
+    .s_eq_tdata         (s_eq_tdata),
+    .s_eq_tvalid        (s_eq_tvalid),
+    .s_eq_tready        (s_eq_tready),
+
+    .m_eq_tdata         (m_eq_tdata),
+    .m_eq_tvalid        (m_eq_tvalid),
+    .m_eq_tready        (m_eq_tready)
+  );
+
+  assign vibrato_din        = m_eq_tdata;
+  assign vibrato_din_valid  = m_eq_tvalid;
+  assign m_eq_tready      = vibrato_din_ready;
 
   vibrato
   #(
@@ -615,9 +720,53 @@ module tulip_dsp
     .dout_ready           (reverb_dout_ready)
   );
 
-  assign dout               = (bypass == 0) ? reverb_dout : din;
-  assign dout_valid         = (bypass == 0) ? reverb_dout_valid : din_valid;
-  assign reverb_dout_ready  = dout_ready;
+  assign delay_din          = reverb_dout;
+  assign delay_din_valid    = reverb_dout_valid;
+  assign reverb_dout_ready  = delay_din_ready;
+
+
+
+
+
+
+
+
+  reverb_wrapper
+  #(
+    .G_NUM_STAGES_LOG2  (5),
+    .G_STAGE_DEPTH_LOG2 (10),
+    .G_DATA_WIDTH       (C_ADC_DWIDTH),
+    .G_TAP_WIDTH        (16)
+  )
+  u_delay
+  (
+    .clk                  (clk),
+    .reset                (reset),
+    .enable               (global_sw_resetn & delay_sw_resetn),
+    .bypass               (bypass_delay),
+
+    .feedback_right_shift (delay_feedback_right_shift),
+    .feedback_gain        (delay_feedback_gain),
+    .feedforward_gain     (delay_feedforward_gain),
+
+    .tap_din              (delay_taps_prog_din),
+    .tap_din_valid        (delay_taps_prog_din_valid),
+    .tap_din_ready        (delay_taps_prog_din_ready),
+    .tap_din_done         (delay_taps_prog_done),
+
+    .din                  (delay_din),
+    .din_valid            (delay_din_valid),
+    .din_ready            (delay_din_ready),
+
+    .dout                 (delay_dout),
+    .dout_valid           (delay_dout_valid),
+    .dout_ready           (delay_dout_ready)
+  );
+
+  assign dout               = (bypass == 0) ? delay_dout : din;
+  assign dout_valid         = (bypass == 0) ? delay_dout_valid : din_valid;
+  assign delay_dout_ready   = dout_ready;
+
 
 
 endmodule
