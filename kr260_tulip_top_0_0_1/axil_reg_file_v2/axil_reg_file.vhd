@@ -37,6 +37,8 @@ package axil_reg_file_pkg is
   end record;
 
   type TULIP_DSP_CONTROL_subreg_t is record
+    SW_RESETN_GAIN_MIRROR : std_logic_vector(0 downto 0);
+    BYPASS_GAIN_MIRROR : std_logic_vector(0 downto 0);
     SW_RESETN_DELAY : std_logic_vector(0 downto 0);
     BYPASS_DELAY : std_logic_vector(0 downto 0);
     SW_RESETN_EQ : std_logic_vector(0 downto 0);
@@ -624,6 +626,8 @@ begin
   registers.I2C_CONTROL.REGISTER_WR_DATA <= registers.I2C_CONTROL_REG(8 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_L.FIFO_VALUE_L <= registers.PS_2_I2S_FIFO_WRITE_L_REG(31 downto 0);
   registers.PS_2_I2S_FIFO_WRITE_R.FIFO_VALUE_R <= registers.PS_2_I2S_FIFO_WRITE_R_REG(31 downto 0);
+  registers.TULIP_DSP_CONTROL.SW_RESETN_GAIN_MIRROR <= registers.TULIP_DSP_CONTROL_REG(21 downto 21);
+  registers.TULIP_DSP_CONTROL.BYPASS_GAIN_MIRROR <= registers.TULIP_DSP_CONTROL_REG(20 downto 20);
   registers.TULIP_DSP_CONTROL.SW_RESETN_DELAY <= registers.TULIP_DSP_CONTROL_REG(19 downto 19);
   registers.TULIP_DSP_CONTROL.BYPASS_DELAY <= registers.TULIP_DSP_CONTROL_REG(18 downto 18);
   registers.TULIP_DSP_CONTROL.SW_RESETN_EQ <= registers.TULIP_DSP_CONTROL_REG(17 downto 17);
@@ -692,7 +696,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"0000005B";
+        registers.VERSION_REG <= x"0000005D";
         registers.COUNTER_US_REG <= x"00000000";
         registers.COUNTER_MS_REG <= x"00000000";
         registers.I2C_STATUS_REG <= x"00000000";

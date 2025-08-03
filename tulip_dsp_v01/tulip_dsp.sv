@@ -13,6 +13,7 @@ module tulip_dsp
   input  logic                    usr_fir_sw_resetn,
   input  logic                    reverb_sw_resetn,
   input  logic                    delay_sw_resetn,
+  input  logic                    gain_mirror_sw_resetn,
   input  logic                    tremelo_sw_resetn,
   input  logic                    wawa_sw_resetn,
   input  logic                    eq_sw_resetn,
@@ -25,6 +26,7 @@ module tulip_dsp
   input  logic                    bypass_reverb,
   input  logic                    bypass_delay,
   input  logic                    bypass_tremelo,
+  input  logic                    bypass_gain_mirror,
   input  logic                    bypass_wawa,
   input  logic                    bypass_eq,
   input  logic                    bypass_vibrato,
@@ -218,6 +220,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  user_fir_dout;
   logic                     user_fir_dout_valid;
   logic                     user_fir_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  s_gain_mirror_tdata;
+  logic                     s_gain_mirror_tvalid;
+  logic                     s_gain_mirror_tready;
+  logic [C_ADC_DWIDTH-1:0]  m_gain_mirror_tdata;
+  logic                     m_gain_mirror_tvalid;
+  logic                     m_gain_mirror_tready;
 
   logic [C_ADC_DWIDTH-1:0]  s_tremelo_tdata;
   logic                     s_tremelo_tvalid;
@@ -453,9 +462,36 @@ module tulip_dsp
     .dout_ready (gain1_dout_ready)
   );
 
-  assign s_tremelo_tdata = gain1_dout;
-  assign s_tremelo_tvalid = gain1_dout_valid;
-  assign gain1_dout_ready = s_tremelo_tready;
+  assign s_gain_mirror_tdata = gain1_dout;
+  assign s_gain_mirror_tvalid = gain1_dout_valid;
+  assign gain1_dout_ready = s_gain_mirror_tready;
+
+  gain_mirror
+  #(
+    .G_DWIDTH       (C_ADC_DWIDTH)
+  )
+  u_gain_mirror
+  (
+    .clk                        (clk),
+    .reset                      (reset | ~global_sw_resetn | ~gain_mirror_sw_resetn),
+    .bypass                     (bypass_gain_mirror),
+
+    .s_gain_stream_tdata        (din),
+    .s_gain_stream_tvalid       (din_valid),
+    .s_gain_stream_tready       (),
+
+    .s_modulation_stream_tdata  (s_gain_mirror_tdata),
+    .s_modulation_stream_tvalid (s_gain_mirror_tvalid),
+    .s_modulation_stream_tready (s_gain_mirror_tready),
+
+    .m_axis_tdata               (m_gain_mirror_tdata),
+    .m_axis_tvalid              (m_gain_mirror_tvalid),
+    .m_axis_tready              (m_gain_mirror_tready)
+  );
+
+  assign s_tremelo_tdata      = m_gain_mirror_tdata;
+  assign s_tremelo_tvalid     = m_gain_mirror_tvalid;
+  assign m_gain_mirror_tready = s_tremelo_tready;
 
   tremelo
   #(
@@ -687,6 +723,13 @@ module tulip_dsp
   assign delay_din          = reverb_dout;
   assign delay_din_valid    = reverb_dout_valid;
   assign reverb_dout_ready  = delay_din_ready;
+
+
+
+
+
+
+
 
   reverb_wrapper
   #(

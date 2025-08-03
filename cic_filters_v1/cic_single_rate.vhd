@@ -62,7 +62,7 @@ begin
 
   s_comb_tdata  <= std_logic_vector(resize(signed(s_cic_tdata), C_COMB_DWIDTH));
   s_comb_tvalid <= s_cic_tvalid;
-  s_cic_tready  <= s_comb_tready;
+  s_cic_tready  <= s_comb_tready when bypass = '0' else m_cic_tready;
 
   u_comb : entity work.comb
   generic map
@@ -76,7 +76,6 @@ begin
   (
     clk           => clk,
     reset         => reset,
-    bypass        => bypass,
 
     s_comb_tdata  => s_comb_tdata,
     s_comb_tvalid => s_comb_tvalid,
@@ -124,7 +123,6 @@ begin
   (
     clk                 => clk,
     reset               => reset,
-    bypass              => bypass,
 
     s_integrator_tdata  => s_integrator_tdata,
     s_integrator_tvalid => s_integrator_tvalid,
@@ -135,8 +133,8 @@ begin
     m_integrator_tready => m_integrator_tready
   );
 
-  m_cic_tdata         <= std_logic_vector(resize(shift_right(signed(m_integrator_tdata), G_SINGLE_STAGE_RS), G_DOUT_DWIDTH));
-  m_cic_tvalid        <= m_integrator_tvalid;
+  m_cic_tdata         <= std_logic_vector(resize(shift_right(signed(m_integrator_tdata), G_SINGLE_STAGE_RS), G_DOUT_DWIDTH)) when bypass = '0' else s_cic_tdata;
+  m_cic_tvalid        <= m_integrator_tvalid when bypass = '0' else s_cic_tvalid;
   m_integrator_tready <= m_cic_tready;
 
 end rtl;

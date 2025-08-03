@@ -599,6 +599,7 @@ begin
       wawa_sw_resetn                      => registers.TULIP_DSP_CONTROL.SW_RESETN_WAWA(0),
       eq_sw_resetn                        => registers.TULIP_DSP_CONTROL.SW_RESETN_EQ(0),
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
+      gain_mirror_sw_resetn               => registers.TULIP_DSP_CONTROL.SW_RESETN_GAIN_MIRROR(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
@@ -607,6 +608,7 @@ begin
       bypass_wawa                         => registers.TULIP_DSP_CONTROL.BYPASS_WAWA(0),
       bypass_eq                           => registers.TULIP_DSP_CONTROL.BYPASS_EQ(0),
       bypass_vibrato                      => registers.TULIP_DSP_CONTROL.BYPASS_VIBRATO(0),
+      bypass_gain_mirror                  => registers.TULIP_DSP_CONTROL.BYPASS_GAIN_MIRROR(0),
       bypass_reverb                       => registers.TULIP_DSP_CONTROL.BYPASS_REVERB(0),
       bypass_delay                        => registers.TULIP_DSP_CONTROL.BYPASS_DELAY(0),
       bypass_lut_tf                       => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
