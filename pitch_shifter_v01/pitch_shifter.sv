@@ -356,27 +356,43 @@ module pitch_shifter
 
   assign dds_din = prog_lfo_freq;
 
-  dds_taylor
+  dds_linear
   #(
-    .G_DIN_WIDTH      (C_PROG_DDS_DWIDTH),
-    .G_DOUT_WIDTH     (C_PROG_DDS_DWIDTH),
-    .G_COMPLEX_OUTPUT ()
+    .G_DWIDTH      (C_PROG_DDS_DWIDTH)
   )
   u_dds_lfo
   (
     .clk              (clk),
-    .reset            (reset),
-    .enable           (enable),
+    .reset            (reset | (~enable)),
 
     .din              (dds_din),
     .din_valid        (dds_din_valid),
     .din_ready        (dds_din_ready),
 
-    .dout_re          (dds_dout),
-    .dout_im          (),
+    .dout             (dds_dout),
     .dout_valid       (dds_dout_valid),
     .dout_ready       (dds_dout_ready)
   );
+
+entity dds_linear is
+  generic
+  (
+    G_DWIDTH : integer range 4 to 128 := 32
+  );
+  port
+  (
+    clk   : in  std_logic;
+    reset : in  std_logic;
+
+    din       : in  std_logic_vector(G_DWIDTH-1 downto 0);
+    din_valid : in  std_logic;
+    din_ready  : out std_logic;
+
+    dout       : out std_logic_vector(G_DWIDTH-1 downto 0);
+    dout_valid : out std_logic;
+    dout_ready : in  std_logic
+  );
+end entity;
 
   assign dds_dout_ready = 1;
 
@@ -421,3 +437,4 @@ module chorus_bram
   end
 
 endmodule
+
