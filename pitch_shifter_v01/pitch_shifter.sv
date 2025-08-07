@@ -2,7 +2,7 @@ module pitch_shifter
 #(
   parameter  int  G_DWIDTH = 24,
   localparam int  C_PROG_DDS_DWIDTH = 32,
-  localparam int  C_BUFFER_ADDDR_WIDTH = 12
+  localparam int  C_BUFFER_ADDR_WIDTH = 12
 )
 (
   input  logic                            clk,
@@ -15,12 +15,12 @@ module pitch_shifter
   output logic                            prog_gain_din_ready,
   output logic                            prog_gain_din_done,
 
-  input  logic [C_BUFFER_ADDDR_WIDTH-1:0] prog_avg_delay_din,
+  input  logic [C_BUFFER_ADDR_WIDTH-1:0] prog_avg_delay_din,
   input  logic                            prog_avg_delay_din_valid,
   output logic                            prog_avg_delay_din_ready,
   output logic                            prog_avg_delay_din_done,
 
-  input  logic [C_BUFFER_ADDDR_WIDTH-1:0] prog_lfo_depth_din,
+  input  logic [C_BUFFER_ADDR_WIDTH-1:0] prog_lfo_depth_din,
   input  logic                            prog_lfo_depth_din_valid,
   output logic                            prog_lfo_depth_din_ready,
   output logic                            prog_lfo_depth_din_done,
@@ -60,8 +60,8 @@ module pitch_shifter
   logic [C_PROG_DDS_DWIDTH-1:0] prog_lfo_depth;
   logic [C_PROG_DDS_DWIDTH-1:0] prog_lfo_freq;
 
-  logic [C_BUFFER_ADDDR_WIDTH-1:0]  bram_din_wr_addr;
-  logic [C_BUFFER_ADDDR_WIDTH-1:0]  bram_din_rd_addr;
+  logic [C_BUFFER_ADDR_WIDTH-1:0]  bram_din_wr_addr;
+  logic [C_BUFFER_ADDR_WIDTH-1:0]  bram_din_rd_addr;
   logic [G_DWIDTH-1:0]              bram_din_data;
   logic                             bram_din_rd_valid;
   logic                             bram_din_wr_valid;
@@ -76,17 +76,17 @@ module pitch_shifter
   logic [C_PROG_DDS_DWIDTH-1:0]                       dds_dout;
   logic                                               dds_dout_valid;
   logic                                               dds_dout_ready;
-  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDDR_WIDTH-1:0]  dds_dout_mult;
-  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDDR_WIDTH-1:0]  dds_dout_mult_buff;
+  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult;
+  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult_buff;
   logic                                               dds_dout_mult_valid;
 
-  logic [C_BUFFER_ADDDR_WIDTH-1:0]                    lfo_index;
+  logic [C_BUFFER_ADDR_WIDTH-1:0]                    lfo_index;
   logic [C_PROG_DDS_DWIDTH-1:0]                       fract;
   logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_0;
   logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_1;
 
-  logic [C_BUFFER_ADDDR_WIDTH-1:0]                    rd_index0;
-  logic [C_BUFFER_ADDDR_WIDTH-1:0]                    rd_index1;
+  logic [C_BUFFER_ADDR_WIDTH-1:0]                    rd_index0;
+  logic [C_BUFFER_ADDR_WIDTH-1:0]                    rd_index1;
 
   logic [G_DWIDTH-1:0]                                rd_0;
   logic [G_DWIDTH-1:0]                                rd_1;
@@ -166,7 +166,7 @@ module pitch_shifter
         SM_PROGRAM : begin
 
           if (bram_clear_done == 0) begin
-            if (bram_din_wr_addr == 2**C_BUFFER_ADDDR_WIDTH-1) begin
+            if (bram_din_wr_addr == 2**C_BUFFER_ADDR_WIDTH-1) begin
               bram_clear_done   <= 1;
               bram_din_wr_addr  <= 0;
             end
@@ -336,7 +336,7 @@ module pitch_shifter
 
   chorus_bram
   #(
-    .G_BRAM_ADDRWIDTH (C_BUFFER_ADDDR_WIDTH),
+    .G_BRAM_ADDRWIDTH (C_BUFFER_ADDR_WIDTH),
     .G_DWIDTH         (G_DWIDTH)
   )
   u_chorus_bram
@@ -418,6 +418,7 @@ module chorus_bram
   end
 
 endmodule
+
 
 
 
