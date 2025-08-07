@@ -319,16 +319,16 @@ module pitch_shifter
   assign fract_mult_output_short = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
 
   always @ (posedge clk) begin
-    fract_mult_0 <= signed'(rd_0) * signed'({0,fract_0});
-    fract_mult_1 <= signed'(rd_1) * signed'({0,fract_1});
+    fract_mult_0 <= signed'(rd_0) * signed'({1'b0,fract_0});
+    fract_mult_1 <= signed'(rd_1) * signed'({1'b0,fract_1});
     fract_mult_dout_valid <= fract_mult_din_valid;
   end
 
   always @ (posedge clk) begin
     //transparent_gain      <= signed'(din_store) * unsigned'(prog_gain[0]);
     //chorus_gain           <= signed'(fract_mult_output_short) * unsigned'(prog_gain[1]);
-    transparent_gain      <= signed'(din_store) * signed'({0,prog_gain[0]});
-    chorus_gain           <= signed'(fract_mult_output_short) * signed'({0,prog_gain[1]});
+    transparent_gain      <= signed'(din_store) * signed'({1'b0,prog_gain[0]});
+    chorus_gain           <= signed'(fract_mult_output_short) * signed'({1'b0,prog_gain[1]});
     gain_mult_dout_valid  <= gain_mult_din_valid;
   end
 
@@ -360,7 +360,7 @@ module pitch_shifter
   #(
     .G_DWIDTH      (C_PROG_DDS_DWIDTH)
   )
-  u_dds_lfo
+  u_dds_linear
   (
     .clk              (clk),
     .reset            (reset | (~enable)),
@@ -374,30 +374,11 @@ module pitch_shifter
     .dout_ready       (dds_dout_ready)
   );
 
-entity dds_linear is
-  generic
-  (
-    G_DWIDTH : integer range 4 to 128 := 32
-  );
-  port
-  (
-    clk   : in  std_logic;
-    reset : in  std_logic;
-
-    din       : in  std_logic_vector(G_DWIDTH-1 downto 0);
-    din_valid : in  std_logic;
-    din_ready  : out std_logic;
-
-    dout       : out std_logic_vector(G_DWIDTH-1 downto 0);
-    dout_valid : out std_logic;
-    dout_ready : in  std_logic
-  );
-end entity;
-
   assign dds_dout_ready = 1;
 
   always @ (posedge clk) begin
-    dds_dout_mult       <= signed'(dds_dout) * signed'({0,prog_lfo_depth});
+    //dds_dout_mult       <= signed'(dds_dout) * signed'({0,prog_lfo_depth});
+    dds_dout_mult       <= dds_dout << G_BRAM_ADDRWIDTH;
     dds_dout_mult_valid <= dds_dout_valid;
   end
 
@@ -437,4 +418,5 @@ module chorus_bram
   end
 
 endmodule
+
 
