@@ -378,7 +378,7 @@ module pitch_shifter
 
   always @ (posedge clk) begin
     //dds_dout_mult       <= signed'(dds_dout) * signed'({0,prog_lfo_depth});
-    dds_dout_mult       <= dds_dout << G_BRAM_ADDRWIDTH;
+    dds_dout_mult       <= dds_dout << C_BUFFER_ADDDRWIDTH;
     dds_dout_mult_valid <= dds_dout_valid;
   end
 
@@ -418,5 +418,6 @@ module chorus_bram
   end
 
 endmodule
+
 
 
