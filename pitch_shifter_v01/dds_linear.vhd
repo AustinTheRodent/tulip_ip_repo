@@ -22,7 +22,7 @@ entity dds_linear is
   );
 end entity;
 
-architecture rtl is
+architecture rtl of dds_linear is
   type state_t is (SM_INIT, SM_GET, SM_OUTPUT);
   signal state : state_t;
 
@@ -50,7 +50,7 @@ begin
               din_ready <= '0';
               dout_valid <= '1';
               counter  <= counter + unsigned(din);
-              dout <= counter + unsigned(din);
+              dout <= std_logic_vector(counter + unsigned(din));
               state <= SM_OUTPUT;
             end if;
 
