@@ -40,12 +40,23 @@ module pitch_shifter
 );
 
   localparam int N = 10;
+  localparam int U = 8;
   localparam real PI = 3.141592653589793;
   const logic [31:0] register_array [0:N-1];
   
   initial begin
     for (int i = 0; i < N; i++) begin
-        register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
+      //register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
+
+      if (i < U) begin
+        window_array[i] = $rtoi(1024.0 * real'(i)/real'(U));
+      end
+      else if (i >= N-U) begin
+        window_array[i] = $rtoi(1024.0 * real'(N-i-1)/real'(U));
+      end
+      else begin
+        window_array[i] = $rtoi(1024.0);
+      end
     end
   end
   
@@ -428,6 +439,7 @@ module chorus_bram
   end
 
 endmodule
+
 
 
 
