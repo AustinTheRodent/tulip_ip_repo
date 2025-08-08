@@ -39,6 +39,16 @@ module pitch_shifter
   input  logic                            dout_ready
 );
 
+  localparam int N = 10;
+  localparam real PI = 3.141592653589793;
+  const logic [31:0] register_array [0:N-1];
+  
+  initial begin
+    for (int i = 0; i < N; i++) begin
+        register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
+    end
+  end
+  
   typedef enum
   {
     SM_INIT,
@@ -418,6 +428,7 @@ module chorus_bram
   end
 
 endmodule
+
 
 
 
