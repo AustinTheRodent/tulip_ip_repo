@@ -67,7 +67,7 @@ module chorus_effect
   logic                             bram_din_wr_valid;
 
   logic [G_DWIDTH-1:0]              bram_dout_data;
-  logic [G_DWIDTH-1:0]              bram_dout_rd_valid;
+  logic                             bram_dout_rd_valid;
 
 
   logic [C_PROG_DDS_DWIDTH-1:0]                       dds_din;
@@ -319,16 +319,16 @@ module chorus_effect
   assign fract_mult_output_short = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
 
   always @ (posedge clk) begin
-    fract_mult_0 <= signed'(rd_0) * signed'({0,fract_0});
-    fract_mult_1 <= signed'(rd_1) * signed'({0,fract_1});
+    fract_mult_0 <= signed'(rd_0) * signed'({1'b0,fract_0});
+    fract_mult_1 <= signed'(rd_1) * signed'({1'b0,fract_1});
     fract_mult_dout_valid <= fract_mult_din_valid;
   end
 
   always @ (posedge clk) begin
     //transparent_gain      <= signed'(din_store) * unsigned'(prog_gain[0]);
     //chorus_gain           <= signed'(fract_mult_output_short) * unsigned'(prog_gain[1]);
-    transparent_gain      <= signed'(din_store) * signed'({0,prog_gain[0]});
-    chorus_gain           <= signed'(fract_mult_output_short) * signed'({0,prog_gain[1]});
+    transparent_gain      <= signed'(din_store) * signed'({1'b0,prog_gain[0]});
+    chorus_gain           <= signed'(fract_mult_output_short) * signed'({1'b0,prog_gain[1]});
     gain_mult_dout_valid  <= gain_mult_din_valid;
   end
 
@@ -381,7 +381,7 @@ module chorus_effect
   assign dds_dout_ready = 1;
 
   always @ (posedge clk) begin
-    dds_dout_mult       <= signed'(dds_dout) * signed'({0,prog_lfo_depth});
+    dds_dout_mult       <= signed'(dds_dout) * signed'({1'b0,prog_lfo_depth});
     dds_dout_mult_valid <= dds_dout_valid;
   end
 

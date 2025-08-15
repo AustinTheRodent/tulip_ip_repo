@@ -696,7 +696,7 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       if a_axi_aresetn = '0' then
-        registers.VERSION_REG <= x"0000005D";
+        registers.VERSION_REG <= x"0000005E";
         registers.COUNTER_US_REG <= x"00000000";
         registers.COUNTER_MS_REG <= x"00000000";
         registers.I2C_STATUS_REG <= x"00000000";

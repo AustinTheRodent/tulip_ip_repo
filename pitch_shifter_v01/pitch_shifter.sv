@@ -2,7 +2,7 @@ module pitch_shifter
 #(
   parameter  int  G_DWIDTH = 24,
   localparam int  C_PROG_DDS_DWIDTH = 32,
-  localparam int  C_BUFFER_ADDR_WIDTH = 12
+  localparam int  C_BUFFER_ADDR_WIDTH = 10
 )
 (
   input  logic                            clk,
@@ -15,15 +15,10 @@ module pitch_shifter
   output logic                            prog_gain_din_ready,
   output logic                            prog_gain_din_done,
 
-  input  logic [C_BUFFER_ADDR_WIDTH-1:0] prog_avg_delay_din,
-  input  logic                            prog_avg_delay_din_valid,
-  output logic                            prog_avg_delay_din_ready,
-  output logic                            prog_avg_delay_din_done,
-
-  input  logic [C_BUFFER_ADDR_WIDTH-1:0] prog_lfo_depth_din,
-  input  logic                            prog_lfo_depth_din_valid,
-  output logic                            prog_lfo_depth_din_ready,
-  output logic                            prog_lfo_depth_din_done,
+  input  logic [G_DWIDTH-1:0]             prog_window_din, // fixed point, 2 integer bits
+  input  logic                            prog_window_din_valid,
+  output logic                            prog_window_din_ready,
+  output logic                            prog_window_din_done,
 
   input  logic [C_PROG_DDS_DWIDTH-1:0]    prog_lfo_freq_din,
   input  logic                            prog_lfo_freq_din_valid,
@@ -39,27 +34,30 @@ module pitch_shifter
   input  logic                            dout_ready
 );
 
+  localparam int C_PROG_INT_BITS = 2;
+
   localparam int N = 10;
   localparam int U = 8;
   localparam real PI = 3.141592653589793;
-  const logic [31:0] register_array [0:N-1];
-  
-  initial begin
-    for (int i = 0; i < N; i++) begin
-      //register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
+  //logic [31:0] window_array [0:N-1];
+  logic [G_DWIDTH-1:0] prog_window [0:2**C_BUFFER_ADDR_WIDTH-1];
 
-      if (i < U) begin
-        window_array[i] = $rtoi(1024.0 * real'(i)/real'(U));
-      end
-      else if (i >= N-U) begin
-        window_array[i] = $rtoi(1024.0 * real'(N-i-1)/real'(U));
-      end
-      else begin
-        window_array[i] = $rtoi(1024.0);
-      end
-    end
-  end
-  
+//  initial begin
+//    for (int i = 0; i < N; i++) begin
+//      //register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
+//
+//      if (i < U) begin
+//        window_array[i] = $rtoi(1024.0 * real'(i)/real'(U));
+//      end
+//      else if (i >= N-U) begin
+//        window_array[i] = $rtoi(1024.0 * real'(N-i-1)/real'(U));
+//      end
+//      else begin
+//        window_array[i] = $rtoi(1024.0);
+//      end
+//    end
+//  end
+
   typedef enum
   {
     SM_INIT,
@@ -71,14 +69,13 @@ module pitch_shifter
     SM_RD_0,
     SM_RD_1,
     SM_MULT_FRACT,
+    SM_WINDOW,
     SM_APPLY_GAIN,
     SM_SEND_OUTPUT
   } state_t;
   state_t state;
 
   logic [G_DWIDTH-1:0]          prog_gain     [0:1];
-  logic [C_PROG_DDS_DWIDTH-1:0] prog_avg_delay;
-  logic [C_PROG_DDS_DWIDTH-1:0] prog_lfo_depth;
   logic [C_PROG_DDS_DWIDTH-1:0] prog_lfo_freq;
 
   logic [C_BUFFER_ADDR_WIDTH-1:0]  bram_din_wr_addr;
@@ -88,7 +85,7 @@ module pitch_shifter
   logic                             bram_din_wr_valid;
 
   logic [G_DWIDTH-1:0]              bram_dout_data;
-  logic [G_DWIDTH-1:0]              bram_dout_rd_valid;
+  logic                             bram_dout_rd_valid;
 
 
   logic [C_PROG_DDS_DWIDTH-1:0]                       dds_din;
@@ -114,8 +111,12 @@ module pitch_shifter
 
   logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_0;
   logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_1;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_0;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_1;
   logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_output;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_output;
   logic [G_DWIDTH-1:0]                                fract_mult_output_short;
+  logic [G_DWIDTH-1:0]                                win_mult_output_short;
   logic [G_DWIDTH+C_PROG_DDS_DWIDTH-1:0]              fract_mult_din_valid;
   logic [G_DWIDTH+C_PROG_DDS_DWIDTH-1:0]              fract_mult_dout_valid;
 
@@ -123,8 +124,16 @@ module pitch_shifter
 
   logic [2*G_DWIDTH-1:0]  transparent_gain;
   logic [2*G_DWIDTH-1:0]  chorus_gain;
+
+  logic [2*G_DWIDTH-1:0]  transparent_gain_store;
+  logic [G_DWIDTH-1:0]    chorus_gain_store;
+
   logic                   gain_mult_din_valid;
   logic                   gain_mult_dout_valid;
+
+  logic [2*G_DWIDTH-1:0]  window_mult;
+  logic                   window_mult_din_valid;
+  logic                   window_mult_dout_valid;
 
   logic bram_clear_done;
 
@@ -141,6 +150,7 @@ module pitch_shifter
   always @ (posedge clk) begin
 
     logic [3:0] prog_gain_counter;
+    logic [C_BUFFER_ADDR_WIDTH:0] prog_window_counter;
     logic [3:0] delay_counter;
     logic all_prog_done;
 
@@ -149,15 +159,14 @@ module pitch_shifter
       dout_valid_int            <= 0;
       delay_counter             <= 0;
       prog_gain_din_ready       <= 0;
+      prog_window_din_ready     <= 0;
       prog_gain_din_done        <= 0;
-      prog_avg_delay_din_ready  <= 0;
-      prog_avg_delay_din_done   <= 0;
-      prog_lfo_depth_din_ready  <= 0;
-      prog_lfo_depth_din_done   <= 0;
+      prog_window_din_done      <= 0;
       prog_lfo_freq_din_ready   <= 0;
       prog_lfo_freq_din_done    <= 0;
       all_prog_done             <= 0;
       prog_gain_counter         <= 0;
+      prog_window_counter       <= 0;
       dds_din_valid             <= 0;
       bram_din_rd_valid         <= 0;
       bram_din_wr_addr          <= 0;
@@ -173,8 +182,7 @@ module pitch_shifter
           if (delay_counter == 7) begin
 
             prog_gain_din_ready         <= 1;
-            prog_avg_delay_din_ready    <= 1;
-            prog_lfo_depth_din_ready    <= 1;
+            prog_window_din_ready       <= 1;
             prog_lfo_freq_din_ready     <= 1;
 
             state                       <= SM_PROGRAM;
@@ -209,20 +217,17 @@ module pitch_shifter
             end
           end
 
-          if (prog_avg_delay_din_valid & prog_avg_delay_din_ready == 1) begin
+          if (prog_window_din_valid & prog_window_din_ready == 1) begin
 
-            prog_avg_delay            <= prog_avg_delay_din;
-            prog_avg_delay_din_ready  <= 0;
-            prog_avg_delay_din_done   <= 1;
+            prog_window[prog_window_counter] <= prog_window_din;
 
-          end
-
-          if (prog_lfo_depth_din_valid & prog_lfo_depth_din_ready == 1) begin
-
-            prog_lfo_depth            <= prog_lfo_depth_din;
-            prog_lfo_depth_din_ready  <= 0;
-            prog_lfo_depth_din_done   <= 1;
-
+            if (prog_window_counter == 2**C_BUFFER_ADDR_WIDTH-1) begin
+              prog_window_din_ready  <= 0;
+              prog_window_din_done   <= 1;
+            end
+            else begin
+              prog_window_counter    <= prog_window_counter + 1;
+            end
           end
 
           if (prog_lfo_freq_din_valid & prog_lfo_freq_din_ready == 1) begin
@@ -236,9 +241,8 @@ module pitch_shifter
           if
           (
             bram_clear_done &
+            prog_window_din_done &
             prog_gain_din_done &
-            prog_avg_delay_din_done &
-            prog_lfo_depth_din_done &
             prog_lfo_freq_din_done == 1
           ) begin
             all_prog_done     <= 1;
@@ -271,8 +275,8 @@ module pitch_shifter
         end
 
         SM_GET_RD_INDEX0_1 : begin
-          rd_index0 <= bram_din_wr_addr-prog_avg_delay+lfo_index;
-          rd_index1 <= bram_din_wr_addr-prog_avg_delay+lfo_index+1;
+          rd_index0 <= bram_din_wr_addr+lfo_index;
+          rd_index1 <= bram_din_wr_addr+lfo_index+1;
           state     <= SM_GET_FRACT;
         end
 
@@ -309,15 +313,26 @@ module pitch_shifter
           fract_mult_din_valid  <= 0;
           if (fract_mult_dout_valid == 1) begin
             fract_mult_output   <= signed'(fract_mult_0 + fract_mult_1) >>> C_PROG_DDS_DWIDTH;
+            win_mult_output     <= signed'(win_mult_0 + win_mult_1) >>> C_PROG_DDS_DWIDTH;
             gain_mult_din_valid <= 1;
-            state               <= SM_APPLY_GAIN;
+            state               <= SM_WINDOW;
+          end
+        end
+
+        SM_WINDOW : begin
+          gain_mult_din_valid <= 0;
+          if (gain_mult_dout_valid) begin
+            transparent_gain_store  <= transparent_gain;
+            chorus_gain_store       <= chorus_gain[2*G_DWIDTH-1-C_PROG_INT_BITS -: G_DWIDTH];
+            window_mult_din_valid   <= 1;
+            state                   <= SM_APPLY_GAIN;
           end
         end
 
         SM_APPLY_GAIN : begin
-          gain_mult_din_valid <= 0;
-          if (gain_mult_dout_valid) begin
-            dout_int        <= (signed'(chorus_gain) >>> (G_DWIDTH-2)) + (signed'(transparent_gain) >>> (G_DWIDTH-2));
+          window_mult_din_valid <= 0;
+          if (window_mult_dout_valid) begin
+            dout_int        <= (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS)) + (signed'(transparent_gain) >>> (G_DWIDTH-C_PROG_INT_BITS));
             dout_valid_int  <= 1;
             state           <= SM_SEND_OUTPUT;
           end
@@ -337,11 +352,19 @@ module pitch_shifter
     end
   end
 
-  assign fract_mult_output_short = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
+  assign fract_mult_output_short  = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
+  assign win_mult_output_short    = win_mult_output[G_DWIDTH-1 -: G_DWIDTH];
+
+  logic [C_BUFFER_ADDR_WIDTH-1:0] window_index0;
+  logic [C_BUFFER_ADDR_WIDTH-1:0] window_index1;
+  assign window_index0 = lfo_index;
+  assign window_index1 = lfo_index + 1;
 
   always @ (posedge clk) begin
-    fract_mult_0 <= signed'(rd_0) * signed'({1'b0,fract_0});
-    fract_mult_1 <= signed'(rd_1) * signed'({1'b0,fract_1});
+    fract_mult_0  <= signed'(rd_0) * signed'({1'b0,fract_0});
+    fract_mult_1  <= signed'(rd_1) * signed'({1'b0,fract_1});
+    win_mult_0    <= signed'(prog_window[window_index0]) * signed'({1'b0,fract_0});
+    win_mult_1    <= signed'(prog_window[window_index1]) * signed'({1'b0,fract_1});
     fract_mult_dout_valid <= fract_mult_din_valid;
   end
 
@@ -351,16 +374,21 @@ module pitch_shifter
     transparent_gain      <= signed'(din_store) * signed'({1'b0,prog_gain[0]});
     chorus_gain           <= signed'(fract_mult_output_short) * signed'({1'b0,prog_gain[1]});
     gain_mult_dout_valid  <= gain_mult_din_valid;
+
+    window_mult             <= signed'(win_mult_output_short) * signed'(chorus_gain_store);
+    window_mult_dout_valid  <= window_mult_din_valid;
+
+
   end
 
   assign bram_din_data = (bram_clear_done == 1) ? din : 0;
 
-  chorus_bram
+  ps_bram
   #(
     .G_BRAM_ADDRWIDTH (C_BUFFER_ADDR_WIDTH),
     .G_DWIDTH         (G_DWIDTH)
   )
-  u_chorus_bram
+  u_ps_bram
   (
     .clk              (clk),
 
@@ -398,16 +426,15 @@ module pitch_shifter
   assign dds_dout_ready = 1;
 
   always @ (posedge clk) begin
-    //dds_dout_mult       <= signed'(dds_dout) * signed'({0,prog_lfo_depth});
-    dds_dout_mult       <= dds_dout << C_BUFFER_ADDDRWIDTH;
+    dds_dout_mult       <= dds_dout << C_BUFFER_ADDR_WIDTH;
     dds_dout_mult_valid <= dds_dout_valid;
   end
 
-
-
 endmodule
 
-module chorus_bram
+
+
+module ps_bram
 #(
   parameter int G_BRAM_ADDRWIDTH = 12,
   parameter int G_DWIDTH = 24
