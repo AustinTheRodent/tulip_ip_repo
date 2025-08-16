@@ -2,7 +2,7 @@ module pitch_shifter
 #(
   parameter  int  G_DWIDTH = 24,
   localparam int  C_PROG_DDS_DWIDTH = 32,
-  localparam int  C_BUFFER_ADDR_WIDTH = 10
+  parameter int   G_BUFFER_ADDR_WIDTH = 12
 )
 (
   input  logic                            clk,
@@ -40,7 +40,7 @@ module pitch_shifter
   localparam int U = 8;
   localparam real PI = 3.141592653589793;
   //logic [31:0] window_array [0:N-1];
-  logic [G_DWIDTH-1:0] prog_window [0:2**C_BUFFER_ADDR_WIDTH-1];
+  logic [G_DWIDTH-1:0] prog_window [0:2**G_BUFFER_ADDR_WIDTH-1];
 
 //  initial begin
 //    for (int i = 0; i < N; i++) begin
@@ -78,8 +78,8 @@ module pitch_shifter
   logic [G_DWIDTH-1:0]          prog_gain     [0:1];
   logic [C_PROG_DDS_DWIDTH-1:0] prog_lfo_freq;
 
-  logic [C_BUFFER_ADDR_WIDTH-1:0]  bram_din_wr_addr;
-  logic [C_BUFFER_ADDR_WIDTH-1:0]  bram_din_rd_addr;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]  bram_din_wr_addr;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]  bram_din_rd_addr;
   logic [G_DWIDTH-1:0]              bram_din_data;
   logic                             bram_din_rd_valid;
   logic                             bram_din_wr_valid;
@@ -94,17 +94,17 @@ module pitch_shifter
   logic [C_PROG_DDS_DWIDTH-1:0]                       dds_dout;
   logic                                               dds_dout_valid;
   logic                                               dds_dout_ready;
-  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult;
-  logic [C_PROG_DDS_DWIDTH+C_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult_buff;
+  logic [C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult;
+  logic [C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1:0]  dds_dout_mult_buff;
   logic                                               dds_dout_mult_valid;
 
-  logic [C_BUFFER_ADDR_WIDTH-1:0]                    lfo_index;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                    lfo_index;
   logic [C_PROG_DDS_DWIDTH-1:0]                       fract;
   logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_0;
   logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_1;
 
-  logic [C_BUFFER_ADDR_WIDTH-1:0]                    rd_index0;
-  logic [C_BUFFER_ADDR_WIDTH-1:0]                    rd_index1;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                    rd_index0;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                    rd_index1;
 
   logic [G_DWIDTH-1:0]                                rd_0;
   logic [G_DWIDTH-1:0]                                rd_1;
@@ -150,7 +150,7 @@ module pitch_shifter
   always @ (posedge clk) begin
 
     logic [3:0] prog_gain_counter;
-    logic [C_BUFFER_ADDR_WIDTH:0] prog_window_counter;
+    logic [G_BUFFER_ADDR_WIDTH:0] prog_window_counter;
     logic [3:0] delay_counter;
     logic all_prog_done;
 
@@ -195,7 +195,7 @@ module pitch_shifter
         SM_PROGRAM : begin
 
           if (bram_clear_done == 0) begin
-            if (bram_din_wr_addr == 2**C_BUFFER_ADDR_WIDTH-1) begin
+            if (bram_din_wr_addr == 2**G_BUFFER_ADDR_WIDTH-1) begin
               bram_clear_done   <= 1;
               bram_din_wr_addr  <= 0;
             end
@@ -221,7 +221,7 @@ module pitch_shifter
 
             prog_window[prog_window_counter] <= prog_window_din;
 
-            if (prog_window_counter == 2**C_BUFFER_ADDR_WIDTH-1) begin
+            if (prog_window_counter == 2**G_BUFFER_ADDR_WIDTH-1) begin
               prog_window_din_ready  <= 0;
               prog_window_din_done   <= 1;
             end
@@ -355,8 +355,8 @@ module pitch_shifter
   assign fract_mult_output_short  = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
   assign win_mult_output_short    = win_mult_output[G_DWIDTH-1 -: G_DWIDTH];
 
-  logic [C_BUFFER_ADDR_WIDTH-1:0] window_index0;
-  logic [C_BUFFER_ADDR_WIDTH-1:0] window_index1;
+  logic [G_BUFFER_ADDR_WIDTH-1:0] window_index0;
+  logic [G_BUFFER_ADDR_WIDTH-1:0] window_index1;
   assign window_index0 = lfo_index;
   assign window_index1 = lfo_index + 1;
 
@@ -385,7 +385,7 @@ module pitch_shifter
 
   ps_bram
   #(
-    .G_BRAM_ADDRWIDTH (C_BUFFER_ADDR_WIDTH),
+    .G_BRAM_ADDRWIDTH (G_BUFFER_ADDR_WIDTH),
     .G_DWIDTH         (G_DWIDTH)
   )
   u_ps_bram
@@ -426,7 +426,7 @@ module pitch_shifter
   assign dds_dout_ready = 1;
 
   always @ (posedge clk) begin
-    dds_dout_mult       <= dds_dout << C_BUFFER_ADDR_WIDTH;
+    dds_dout_mult       <= dds_dout << G_BUFFER_ADDR_WIDTH;
     dds_dout_mult_valid <= dds_dout_valid;
   end
 
