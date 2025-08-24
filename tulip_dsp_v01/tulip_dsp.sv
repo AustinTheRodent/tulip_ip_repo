@@ -19,6 +19,7 @@ module tulip_dsp
   input  logic                    eq_sw_resetn,
   input  logic                    vibrato_sw_resetn,
   input  logic                    chorus_sw_resetn,
+  input  logic                    ps_sw_resetn,
 
   input  logic                    bypass,
   input  logic                    bypass_lut_tf, // Look Up Table Transfer Function
@@ -31,6 +32,7 @@ module tulip_dsp
   input  logic                    bypass_eq,
   input  logic                    bypass_vibrato,
   input  logic                    bypass_chorus,
+  input  logic                    bypass_ps,
 
   input  logic [31:0]             input_gain,
   input  logic [31:0]             output_gain,
@@ -129,6 +131,26 @@ module tulip_dsp
   input  logic                              prog_chorus_lfo_freq_din_valid,
   output logic                              prog_chorus_lfo_freq_din_ready,
   output logic                              prog_chorus_lfo_freq_din_done,
+
+  input  logic [23:0]                       ps_prog_gain_din, // fixed point, 2 integer bits
+  input  logic                              ps_prog_gain_din_valid,
+  output logic                              ps_prog_gain_din_ready,
+  output logic                              ps_prog_gain_din_done,
+
+  input  logic [23:0]                       ps_prog_window_din, // fixed point, 2 integer bits
+  input  logic                              ps_prog_window_din_valid,
+  output logic                              ps_prog_window_din_ready,
+  output logic                              ps_prog_window_din_done,
+
+  input  logic [31:0]                       ps_prog_lfo_freq_din,
+  input  logic                              ps_prog_lfo_freq_din_valid,
+  output logic                              ps_prog_lfo_freq_din_ready,
+  output logic                              ps_prog_lfo_freq_din_done,
+
+  input  logic [7:0]                        ps_prog_buf_depthlog2_din,
+  input  logic                              ps_prog_buf_depthlog2_din_valid,
+  output logic                              ps_prog_buf_depthlog2_din_ready,
+  output logic                              ps_prog_buf_depthlog2_din_done,
 
   input  logic [C_ADC_DWIDTH-1:0] din,
   input  logic                    din_valid,
@@ -276,6 +298,13 @@ module tulip_dsp
   logic [C_ADC_DWIDTH-1:0]  delay_dout;
   logic                     delay_dout_valid;
   logic                     delay_dout_ready;
+
+  logic [C_ADC_DWIDTH-1:0]  ps_din;
+  logic                     ps_din_valid;
+  logic                     ps_din_ready;
+  logic [C_ADC_DWIDTH-1:0]  ps_dout;
+  logic                     ps_dout_valid;
+  logic                     ps_dout_ready;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -684,9 +713,55 @@ module tulip_dsp
     .dout_ready               (chorus_dout_ready)
   );
 
-  assign reverb_din         = chorus_dout;
-  assign reverb_din_valid   = chorus_dout_valid;
-  assign chorus_dout_ready  = reverb_din_ready;
+  assign ps_din             = chorus_dout;
+  assign ps_din_valid       = chorus_dout_valid;
+  assign chorus_dout_ready  = ps_din_ready;
+
+
+  pitch_shifter_variable
+  #(
+    .G_DWIDTH             (C_ADC_DWIDTH),
+    .G_BUFFER_ADDR_WIDTH  (14)
+  )
+  u_pitch_shifter
+  (
+    .clk                          (clk),
+    .reset                        (reset),
+    .enable                       (global_sw_resetn & ps_sw_resetn),
+    .bypass                       (bypass_ps),
+
+    .prog_gain_din                (ps_prog_gain_din),
+    .prog_gain_din_valid          (ps_prog_gain_din_valid),
+    .prog_gain_din_ready          (ps_prog_gain_din_ready),
+    .prog_gain_din_done           (ps_prog_gain_din_done),
+
+    .prog_window_din              (ps_prog_window_din),
+    .prog_window_din_valid        (ps_prog_window_din_valid),
+    .prog_window_din_ready        (ps_prog_window_din_ready),
+    .prog_window_din_done         (ps_prog_window_din_done),
+
+    .prog_lfo_freq_din            (ps_prog_lfo_freq_din),
+    .prog_lfo_freq_din_valid      (ps_prog_lfo_freq_din_valid),
+    .prog_lfo_freq_din_ready      (ps_prog_lfo_freq_din_ready),
+    .prog_lfo_freq_din_done       (ps_prog_lfo_freq_din_done),
+
+    .prog_buf_depthlog2_din       (ps_prog_buf_depthlog2_din),
+    .prog_buf_depthlog2_din_valid (ps_prog_buf_depthlog2_din_valid),
+    .prog_buf_depthlog2_din_ready (ps_prog_buf_depthlog2_din_ready),
+    .prog_buf_depthlog2_din_done  (ps_prog_buf_depthlog2_din_done),
+
+    .din                          (ps_din),
+    .din_valid                    (ps_din_valid),
+    .din_ready                    (ps_din_ready),
+
+    .dout                         (ps_dout),
+    .dout_valid                   (ps_dout_valid),
+    .dout_ready                   (ps_dout_ready)
+  );
+
+  assign reverb_din       = ps_dout;
+  assign reverb_din_valid = ps_dout_valid;
+  assign ps_dout_ready    = reverb_din_ready;
 
   reverb_wrapper
   #(
@@ -724,13 +799,6 @@ module tulip_dsp
   assign delay_din_valid    = reverb_dout_valid;
   assign reverb_dout_ready  = delay_din_ready;
 
-
-
-
-
-
-
-
   reverb_wrapper
   #(
     .G_NUM_STAGES_LOG2  (5),
@@ -763,10 +831,8 @@ module tulip_dsp
     .dout_ready           (delay_dout_ready)
   );
 
-  assign dout               = (bypass == 0) ? delay_dout : din;
-  assign dout_valid         = (bypass == 0) ? delay_dout_valid : din_valid;
-  assign delay_dout_ready   = dout_ready;
-
-
+  assign dout             = (bypass == 0) ? delay_dout : din;
+  assign dout_valid       = (bypass == 0) ? delay_dout_valid : din_valid;
+  assign delay_dout_ready = dout_ready;
 
 endmodule

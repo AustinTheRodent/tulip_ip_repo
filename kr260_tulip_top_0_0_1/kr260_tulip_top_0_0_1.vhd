@@ -246,6 +246,15 @@ architecture rtl of kr260_tulip_top_0_0_1 is
   signal s_wawa_adc_tdata_rs            : unsigned(31 downto 0);
   signal s_wawa_adc_tdata_store         : std_logic_vector(7 downto 0);
 
+  signal ps_prog_gain_din_ready           : std_logic_vector(0 downto 0);
+  signal ps_prog_gain_din_done            : std_logic_vector(0 downto 0);
+  signal ps_prog_window_din_ready         : std_logic_vector(0 downto 0);
+  signal ps_prog_window_din_done          : std_logic_vector(0 downto 0);
+  signal ps_prog_lfo_freq_din_ready       : std_logic_vector(0 downto 0);
+  signal ps_prog_lfo_freq_din_done        : std_logic_vector(0 downto 0);
+  signal ps_prog_buf_depthlog2_din_ready  : std_logic_vector(0 downto 0);
+  signal ps_prog_buf_depthlog2_din_done   : std_logic_vector(0 downto 0);
+
 begin
 
   p_wawa_adc : process(s_axi_aclk)
@@ -407,6 +416,31 @@ begin
 
       s_TULIP_DSP_STATUS_EQ_PROG_B_DONE                   => eq_prog_b_done,
       s_TULIP_DSP_STATUS_EQ_PROG_B_DONE_v                 => '1',
+
+      s_TULIP_DSP_STATUS2_PS_DEPTH_DONE                   => ps_prog_buf_depthlog2_din_done,
+      s_TULIP_DSP_STATUS2_PS_DEPTH_DONE_v                 => '1',
+
+      s_TULIP_DSP_STATUS2_PS_DEPTH_READY                  => ps_prog_buf_depthlog2_din_ready,
+      s_TULIP_DSP_STATUS2_PS_DEPTH_READY_v                => '1',
+
+      s_TULIP_DSP_STATUS2_PS_FREQ_DONE                    => ps_prog_lfo_freq_din_done,
+      s_TULIP_DSP_STATUS2_PS_FREQ_DONE_v                  => '1',
+
+      s_TULIP_DSP_STATUS2_PS_FREQ_READY                   => ps_prog_lfo_freq_din_ready,
+      s_TULIP_DSP_STATUS2_PS_FREQ_READY_v                 => '1',
+
+      s_TULIP_DSP_STATUS2_PS_WINDOW_DONE                  => ps_prog_window_din_done,
+      s_TULIP_DSP_STATUS2_PS_WINDOW_DONE_v                => '1',
+
+      s_TULIP_DSP_STATUS2_PS_WINDOW_READY                 => ps_prog_window_din_ready,
+      s_TULIP_DSP_STATUS2_PS_WINDOW_READY_v               => '1',
+
+      s_TULIP_DSP_STATUS2_PS_GAIN_DONE                    => ps_prog_gain_din_done,
+      s_TULIP_DSP_STATUS2_PS_GAIN_DONE_v                  => '1',
+
+      s_TULIP_DSP_STATUS2_PS_GAIN_READY                   => ps_prog_gain_din_ready,
+      s_TULIP_DSP_STATUS2_PS_GAIN_READY_v                 => '1',
+
 
       s_COUNTER_US_TICK_US    => tick_us,
       s_COUNTER_US_TICK_US_v  => '1',
@@ -601,6 +635,7 @@ begin
       vibrato_sw_resetn                   => registers.TULIP_DSP_CONTROL.SW_RESETN_VIBRATO(0),
       gain_mirror_sw_resetn               => registers.TULIP_DSP_CONTROL.SW_RESETN_GAIN_MIRROR(0),
       chorus_sw_resetn                    => registers.TULIP_DSP_CONTROL.SW_RESETN_CHORUS(0),
+      ps_sw_resetn                        => registers.TULIP_DSP_CONTROL.SW_RESETN_PITCH_SHIFTER(0),
 
       bypass                              => registers.TULIP_DSP_CONTROL.BYPASS(0),
       bypass_chorus                       => registers.TULIP_DSP_CONTROL.BYPASS_CHORUS(0),
@@ -613,6 +648,7 @@ begin
       bypass_delay                        => registers.TULIP_DSP_CONTROL.BYPASS_DELAY(0),
       bypass_lut_tf                       => registers.TULIP_DSP_CONTROL.BYPASS_LUT_TF(0),
       bypass_usr_fir                      => registers.TULIP_DSP_CONTROL.BYPASS_USR_FIR(0),
+      bypass_ps                           => registers.TULIP_DSP_CONTROL.BYPASS_PITCH_SHIFTER(0),
 
       input_gain                          => registers.TULIP_DSP_INPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_INPUT_GAIN.DECIMAL_BITS,
       output_gain                         => registers.TULIP_DSP_OUTPUT_GAIN.INTEGER_BITS & registers.TULIP_DSP_OUTPUT_GAIN.DECIMAL_BITS,
@@ -711,6 +747,27 @@ begin
       prog_chorus_lfo_freq_din_valid      => registers.TULIP_DSP_CHORUS_LFO_FREQ_REG_wr_pulse,
       prog_chorus_lfo_freq_din_ready      => chorus_lfo_freq_prog_ready,
       prog_chorus_lfo_freq_din_done       => chorus_lfo_freq_prog_done,
+
+      ps_prog_gain_din                    => registers.TULIP_DSP_PS_GAIN.GAIN,
+      ps_prog_gain_din_valid              => registers.TULIP_DSP_PS_GAIN_REG_wr_pulse,
+      ps_prog_gain_din_ready              => ps_prog_gain_din_ready,
+      ps_prog_gain_din_done               => ps_prog_gain_din_done,
+
+      ps_prog_window_din                  => registers.TULIP_DSP_PS_WINDOW.WINDOW,
+      ps_prog_window_din_valid            => registers.TULIP_DSP_PS_WINDOW_REG_wr_pulse,
+      ps_prog_window_din_ready            => ps_prog_window_din_ready,
+      ps_prog_window_din_done             => ps_prog_window_din_done,
+
+      ps_prog_lfo_freq_din                => registers.TULIP_DSP_PS_LFO_FREQ.FREQ,
+      ps_prog_lfo_freq_din_valid          => registers.TULIP_DSP_PS_LFO_FREQ_REG_wr_pulse,
+      ps_prog_lfo_freq_din_ready          => ps_prog_lfo_freq_din_ready,
+      ps_prog_lfo_freq_din_done           => ps_prog_lfo_freq_din_done,
+
+      ps_prog_buf_depthlog2_din           => registers.TULIP_DSP_PS_DEPTHLOG2.DEPTH,
+      ps_prog_buf_depthlog2_din_valid     => registers.TULIP_DSP_PS_DEPTHLOG2_REG_wr_pulse,
+      ps_prog_buf_depthlog2_din_ready     => ps_prog_buf_depthlog2_din_ready,
+      ps_prog_buf_depthlog2_din_done      => ps_prog_buf_depthlog2_din_done,
+
 
       din                                 => dsp_l_din,
       din_valid                           => dsp_l_din_valid,

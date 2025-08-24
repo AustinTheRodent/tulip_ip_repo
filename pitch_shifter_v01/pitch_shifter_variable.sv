@@ -25,7 +25,7 @@ module pitch_shifter_variable
   output logic                            prog_lfo_freq_din_ready,
   output logic                            prog_lfo_freq_din_done,
 
-  input  logic [G_BUFFER_ADDR_WIDTH-1:0]  prog_buf_depthlog2_din,
+  input  logic [7:0]                      prog_buf_depthlog2_din,
   input  logic                            prog_buf_depthlog2_din_valid,
   output logic                            prog_buf_depthlog2_din_ready,
   output logic                            prog_buf_depthlog2_din_done,
@@ -40,28 +40,6 @@ module pitch_shifter_variable
 );
 
   localparam int C_PROG_INT_BITS = 2;
-
-  localparam int N = 10;
-  localparam int U = 8;
-  localparam real PI = 3.141592653589793;
-  //logic [31:0] window_array [0:N-1];
-  logic [G_DWIDTH-1:0] prog_window [0:2**G_BUFFER_ADDR_WIDTH-1];
-
-//  initial begin
-//    for (int i = 0; i < N; i++) begin
-//      //register_array[i] = $rtoi(1024.0 * (0.54 - 0.46 * $cos(2.0 * PI * real'(i) / real'(N)))**2);
-//
-//      if (i < U) begin
-//        window_array[i] = $rtoi(1024.0 * real'(i)/real'(U));
-//      end
-//      else if (i >= N-U) begin
-//        window_array[i] = $rtoi(1024.0 * real'(N-i-1)/real'(U));
-//      end
-//      else begin
-//        window_array[i] = $rtoi(1024.0);
-//      end
-//    end
-//  end
 
   typedef enum
   {
@@ -94,6 +72,13 @@ module pitch_shifter_variable
   logic [G_DWIDTH-1:0]              bram_dout_data;
   logic                             bram_dout_rd_valid;
 
+  logic [G_BUFFER_ADDR_WIDTH-1:0]  bram_win_din_rd_addr;
+  logic                            bram_win_din_rd_valid;
+
+  logic [G_DWIDTH-1:0]              bram_win_dout_data;
+  logic [G_DWIDTH-1:0]              bram_win_dout_data0;
+  logic [G_DWIDTH-1:0]              bram_win_dout_data1;
+  logic                             bram_win_dout_rd_valid;
 
   logic [C_PROG_DDS_DWIDTH-1:0]                       dds_din;
   logic                                               dds_din_valid;
@@ -149,6 +134,8 @@ module pitch_shifter_variable
   logic [G_DWIDTH-1:0] dout_int;
   logic dout_valid_int;
 
+  logic [G_BUFFER_ADDR_WIDTH-1:0] prog_window_counter;
+
 //////////////////////////////////////////
 
   assign din_ready = (bypass == 0) ? din_ready_int : dout_ready;
@@ -158,7 +145,6 @@ module pitch_shifter_variable
   always @ (posedge clk) begin
 
     logic [3:0] prog_gain_counter;
-    logic [G_BUFFER_ADDR_WIDTH:0] prog_window_counter;
     logic [3:0] delay_counter;
     logic all_prog_done;
 
@@ -237,9 +223,6 @@ module pitch_shifter_variable
           end
 
           if (prog_window_din_valid & prog_window_din_ready == 1) begin
-
-            prog_window[prog_window_counter] <= prog_window_din;
-
             if (prog_window_counter == 2**G_BUFFER_ADDR_WIDTH-1) begin
               prog_window_din_ready  <= 0;
               prog_window_din_done   <= 1;
@@ -324,6 +307,10 @@ module pitch_shifter_variable
         SM_GET_FRACT : begin
           fract_0 <= 2**32 - unsigned'(signed'(dds_dout_mult_buff) - (signed'(lfo_index0) <<< C_PROG_DDS_DWIDTH));
           fract_1 <= signed'(dds_dout_mult_buff) - (signed'(lfo_index0) <<< C_PROG_DDS_DWIDTH);
+
+          bram_win_din_rd_addr  <= lfo_index;
+          bram_win_din_rd_valid <= 1;
+
           bram_din_rd_addr  <= rd_index0;
           bram_din_rd_valid <= 1;
           state             <= SM_RD_0;
@@ -331,19 +318,34 @@ module pitch_shifter_variable
 
         SM_RD_0 : begin
           if (bram_dout_rd_valid) begin
+
+            bram_win_dout_data0 <= bram_win_dout_data;
+
+            if ((lfo_index + 1) >= 2**prog_buf_depthlog2) begin
+              bram_win_din_rd_addr <= 0;
+            end
+            else begin
+              bram_win_din_rd_addr <= lfo_index + 1;
+            end
+            bram_win_din_rd_valid <= 1;
+
             bram_din_rd_addr  <= rd_index1;
             rd_0              <= bram_dout_data;
             bram_din_rd_valid <= 1;
             state             <= SM_RD_1;
           end
           else begin
-            bram_din_rd_valid <= 0;
+            bram_din_rd_valid     <= 0;
+            bram_win_din_rd_valid <= 0;
           end
         end
 
         SM_RD_1 : begin
           bram_din_rd_valid       <= 0;
           if (bram_dout_rd_valid) begin
+
+            bram_win_dout_data1   <= bram_win_dout_data;
+
             rd_1                  <= bram_dout_data;
             fract_mult_din_valid  <= 1;
             state                 <= SM_MULT_FRACT;
@@ -409,8 +411,8 @@ module pitch_shifter_variable
   always @ (posedge clk) begin
     fract_mult_0  <= signed'(rd_0) * signed'({1'b0,fract_0});
     fract_mult_1  <= signed'(rd_1) * signed'({1'b0,fract_1});
-    win_mult_0    <= signed'(prog_window[window_index0]) * signed'({1'b0,fract_0});
-    win_mult_1    <= signed'(prog_window[window_index1]) * signed'({1'b0,fract_1});
+    win_mult_0    <= signed'(bram_win_dout_data0) * signed'({1'b0,fract_0});
+    win_mult_1    <= signed'(bram_win_dout_data1) * signed'({1'b0,fract_1});
     fract_mult_dout_valid <= fract_mult_din_valid;
   end
 
@@ -446,6 +448,28 @@ module pitch_shifter_variable
 
     .dout_data        (bram_dout_data),
     .dout_rd_valid    (bram_dout_rd_valid)
+  );
+
+
+
+  ps_bram
+  #(
+    .G_BRAM_ADDRWIDTH (G_BUFFER_ADDR_WIDTH),
+    .G_DWIDTH         (G_DWIDTH)
+  )
+  u_ps_bram_window
+  (
+    .clk              (clk),
+
+    .din_wr_addr      (prog_window_counter),
+    .din_wr_valid     (prog_window_din_valid & prog_window_din_ready),
+    .din_data         (prog_window_din),
+
+    .din_rd_addr      (bram_win_din_rd_addr),
+    .din_rd_valid     (bram_win_din_rd_valid),
+
+    .dout_data        (bram_win_dout_data),
+    .dout_rd_valid    (bram_win_dout_rd_valid)
   );
 
 
