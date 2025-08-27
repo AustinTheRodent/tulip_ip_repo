@@ -1,0 +1,546 @@
+module pitch_shifter_multiwin
+#(
+  parameter  int  G_DWIDTH = 24,
+  localparam int  C_PROG_DDS_DWIDTH = 32,
+  parameter  int  G_BUFFER_ADDR_WIDTH = 12
+)
+(
+  input  logic                            clk,
+  input  logic                            reset,
+  input  logic                            enable,
+  input  logic                            bypass,
+
+  input  logic [G_DWIDTH-1:0]             prog_gain_din, // fixed point, 2 integer bits
+  input  logic                            prog_gain_din_valid,
+  output logic                            prog_gain_din_ready,
+  output logic                            prog_gain_din_done,
+
+  input  logic [G_DWIDTH-1:0]             prog_window_din, // fixed point, 2 integer bits
+  input  logic                            prog_window_din_valid,
+  output logic                            prog_window_din_ready,
+  output logic                            prog_window_din_done,
+
+  input  logic [C_PROG_DDS_DWIDTH-1:0]    prog_lfo_freq_din,
+  input  logic                            prog_lfo_freq_din_valid,
+  output logic                            prog_lfo_freq_din_ready,
+  output logic                            prog_lfo_freq_din_done,
+
+  input  logic [7:0]                      prog_buf_depthlog2_din,
+  input  logic                            prog_buf_depthlog2_din_valid,
+  output logic                            prog_buf_depthlog2_din_ready,
+  output logic                            prog_buf_depthlog2_din_done,
+
+  input  logic [G_DWIDTH-1:0]             din,
+  input  logic                            din_valid,
+  output logic                            din_ready,
+
+  output logic [G_DWIDTH-1:0]             dout,
+  output logic                            dout_valid,
+  input  logic                            dout_ready
+);
+
+  localparam int C_PROG_INT_BITS = 2;
+
+  typedef enum
+  {
+    SM_INIT,
+    SM_PROGRAM,
+    SM_BUFFER_INPUT,
+    SM_GET_LFO_INDEX,
+    SM_GET_LFO_INDEX_DLY,
+    SM_GET_RD_INDEX0_1,
+    SM_GET_FRACT,
+    SM_RD_0,
+    SM_RD_1,
+    SM_MULT_FRACT,
+    SM_WINDOW,
+    SM_APPLY_GAIN,
+    SM_SEND_OUTPUT
+  } state_t;
+  state_t state;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     prog_buf_depthlog2;
+
+  logic [G_DWIDTH-1:0]                                prog_gain     [0:1];
+  logic [C_PROG_DDS_DWIDTH-1:0]                       prog_lfo_freq;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     bram_din_wr_addr;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     bram_din_rd_addr;
+  logic [G_DWIDTH-1:0]                                bram_din_data;
+  logic                                               bram_din_rd_valid;
+  logic                                               bram_din_wr_valid;
+
+  logic [G_DWIDTH-1:0]                                bram_dout_data;
+  logic                                               bram_dout_rd_valid;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     bram_win_din_rd_addr;
+  logic                                               bram_win_din_rd_valid;
+
+  logic [G_DWIDTH-1:0]                                bram_win_dout_data;
+  logic [G_DWIDTH-1:0]                                bram_win_dout_data0;
+  logic [G_DWIDTH-1:0]                                bram_win_dout_data1;
+  logic                                               bram_win_dout_rd_valid;
+
+  logic [C_PROG_DDS_DWIDTH-1:0]                       dds_din;
+  logic                                               dds_din_valid;
+  logic                                               dds_din_ready;
+  logic [C_PROG_DDS_DWIDTH-1:0]                       dds_dout;
+  logic                                               dds_dout_valid;
+  logic                                               dds_dout_ready;
+  logic [C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1:0]   dds_dout_mult;
+  logic [C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1:0]   dds_dout_mult_buff;
+  logic                                               dds_dout_mult_valid;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     lfo_index;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     lfo_dly;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     lfo_index_delay;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     lfo_index0;
+  logic [C_PROG_DDS_DWIDTH-1:0]                       fract;
+  logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_0;
+  logic [C_PROG_DDS_DWIDTH+1-1:0]                     fract_1;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     rd_index0;
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     rd_index1;
+
+  logic [G_DWIDTH-1:0]                                rd_0;
+  logic [G_DWIDTH-1:0]                                rd_1;
+
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_0;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_1;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_0;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_1;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            fract_mult_output;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH+1-1:0]            win_mult_output;
+  logic [G_DWIDTH-1:0]                                fract_mult_output_short;
+  logic [G_DWIDTH-1:0]                                win_mult_output_short;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH-1:0]              fract_mult_din_valid;
+  logic [G_DWIDTH+C_PROG_DDS_DWIDTH-1:0]              fract_mult_dout_valid;
+
+  logic [G_DWIDTH-1:0]                                din_store;
+
+  logic [2*G_DWIDTH-1:0]                              transparent_gain;
+  logic [2*G_DWIDTH-1:0]                              ps_gain;
+
+  logic                                               is_dly_run;
+  logic [G_DWIDTH-1:0]                                ps_gain_store;
+
+  logic                                               gain_mult_din_valid;
+  logic                                               gain_mult_dout_valid;
+
+  logic [2*G_DWIDTH-1:0]                              window_mult;
+  logic                                               window_mult_din_valid;
+  logic                                               window_mult_dout_valid;
+
+  logic                                               bram_clear_done;
+
+  logic                                               din_ready_int;
+  logic                                               dout_valid_int;
+  logic [G_DWIDTH-1:0]                                dout_int;
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0]                     prog_window_counter;
+
+//////////////////////////////////////////
+
+  assign din_ready = (bypass == 0) ? din_ready_int : dout_ready;
+  assign dout = (bypass == 0) ? dout_int : din;
+  assign dout_valid = (bypass == 0) ? dout_valid_int : din_valid;
+
+  assign lfo_index_delay = lfo_index + lfo_dly;
+
+  always @ (posedge clk) begin
+
+    logic [3:0] prog_gain_counter;
+    logic [3:0] delay_counter;
+    logic all_prog_done;
+
+    if (reset == 1 || enable == 0) begin
+
+      prog_buf_depthlog2_din_ready <= 0;
+      prog_buf_depthlog2_din_done  <= 0;
+
+      lfo_dly                   <= 0;
+      is_dly_run                <= 0;
+
+      din_ready_int             <= 0;
+      dout_valid_int            <= 0;
+      delay_counter             <= 0;
+      prog_gain_din_ready       <= 0;
+      prog_window_din_ready     <= 0;
+      prog_gain_din_done        <= 0;
+      prog_window_din_done      <= 0;
+      prog_lfo_freq_din_ready   <= 0;
+      prog_lfo_freq_din_done    <= 0;
+      all_prog_done             <= 0;
+      prog_gain_counter         <= 0;
+      prog_window_counter       <= 0;
+      dds_din_valid             <= 0;
+      bram_din_rd_valid         <= 0;
+      bram_din_wr_addr          <= 0;
+      bram_din_wr_valid         <= 1;
+      fract_mult_din_valid      <= 0;
+      gain_mult_din_valid       <= 0;
+      bram_clear_done           <= 0;
+      state                     <= SM_INIT;
+    end
+    else begin
+      case (state)
+        SM_INIT : begin
+          if (delay_counter == 7) begin
+
+            prog_gain_din_ready         <= 1;
+            prog_window_din_ready       <= 1;
+            prog_lfo_freq_din_ready     <= 1;
+            prog_buf_depthlog2_din_ready <= 1;
+            is_dly_run                  <= 0;
+
+            state                       <= SM_PROGRAM;
+          end
+          else begin
+            delay_counter               <= delay_counter + 1;
+          end
+        end
+
+        SM_PROGRAM : begin
+
+          if (bram_clear_done == 0) begin
+            if (bram_din_wr_addr == 2**G_BUFFER_ADDR_WIDTH-1) begin
+              bram_clear_done   <= 1;
+              bram_din_wr_addr  <= 0;
+            end
+            else begin
+              bram_din_wr_addr  <= bram_din_wr_addr + 1;
+            end
+          end
+
+          if (prog_buf_depthlog2_din_valid & prog_buf_depthlog2_din_ready == 1) begin
+            prog_buf_depthlog2           <= prog_buf_depthlog2_din;
+            prog_buf_depthlog2_din_ready <= 0;
+            prog_buf_depthlog2_din_done  <= 1;
+          end
+
+          if (prog_gain_din_valid & prog_gain_din_ready == 1) begin
+
+            prog_gain[prog_gain_counter] <= prog_gain_din;
+
+            if (prog_gain_counter == 1) begin
+              prog_gain_din_ready  <= 0;
+              prog_gain_din_done   <= 1;
+            end
+            else begin
+              prog_gain_counter    <= prog_gain_counter + 1;
+            end
+          end
+
+          if (prog_window_din_valid & prog_window_din_ready == 1) begin
+            if (prog_window_counter == 2**G_BUFFER_ADDR_WIDTH-1) begin
+              prog_window_din_ready  <= 0;
+              prog_window_din_done   <= 1;
+            end
+            else begin
+              prog_window_counter    <= prog_window_counter + 1;
+            end
+          end
+
+          if (prog_lfo_freq_din_valid & prog_lfo_freq_din_ready == 1) begin
+
+            prog_lfo_freq           <= prog_lfo_freq_din;
+            prog_lfo_freq_din_ready <= 0;
+            prog_lfo_freq_din_done  <= 1;
+
+          end
+
+          if
+          (
+            bram_clear_done &
+            prog_window_din_done &
+            prog_gain_din_done &
+            prog_buf_depthlog2_din_done &
+            prog_lfo_freq_din_done == 1
+          ) begin
+            all_prog_done     <= 1;
+            bram_din_wr_valid <= 1;
+            din_ready_int     <= 1;
+            state             <= SM_BUFFER_INPUT;
+          end
+
+        end
+
+        SM_BUFFER_INPUT : begin
+          if (din_valid & din_ready_int == 1) begin
+            ps_gain_store     <= 0;
+            din_ready_int     <= 0;
+            din_store         <= din;
+            bram_din_wr_valid <= 0;
+            dds_din_valid     <= 1;
+            is_dly_run        <= 0;
+            state             <= SM_GET_LFO_INDEX;
+          end
+        end
+
+        SM_GET_LFO_INDEX : begin
+          lfo_dly       <= 0;
+          dds_din_valid <= 0;
+          if (dds_dout_mult_valid == 1) begin
+            lfo_index0          <= dds_dout_mult[C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1 -: G_BUFFER_ADDR_WIDTH];
+            lfo_index           <= (dds_dout_mult[C_PROG_DDS_DWIDTH+G_BUFFER_ADDR_WIDTH-1 -: G_BUFFER_ADDR_WIDTH] << ((G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2))) >> ((G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2));
+            fract               <= dds_dout_mult[C_PROG_DDS_DWIDTH-1 -: C_PROG_DDS_DWIDTH];
+
+            dds_dout_mult_buff  <= dds_dout_mult;
+            state               <= SM_GET_RD_INDEX0_1;
+          end
+        end
+
+        SM_GET_LFO_INDEX_DLY : begin
+          lfo_dly <= (1 << (prog_buf_depthlog2-1));
+          state   <= SM_GET_RD_INDEX0_1;
+        end
+
+        SM_GET_RD_INDEX0_1 : begin
+          rd_index0 <= ((bram_din_wr_addr+lfo_index_delay) << (G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2)) >> (G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2);
+          rd_index1 <= ((bram_din_wr_addr+lfo_index_delay+1) << (G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2)) >> (G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2);
+          state     <= SM_GET_FRACT;
+        end
+
+        SM_GET_FRACT : begin
+          fract_0               <= 2**32 - unsigned'(signed'(dds_dout_mult_buff) - (signed'(lfo_index0) <<< C_PROG_DDS_DWIDTH));
+          fract_1               <= signed'(dds_dout_mult_buff) - (signed'(lfo_index0) <<< C_PROG_DDS_DWIDTH);
+
+          bram_win_din_rd_addr  <= lfo_index_delay;
+          bram_win_din_rd_valid <= 1;
+
+          bram_din_rd_addr      <= rd_index0;
+          bram_din_rd_valid     <= 1;
+          state                 <= SM_RD_0;
+        end
+
+        SM_RD_0 : begin
+          if (bram_dout_rd_valid) begin
+
+            bram_win_dout_data0 <= bram_win_dout_data;
+
+            if ((lfo_index_delay + 1) >= (1<<prog_buf_depthlog2)) begin
+              bram_win_din_rd_addr <= 0;
+            end
+            else begin
+              bram_win_din_rd_addr <= lfo_index_delay + 1;
+            end
+            bram_win_din_rd_valid <= 1;
+
+            bram_din_rd_addr  <= rd_index1;
+            rd_0              <= bram_dout_data;
+            bram_din_rd_valid <= 1;
+            state             <= SM_RD_1;
+          end
+          else begin
+            bram_din_rd_valid     <= 0;
+            bram_win_din_rd_valid <= 0;
+          end
+        end
+
+        SM_RD_1 : begin
+          bram_din_rd_valid       <= 0;
+          if (bram_dout_rd_valid) begin
+
+            bram_win_dout_data1   <= bram_win_dout_data;
+
+            rd_1                  <= bram_dout_data;
+            fract_mult_din_valid  <= 1;
+            state                 <= SM_MULT_FRACT;
+          end
+        end
+
+        SM_MULT_FRACT : begin
+          fract_mult_din_valid  <= 0;
+          if (fract_mult_dout_valid == 1) begin
+            fract_mult_output   <= signed'(fract_mult_0 + fract_mult_1) >>> C_PROG_DDS_DWIDTH;
+            win_mult_output     <= signed'(win_mult_0 + win_mult_1) >>> C_PROG_DDS_DWIDTH;
+            gain_mult_din_valid <= 1;
+            state               <= SM_WINDOW;
+          end
+        end
+
+        SM_WINDOW : begin
+          gain_mult_din_valid <= 0;
+          if (gain_mult_dout_valid) begin
+            ps_gain_store           <= ps_gain[2*G_DWIDTH-1-C_PROG_INT_BITS -: G_DWIDTH];
+            window_mult_din_valid   <= 1;
+            state                   <= SM_APPLY_GAIN;
+          end
+        end
+
+        SM_APPLY_GAIN : begin
+          window_mult_din_valid <= 0;
+
+          if (is_dly_run == 1) begin
+            if (window_mult_dout_valid) begin
+              dout_int        <= dout_int - (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS));
+              dout_valid_int  <= 1;
+              state           <= SM_SEND_OUTPUT;
+              is_dly_run      <= 0;
+            end
+          end
+          else begin
+            if (window_mult_dout_valid) begin
+              dout_int        <= (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS)) + (signed'(transparent_gain) >>> (G_DWIDTH-C_PROG_INT_BITS));
+              state           <= SM_GET_LFO_INDEX_DLY;
+              is_dly_run      <= 1;
+            end
+          end
+
+        end
+
+        SM_SEND_OUTPUT : begin
+          if (dout_valid_int & dout_ready == 1) begin
+            dout_valid_int    <= 0;
+            din_ready_int     <= 1;
+            if (bram_din_wr_addr+1 >= (1<<prog_buf_depthlog2)) begin
+              bram_din_wr_addr  <= 0;
+            end
+            else begin
+              bram_din_wr_addr  <= bram_din_wr_addr + 1;
+            end
+            bram_din_wr_valid <= 1;
+            state             <= SM_BUFFER_INPUT;
+          end
+        end
+
+      endcase
+    end
+  end
+
+  assign fract_mult_output_short  = fract_mult_output[G_DWIDTH-1 -: G_DWIDTH];
+  assign win_mult_output_short    = win_mult_output[G_DWIDTH-1 -: G_DWIDTH];
+
+  logic [G_BUFFER_ADDR_WIDTH-1:0] window_index0;
+  logic [G_BUFFER_ADDR_WIDTH-1:0] window_index1;
+  assign window_index0 = lfo_index_delay;
+  assign window_index1 = ((lfo_index_delay + 1) >= (1<<prog_buf_depthlog2)) ? 0 : (lfo_index_delay + 1);
+
+  always @ (posedge clk) begin
+    fract_mult_0  <= signed'(rd_0) * signed'({1'b0,fract_0});
+    fract_mult_1  <= signed'(rd_1) * signed'({1'b0,fract_1});
+    win_mult_0    <= signed'(bram_win_dout_data0) * signed'({1'b0,fract_0});
+    win_mult_1    <= signed'(bram_win_dout_data1) * signed'({1'b0,fract_1});
+    fract_mult_dout_valid <= fract_mult_din_valid;
+  end
+
+  always @ (posedge clk) begin
+    transparent_gain      <= signed'(din_store) * signed'({1'b0,prog_gain[0]});
+    ps_gain               <= signed'(fract_mult_output_short) * signed'({1'b0,prog_gain[1]});
+    gain_mult_dout_valid  <= gain_mult_din_valid;
+
+    window_mult             <= signed'(win_mult_output_short) * signed'(ps_gain_store);
+    window_mult_dout_valid  <= window_mult_din_valid;
+  end
+
+  assign bram_din_data = (bram_clear_done == 1) ? din : 0;
+
+  ps_bram
+  #(
+    .G_BRAM_ADDRWIDTH (G_BUFFER_ADDR_WIDTH),
+    .G_DWIDTH         (G_DWIDTH)
+  )
+  u_ps_bram
+  (
+    .clk              (clk),
+
+    .din_wr_addr      (bram_din_wr_addr),
+    .din_rd_addr      (bram_din_rd_addr),
+    .din_data         (bram_din_data),
+    .din_rd_valid     (bram_din_rd_valid),
+    .din_wr_valid     (bram_din_wr_valid),
+
+    .dout_data        (bram_dout_data),
+    .dout_rd_valid    (bram_dout_rd_valid)
+  );
+
+  ps_bram
+  #(
+    .G_BRAM_ADDRWIDTH (G_BUFFER_ADDR_WIDTH),
+    .G_DWIDTH         (G_DWIDTH)
+  )
+  u_ps_bram_window
+  (
+    .clk              (clk),
+
+    .din_wr_addr      (prog_window_counter),
+    .din_wr_valid     (prog_window_din_valid & prog_window_din_ready),
+    .din_data         (prog_window_din),
+
+    .din_rd_addr      (bram_win_din_rd_addr),
+    .din_rd_valid     (bram_win_din_rd_valid),
+
+    .dout_data        (bram_win_dout_data),
+    .dout_rd_valid    (bram_win_dout_rd_valid)
+  );
+
+
+  assign dds_din = prog_lfo_freq;
+
+  dds_linear
+  #(
+    .G_DWIDTH      (C_PROG_DDS_DWIDTH)
+  )
+  u_dds_linear
+  (
+    .clk              (clk),
+    .reset            (reset | (~enable)),
+
+    .din              (dds_din>>(G_BUFFER_ADDR_WIDTH-prog_buf_depthlog2)),
+    .din_valid        (dds_din_valid),
+    .din_ready        (dds_din_ready),
+
+    .dout             (dds_dout),
+    .dout_valid       (dds_dout_valid),
+    .dout_ready       (dds_dout_ready)
+  );
+
+  assign dds_dout_ready = 1;
+
+  always @ (posedge clk) begin
+    dds_dout_mult       <= dds_dout << G_BUFFER_ADDR_WIDTH;
+    dds_dout_mult_valid <= dds_dout_valid;
+  end
+
+endmodule
+
+
+
+module ps_bram
+#(
+  parameter int G_BRAM_ADDRWIDTH = 12,
+  parameter int G_DWIDTH = 24
+)
+(
+  input  logic clk,
+
+  input  logic [G_BRAM_ADDRWIDTH-1:0] din_wr_addr,
+  input  logic [G_BRAM_ADDRWIDTH-1:0] din_rd_addr,
+  input  logic [G_DWIDTH-1:0]         din_data,
+  input  logic                        din_rd_valid,
+  input  logic                        din_wr_valid,
+
+  output logic [G_DWIDTH-1:0]         dout_data,
+  output logic                        dout_rd_valid
+);
+
+  logic [G_DWIDTH-1:0] bram_memory [0:2**G_BRAM_ADDRWIDTH-1];
+
+  always @ (posedge clk) begin
+    if (din_wr_valid == 1) begin
+      bram_memory[din_wr_addr]  <= din_data;
+    end
+  end
+
+  always @ (posedge clk) begin
+    dout_data                   <= bram_memory[din_rd_addr];
+    dout_rd_valid               <= din_rd_valid;
+  end
+
+endmodule
+
+
+
+
+
+
