@@ -121,7 +121,7 @@ module pitch_shifter_multiwin
   logic [2*G_DWIDTH-1:0]                              transparent_gain;
   logic [2*G_DWIDTH-1:0]                              ps_gain;
 
-  logic                                               is_dly_run;
+  logic [7:0]                                         dly_run_counter;
   logic [G_DWIDTH-1:0]                                ps_gain_store;
 
   logic                                               gain_mult_din_valid;
@@ -159,7 +159,7 @@ module pitch_shifter_multiwin
       prog_buf_depthlog2_din_done  <= 0;
 
       lfo_dly                   <= 0;
-      is_dly_run                <= 0;
+      dly_run_counter           <= 0;
 
       din_ready_int             <= 0;
       dout_valid_int            <= 0;
@@ -187,11 +187,11 @@ module pitch_shifter_multiwin
         SM_INIT : begin
           if (delay_counter == 7) begin
 
-            prog_gain_din_ready         <= 1;
-            prog_window_din_ready       <= 1;
-            prog_lfo_freq_din_ready     <= 1;
-            prog_buf_depthlog2_din_ready <= 1;
-            is_dly_run                  <= 0;
+            prog_gain_din_ready           <= 1;
+            prog_window_din_ready         <= 1;
+            prog_lfo_freq_din_ready       <= 1;
+            prog_buf_depthlog2_din_ready  <= 1;
+            dly_run_counter               <= 0;
 
             state                       <= SM_PROGRAM;
           end
@@ -272,7 +272,8 @@ module pitch_shifter_multiwin
             din_store         <= din;
             bram_din_wr_valid <= 0;
             dds_din_valid     <= 1;
-            is_dly_run        <= 0;
+            dly_run_counter   <= 0;
+            dout_int          <= 0;
             state             <= SM_GET_LFO_INDEX;
           end
         end
@@ -291,7 +292,8 @@ module pitch_shifter_multiwin
         end
 
         SM_GET_LFO_INDEX_DLY : begin
-          lfo_dly <= (1 << (prog_buf_depthlog2-1));
+          //lfo_dly <= (1 << (prog_buf_depthlog2-1));
+          lfo_dly <= lfo_dly + (1 << (prog_buf_depthlog2-2));
           state   <= SM_GET_RD_INDEX0_1;
         end
 
@@ -371,19 +373,19 @@ module pitch_shifter_multiwin
         SM_APPLY_GAIN : begin
           window_mult_din_valid <= 0;
 
-          if (is_dly_run == 1) begin
+          if (dly_run_counter == 3) begin
             if (window_mult_dout_valid) begin
-              dout_int        <= dout_int - (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS));
+              dout_int        <= dout_int + (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS)) + (signed'(transparent_gain) >>> (G_DWIDTH-C_PROG_INT_BITS));
               dout_valid_int  <= 1;
               state           <= SM_SEND_OUTPUT;
-              is_dly_run      <= 0;
+              dly_run_counter <= 0;
             end
           end
           else begin
             if (window_mult_dout_valid) begin
-              dout_int        <= (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS)) + (signed'(transparent_gain) >>> (G_DWIDTH-C_PROG_INT_BITS));
+              dout_int        <= dout_int + (signed'(window_mult) >>> (G_DWIDTH-C_PROG_INT_BITS));
               state           <= SM_GET_LFO_INDEX_DLY;
-              is_dly_run      <= 1;
+              dly_run_counter <= dly_run_counter + 1;
             end
           end
 

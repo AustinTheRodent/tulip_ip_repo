@@ -718,10 +718,10 @@ module tulip_dsp
   assign chorus_dout_ready  = ps_din_ready;
 
 
-  pitch_shifter_variable
+  pitch_shifter_multiwin
   #(
     .G_DWIDTH             (C_ADC_DWIDTH),
-    .G_BUFFER_ADDR_WIDTH  (14)
+    .G_BUFFER_ADDR_WIDTH  (13)
   )
   u_pitch_shifter
   (
