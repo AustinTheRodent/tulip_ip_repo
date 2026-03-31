@@ -25,6 +25,132 @@ end entity;
 
 architecture rtl of fp_add is
 
+
+  function encode_bit_pairs
+  (
+    input_vector : in std_logic_vector(1 downto 0)
+  ) return std_logic_vector is
+  begin
+    case input_vector is
+      when "00" =>
+        return "10";
+      when "01" =>
+        return "01";
+      when others =>
+        return "00";
+    end case;
+  end function;
+
+  function assemble
+  (
+    input_vector_left   : in std_logic_vector;
+    input_vector_right  : in std_logic_vector
+  ) return std_logic_vector is
+    variable v_left_bits  : std_logic_vector(1 downto 0);
+    variable v_zeros      : std_logic_vector(input_vector_left'range);
+  begin
+    v_left_bits := input_vector_left(input_vector_left'left) & input_vector_right(input_vector_right'left);
+    v_zeros     := (others => '0');
+    case v_left_bits is
+      when "11" =>
+        return '1' & v_zeros;
+      when "01" =>
+        return '0' & input_vector_left;
+      when "00" =>
+        return '0' & input_vector_left;
+      when others =>
+        return "01" & input_vector_right(input_vector_right'left-1 downto 0);
+    end case;
+  end function;
+
+  function get_leading_zeros32
+  (
+    input_vector : in std_logic_vector(31 downto 0)
+  ) return unsigned is
+
+    type two_bit_pairs_t    is array (15 downto 0) of std_logic_vector(1 downto 0);
+    type three_bit_array_t  is array ( 7 downto 0) of std_logic_vector(2 downto 0);
+    type four_bit_array_t   is array ( 3 downto 0) of std_logic_vector(3 downto 0);
+    type five_bit_array_t   is array ( 1 downto 0) of std_logic_vector(4 downto 0);
+
+    variable v_two_bit_pairs    : two_bit_pairs_t;
+    variable v_three_bit_array  : three_bit_array_t;
+    variable v_four_bit_array   : four_bit_array_t;
+    variable v_five_bit_array   : five_bit_array_t;
+    variable v_output           : std_logic_vector(5 downto 0);
+    variable v_return_value     : std_logic_vector(7 downto 0);
+
+  begin
+
+    for i in 15 downto 0 loop
+      v_two_bit_pairs(i) := encode_bit_pairs(input_vector((i+1)*2-1 downto (i+1)*2-2));
+    end loop;
+
+    for i in 7 downto 0 loop
+      v_three_bit_array(i) := assemble(v_two_bit_pairs((i+1)*2-1), v_two_bit_pairs((i+1)*2-2));
+    end loop;
+
+    for i in 3 downto 0 loop
+      v_four_bit_array(i) := assemble(v_three_bit_array((i+1)*2-1), v_three_bit_array((i+1)*2-2));
+    end loop;
+
+    for i in 1 downto 0 loop
+      v_five_bit_array(i) := assemble(v_four_bit_array((i+1)*2-1), v_four_bit_array((i+1)*2-2));
+    end loop;
+
+    v_output := assemble(v_five_bit_array(1), v_five_bit_array(0));
+    v_return_value := "00" & v_output;
+    return unsigned(v_return_value);
+
+  end function;
+
+  function get_leading_zeros64
+  (
+    input_vector : in std_logic_vector(63 downto 0)
+  ) return unsigned is
+
+    type one_bit_pairs_t    is array (31 downto 0) of std_logic_vector(1 downto 0);
+    type two_bit_pairs_t    is array (15 downto 0) of std_logic_vector(2 downto 0);
+    type three_bit_array_t  is array ( 7 downto 0) of std_logic_vector(3 downto 0);
+    type four_bit_array_t   is array ( 3 downto 0) of std_logic_vector(4 downto 0);
+    type five_bit_array_t   is array ( 1 downto 0) of std_logic_vector(5 downto 0);
+
+    variable v_one_bit_pairs    : one_bit_pairs_t;
+    variable v_two_bit_pairs    : two_bit_pairs_t;
+    variable v_three_bit_array  : three_bit_array_t;
+    variable v_four_bit_array   : four_bit_array_t;
+    variable v_five_bit_array   : five_bit_array_t;
+    variable v_output           : std_logic_vector(6 downto 0);
+    variable v_return_value     : std_logic_vector(7 downto 0);
+
+  begin
+
+    for i in 31 downto 0 loop
+      v_one_bit_pairs(i) := encode_bit_pairs(input_vector((i+1)*2-1 downto (i+1)*2-2));
+    end loop;
+
+    for i in 15 downto 0 loop
+      v_two_bit_pairs(i) := assemble(v_one_bit_pairs((i+1)*2-1), v_one_bit_pairs((i+1)*2-2));
+    end loop;
+
+    for i in 7 downto 0 loop
+      v_three_bit_array(i) := assemble(v_two_bit_pairs((i+1)*2-1), v_two_bit_pairs((i+1)*2-2));
+    end loop;
+
+    for i in 3 downto 0 loop
+      v_four_bit_array(i) := assemble(v_three_bit_array((i+1)*2-1), v_three_bit_array((i+1)*2-2));
+    end loop;
+
+    for i in 1 downto 0 loop
+      v_five_bit_array(i) := assemble(v_four_bit_array((i+1)*2-1), v_four_bit_array((i+1)*2-2));
+    end loop;
+
+    v_output := assemble(v_five_bit_array(1), v_five_bit_array(0));
+    v_return_value := '0' & v_output;
+    return unsigned(v_return_value);
+
+  end function;
+
   signal sign1        : std_logic;
   signal exp1         : unsigned(G_EXP_LEN-1 downto 0);
   signal mant1        : unsigned(G_MANT_LEN-1 downto 0);
@@ -61,14 +187,15 @@ architecture rtl of fp_add is
   signal mant_round0  : unsigned(G_MANT_LEN+1-1 downto 0);
   signal mant_round1  : unsigned(G_MANT_LEN+1-1 downto 0);
   signal exp_added    : unsigned(G_EXP_LEN+1-1 downto 0);
-  signal exp_norm     : unsigned(G_EXP_LEN-1 downto 0);
-  signal exp_round    : unsigned(G_EXP_LEN-1 downto 0);
+  signal exp_norm     : unsigned(G_EXP_LEN+1-1 downto 0);
+  signal exp_round    : unsigned(G_EXP_LEN+1-1 downto 0);
   signal sign_round   : std_logic;
   signal g_norm       : std_logic;
   signal r_norm       : std_logic;
   signal s_norm       : std_logic;
 
-  signal lshift_count : unsigned(7 downto 0);
+  signal lshift_count0  : unsigned(7 downto 0);
+  signal lshift_count   : unsigned(7 downto 0);
 
   constant C_Z        : std_logic_vector(64-(G_MANT_LEN+1)-1 downto 0) := (others => '0');
   constant C_ZL       : unsigned(7 downto 0) := to_unsigned(64-G_MANT_LEN-1, 8);
@@ -117,7 +244,7 @@ begin
 -------------------------------------------------------------
 
   grs   <= '0' & g & r & s;
-  frac  <= std_logic_vector(unsigned(x"8") - unsigned(grs));
+  frac  <= std_logic_vector(to_unsigned(8, 4) - unsigned(grs));
 
   process(clk)
   begin
@@ -142,9 +269,11 @@ begin
         s_frac      <= '0';
       end if;
 
-      exp_added <= resize(exp1, G_EXP_LEN+1);
+      exp_added <= resize(exp1_swap, G_EXP_LEN+1);
 
       sign_round <= sign1_swap;
+
+      dout_valid <= din_valid;
 
       --mant_added <=
       --  mant1_swap + mant2_shift when sign1_swap = sign2_swap else
@@ -175,7 +304,8 @@ begin
 -------------------------------------------------------------
   -- Normalization:
 
-  lshift_count <= get_leading_zeros64(C_Z & std_logic_vector(mant_added)) - C_ZL;
+  lshift_count0 <= get_leading_zeros64(C_Z & std_logic_vector(mant_added)) - C_ZL;
+  lshift_count <= lshift_count0 when lshift_count0 < exp_added+1 else resize(exp_added+1, 8);
 
   mant_shifted <= shift_left(mant_added & g_frac & r_frac, to_integer(lshift_count)-1);
 
@@ -207,7 +337,7 @@ begin
  -- Round to Nearest Even
 
   mant_round0 <=
-    mant_norm + 1 when g = '1' and ((r or s) = '1' or mant_norm(0) = '1') else
+    mant_norm + 1 when g_norm = '1' and ((r_norm or s_norm) = '1' or mant_norm(0) = '1') else
     mant_norm;
 
   mant_round1 <=
@@ -218,7 +348,7 @@ begin
     exp_norm + 1 when mant_round0(mant_round0'left) = '1' else
     exp_norm;
 
-  dout <= sign_round & std_logic_vector(mant_round1(G_MANT_LEN-2 downto 0)) & std_logic_vector(exp_round(G_EXP_LEN-1 downto 0));
+  dout <= sign_round & std_logic_vector(exp_round(G_EXP_LEN-1 downto 0)) & std_logic_vector(mant_round1(G_MANT_LEN-2 downto 0));
 
 end rtl;
 
