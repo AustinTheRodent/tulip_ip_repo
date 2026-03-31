@@ -79,6 +79,9 @@ def manual_float_add_v4(a, b, debug=False):
             res_m >>= 1
             res_e += 1
 
+    if res_e >= 1<<8:
+      res_e = (1<<8)-1
+
     res_bits = (res_s << 31) | (res_e << 23) | (res_m & 0x7FFFFF)
     return np.uint32(res_bits).view(np.float32)
 # Test mixed signs
