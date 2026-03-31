@@ -189,6 +189,7 @@ architecture rtl of fp_add is
   signal exp_added    : unsigned(G_EXP_LEN+1-1 downto 0);
   signal exp_norm     : unsigned(G_EXP_LEN+1-1 downto 0);
   signal exp_round    : unsigned(G_EXP_LEN+1-1 downto 0);
+  signal exp_overflow : unsigned(G_EXP_LEN+1-1 downto 0);
   signal sign_round   : std_logic;
   signal g_norm       : std_logic;
   signal r_norm       : std_logic;
@@ -348,7 +349,13 @@ begin
     exp_norm + 1 when mant_round0(mant_round0'left) = '1' else
     exp_norm;
 
-  dout <= sign_round & std_logic_vector(exp_round(G_EXP_LEN-1 downto 0)) & std_logic_vector(mant_round1(G_MANT_LEN-2 downto 0));
+  exp_overflow <=
+    (others => '1') when exp_round(exp_round'left) = '1' else
+    exp_round;
+
+  dout <=
+    (others => '0') when mant_added = 0 and g_frac = '0' else
+    sign_round & std_logic_vector(exp_overflow(G_EXP_LEN-1 downto 0)) & std_logic_vector(mant_round1(G_MANT_LEN-2 downto 0));
 
 end rtl;
 
